@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -86,9 +87,12 @@ def _load_target(root: dict[str, Any]) -> LocalCommandTarget | None:
     timeout_seconds = mapping.get("timeout_seconds", 10)
     if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)):
         raise ConfigError("target.timeout_seconds must be a number")
+    timeout_seconds = float(timeout_seconds)
+    if not math.isfinite(timeout_seconds):
+        raise ConfigError("target.timeout_seconds must be finite")
     if timeout_seconds <= 0:
         raise ConfigError("target.timeout_seconds must be > 0")
-    return LocalCommandTarget(tuple(command), float(timeout_seconds))
+    return LocalCommandTarget(tuple(command), timeout_seconds)
 
 
 def load_suite(path: str | Path) -> EvalSuite:
