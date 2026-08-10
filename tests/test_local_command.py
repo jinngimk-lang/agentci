@@ -64,3 +64,19 @@ def test_missing_executable_is_a_normal_failed_case(tmp_path: Path):
     result = run_suite(suite, tmp_path / 'out')
     assert result.cases[0].passed is False
     assert any('executable not found' in reason for reason in result.cases[0].failure_reasons)
+
+
+def test_non_utf8_stdout_is_a_normal_failed_case(tmp_path: Path):
+    script = write_script(tmp_path / 'target.py', 'import sys\nsys.stdout.buffer.write(b"\\xff")\n')
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
+    result = run_suite(suite, tmp_path / 'out')
+    assert result.cases[0].passed is False
+    assert any('UTF-8' in reason for reason in result.cases[0].failure_reasons)
+
+
+def test_non_finite_cost_is_a_normal_failed_case(tmp_path: Path):
+    script = write_script(tmp_path / 'target.py', 'print(\'{"success": true, "cost_usd": NaN}\')\n')
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
+    result = run_suite(suite, tmp_path / 'out')
+    assert result.cases[0].passed is False
+    assert any('cost_usd' in reason for reason in result.cases[0].failure_reasons)
