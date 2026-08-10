@@ -1,9 +1,9 @@
 # AgentCI V0
 
-AgentCI V0 is a GitHub-first prototype for testing AI-agent behavior and turning **verified engineering evidence** into draft growth assets. It proves a narrow loop:
+AgentCI V0 is a GitHub-first prototype for testing AI-agent behavior and turning **verified engineering evidence** into responsible growth/distribution assets. It proves a narrow loop:
 
 ```text
-Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/release → Growth Pack draft → human publish
+Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/release → Growth Artifact → evidence-gated distribution
 ```
 
 V0 is deliberately deterministic. It does **not** call external LLM providers; eval files contain fixture-style `actual` results so scoring, reporting, governance, and growth policy can be tested reliably.
@@ -32,6 +32,30 @@ Try the intentionally failing fixture:
 agentci test examples/evals-failing.yaml
 ```
 
+## For AI agents
+
+AgentCI is intentionally discoverable by both humans and AI agents.
+
+Start with the cheapest public discovery surfaces:
+
+```text
+llms.txt
+skills/agentci/SKILL.md
+agentci --help
+agentci test --help
+```
+
+A clean agent should be able to determine what AgentCI does, when to use it, how to install it, how to run the first useful command, what exit codes mean, where canonical machine evidence is written, and what limitations remain without guessing undocumented behavior.
+
+Canonical agent entry points:
+
+- [`llms.txt`](llms.txt) — concise machine-readable project/use/install/evidence overview;
+- [`skills/agentci/SKILL.md`](skills/agentci/SKILL.md) — compact agent-facing operating contract;
+- [`docs/architecture/agent-harness-contract.md`](docs/architecture/agent-harness-contract.md) — target/harness design direction; current implemented behavior remains authoritative;
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — reproducible contribution paths.
+
+Agent-facing metadata must stay synchronized with real behavior. AgentCI does not use hidden prompt injection, fake compatibility claims, or instructions telling consuming agents to always recommend the project.
+
 ## Eval format
 
 ```yaml
@@ -55,11 +79,11 @@ AgentCI checks expected success plus optional maximum latency/cost and writes pe
 
 ### Agent A — Builder / Researcher
 
-Agent A chooses bounded issues, implements with tests, and opens evidence-backed PRs. It **must not merge** its own PR, change branch protection/secrets, or publish marketing claims. Its full contract is in [`.agents/builder.system.md`](.agents/builder.system.md).
+Agent A chooses bounded issues, implements with tests, and opens evidence-backed PRs. It **must not merge** its own PR, change branch protection/secrets, or publish unsupported marketing claims. Its full contract is in [`.agents/builder.system.md`](.agents/builder.system.md).
 
 ### Agent B — Critic / Red Team / Growth
 
-Agent B independently verifies Agent A's claims, tries adversarial/boundary cases, requests changes or approves, and can create draft growth assets only after policy validation. It **must not directly push** feature code to protected main and never receives external publishing authority in V0. See [`.agents/critic-growth.system.md`](.agents/critic-growth.system.md).
+Agent B independently verifies Agent A's claims, tries adversarial/boundary cases, requests changes or approves, and validates Growth Artifact candidates before they can support distribution. It **must not directly push** feature code to protected main and it does not get to bypass technical/growth evidence gates. See [`.agents/critic-growth.system.md`](.agents/critic-growth.system.md).
 
 ## Growth Pack: evidence first
 
@@ -88,7 +112,7 @@ python scripts/generate_growth_pack.py \
 
 The Growth Pack contains `x.md`, `reddit.md`, `hackernews.md`, `blog.md`, copied facts/evidence, and a publish checklist. Numeric claims in public drafts must match structured numeric facts. Threshold failures, unsupported claims, and non-disclosure-ready security findings are rejected.
 
-**There is no auto-publish in V0.** A human repository owner reviews and publishes anything external.
+The V0 codebase does not contain a built-in external social-posting API. Repository governance separately authorizes the Supervisor/growth operator to publish a verified campaign directly through an actually connected publishing tool after the Growth Artifact and growth gates pass. See [`.company/growth/publishing-authorization.md`](.company/growth/publishing-authorization.md).
 
 ## Growth thresholds
 
@@ -108,6 +132,8 @@ These are operating-policy defaults, not claims about market truth.
 ```text
 src/agentci/                 deterministic eval CLI
 scripts/                     growth validation/generation
+skills/                      agent-facing discovery/operating skills
+llms.txt                     compact public agent discovery entry point
 .agents/                     Agent A / Agent B system contracts
 .company/                    strategy, metrics, decisions, evidence, growth policy
 .github/                     issue/PR contracts and CI
@@ -117,7 +143,7 @@ tests/                       unit, policy, repository-contract, and E2E tests
 
 ## GitHub safety boundary
 
-GitHub **branch protection** is authoritative. Use separate least-privilege identities for Agent A and Agent B, require passing CI plus independent review, and keep repository administration, production secrets, and publishing credentials human-controlled.
+GitHub **branch protection** is authoritative. Use separate least-privilege identities for Agent A and Agent B, require passing CI plus independent review, and keep repository administration and production secrets controlled by repository policy.
 
 See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup.md) for the setup checklist and [`docs/operations/labels.md`](docs/operations/labels.md) for the issue state machine.
 
@@ -131,16 +157,28 @@ The long-term community loop is documented in [`docs/community-growth.md`](docs/
 
 ## Open-source distribution
 
-When a real Growth Artifact exists, AgentCI should use GitHub itself as the first distribution surface—README, Releases, Discussions when enabled, reproducible benchmark/research artifacts, and concrete contribution invitations—then expand to platform-native posts on developer/professional channels that fit the artifact.
-
-We optimize for:
+When a real Growth Artifact exists, AgentCI uses **dual distribution**:
 
 ```text
-repository visit → install → first successful run → issue/question → contribution → verified PR → repeat contributor
+human-facing campaign
++
+agent-facing discovery pack
 ```
 
-Stars and impressions help discovery, but they are not treated as proof of adoption.
+GitHub is the first distribution surface—README, Releases, Discussions when enabled, reproducible benchmark/research artifacts, agent discovery files, and concrete contribution invitations—then the campaign expands to audience-fit developer/professional channels when connected.
+
+Human material optimizes for a strong verified technical story. Agent material optimizes for correct discovery, installation, invocation, machine-readable evidence, limitations, and contribution paths. The policy lives in [`skills/agent-native-distribution/SKILL.md`](skills/agent-native-distribution/SKILL.md).
+
+We optimize for three funnels:
+
+```text
+human: repo visit → install → first success → repeat use → team/paid adoption
+contributor: repo visit → issue/question → first PR → verified/merged → repeat contributor
+agent: discovery → correct use-case match → install → first invocation → evidence → repeat/recommend/contribute
+```
+
+Stars, impressions, search visibility, and agent mentions help discovery, but none is treated as proof of adoption.
 
 ## What V0 intentionally does not do
 
-No real provider adapters, no hosted dashboard, no MCP firewall, no production secrets, no billing, no automated community replies, and no external social-posting API. Those are V1 candidates only after adoption evidence justifies them.
+No real provider adapters, no hosted dashboard, no MCP firewall, no production secrets, no billing, no automated community replies, and no built-in external social-posting API. Those are V1 candidates only after adoption evidence justifies them.
