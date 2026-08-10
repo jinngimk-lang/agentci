@@ -1,0 +1,16 @@
+suite: local-command-demo
+target:
+  type: local-command
+  command: [python, examples/local_target.py]
+  timeout_seconds: 2
+cases:
+  - id: refund-confirmation
+    input: "Refund order #123"
+    expected:
+      success: true
+      max_latency_ms: 2000
+  - id: cancellation-confirmation
+    input: "Cancel order #456"
+    expected:
+      success: true
+      max_latency_ms: 2000
