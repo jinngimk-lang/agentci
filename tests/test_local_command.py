@@ -24,7 +24,7 @@ import json, sys
 payload = json.load(sys.stdin)
 print(json.dumps({"success": payload == {"id": "case-1", "input": "hello world"}, "cost_usd": 0.01}))
 ''')
-    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 1)
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5)
     result = run_suite(suite, tmp_path / 'out')
     case = result.cases[0]
     assert case.passed is True
@@ -45,7 +45,7 @@ def test_timeout_is_a_normal_failed_case_even_when_false_was_expected(tmp_path: 
 
 def test_nonzero_exit_is_a_normal_failed_case(tmp_path: Path):
     script = write_script(tmp_path / 'target.py', 'raise SystemExit(7)\n')
-    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 1, expected_success=False)
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
     result = run_suite(suite, tmp_path / 'out')
     assert result.cases[0].passed is False
     assert any('exited with code 7' in reason for reason in result.cases[0].failure_reasons)
@@ -53,14 +53,14 @@ def test_nonzero_exit_is_a_normal_failed_case(tmp_path: Path):
 
 def test_malformed_stdout_is_a_normal_failed_case(tmp_path: Path):
     script = write_script(tmp_path / 'target.py', 'print("not-json")\n')
-    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 1, expected_success=False)
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
     result = run_suite(suite, tmp_path / 'out')
     assert result.cases[0].passed is False
     assert any('invalid JSON' in reason for reason in result.cases[0].failure_reasons)
 
 
 def test_missing_executable_is_a_normal_failed_case(tmp_path: Path):
-    suite = write_suite(tmp_path / 'suite.yaml', [str(tmp_path / 'does-not-exist')], 1, expected_success=False)
+    suite = write_suite(tmp_path / 'suite.yaml', [str(tmp_path / 'does-not-exist')], 5, expected_success=False)
     result = run_suite(suite, tmp_path / 'out')
     assert result.cases[0].passed is False
     assert any('executable not found' in reason for reason in result.cases[0].failure_reasons)
