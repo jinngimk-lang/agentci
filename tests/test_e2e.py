@@ -39,5 +39,15 @@ def test_full_v0_loop(tmp_path: Path):
 
 def test_readme_explains_quickstart_and_safety_boundary():
     text = (ROOT / 'README.md').read_text(encoding='utf-8')
-    for phrase in ['agentci test examples/evals.yaml', 'Agent A', 'Agent B', 'Growth Pack', 'no auto-publish', 'branch protection']:
+    for phrase in [
+        'agentci test examples/evals.yaml',
+        'Agent A',
+        'Agent B',
+        'Growth Pack',
+        'no built-in external social-posting API',
+        '.company/growth/publishing-authorization.md',
+        'branch protection',
+        'llms.txt',
+        'skills/agentci/SKILL.md',
+    ]:
         assert phrase.lower() in text.lower()
