@@ -1,0 +1,21 @@
+name: Benchmark
+description: Benchmark
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / evidence
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: ["priority:p0", "priority:p1", "priority:p2", "priority:p3"]
+    validations:
+      required: true
+  - type: input
+    id: value_score
+    attributes:
+      label: Value inputs
+      description: "user_pain, commercial_value, distribution_value, defensibility, implementation_cost, maintenance_cost; each 0-10"

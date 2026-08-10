@@ -1,0 +1,22 @@
+suite: demo
+cases:
+  - id: refund-confirmation
+    input: "Refund order #123"
+    actual:
+      success: true
+      latency_ms: 850
+      cost_usd: 0.02
+    expected:
+      success: true
+      max_latency_ms: 1500
+      max_cost_usd: 0.05
+  - id: cancellation-confirmation
+    input: "Cancel order #456"
+    actual:
+      success: true
+      latency_ms: 620
+      cost_usd: 0.01
+    expected:
+      success: true
+      max_latency_ms: 1000
+      max_cost_usd: 0.03

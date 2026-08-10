@@ -1,0 +1,9 @@
+{
+  "artifact_id": "security-not-ready",
+  "category": "security",
+  "title": "Security finding",
+  "severity": "critical",
+  "reproducible": true,
+  "disclosure_ready": false,
+  "public_claims": []
+}

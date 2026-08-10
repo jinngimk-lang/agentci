@@ -1,0 +1,12 @@
+suite: regression-demo
+cases:
+  - id: refund-confirmation
+    input: "Refund order #123"
+    actual:
+      success: false
+      latency_ms: 1800
+      cost_usd: 0.08
+    expected:
+      success: true
+      max_latency_ms: 1500
+      max_cost_usd: 0.05

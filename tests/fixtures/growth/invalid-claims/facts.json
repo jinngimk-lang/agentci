@@ -1,0 +1,8 @@
+{
+  "artifact_id": "invalid-claims",
+  "category": "benchmark",
+  "title": "Claim mismatch benchmark",
+  "runs": 300,
+  "reproducible": true,
+  "public_claims": ["We ran 999 reproducible agent evaluations."]
+}

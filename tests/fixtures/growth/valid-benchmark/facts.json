@@ -1,0 +1,8 @@
+{
+  "artifact_id": "valid-benchmark",
+  "category": "benchmark",
+  "title": "Browser agent reliability benchmark",
+  "runs": 300,
+  "reproducible": true,
+  "public_claims": ["We ran 300 reproducible agent evaluations."]
+}

@@ -1,0 +1,22 @@
+benchmark:
+  min_runs: 300
+  requires_reproducible: true
+performance:
+  min_improvement_percent: 20
+  min_samples: 100
+security:
+  allowed_severity:
+    - high
+    - critical
+  requires_reproducible: true
+  requires_disclosure_ready: true
+integration:
+  requires_demo: true
+  requires_tests: true
+  requires_docs: true
+release:
+  min_meaningful_changes: 3
+  allow_major_capability: true
+dataset:
+  min_examples: 100
+  requires_reproducible_notes: true

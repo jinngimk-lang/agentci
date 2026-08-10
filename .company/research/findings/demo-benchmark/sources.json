@@ -1,0 +1,6 @@
+{
+  "sources": [
+    "examples/evals.yaml",
+    ".company/growth/rules.yaml"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "artifact_id": "demo-benchmark",
+  "category": "benchmark",
+  "title": "Deterministic AgentCI demo benchmark",
+  "runs": 300,
+  "reproducible": true,
+  "public_claims": [
+    "We ran 300 reproducible deterministic agent evaluations."
+  ]
+}

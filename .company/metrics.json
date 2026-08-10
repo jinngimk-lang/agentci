@@ -1,0 +1,21 @@
+{
+  "north_star": "weekly_successful_projects",
+  "product": {
+    "weekly_active_projects": 0,
+    "successful_eval_runs": 0,
+    "first_run_success_rate": 0,
+    "retention_4w": 0
+  },
+  "growth": {
+    "github_stars": 0,
+    "weekly_installs": 0,
+    "organic_visitors": 0,
+    "qualified_visitors": 0
+  },
+  "business": {
+    "signups": 0,
+    "paid_teams": 0,
+    "mrr_usd": 0
+  },
+  "data_policy": "All zero values are initialization only. Agents must never invent or infer missing usage data."
+}

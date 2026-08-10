@@ -1,0 +1,8 @@
+{
+  "artifact_id": "invalid-benchmark",
+  "category": "benchmark",
+  "title": "Small benchmark",
+  "runs": 299,
+  "reproducible": true,
+  "public_claims": ["We ran 299 agent evaluations."]
+}

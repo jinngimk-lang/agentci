@@ -1,0 +1,33 @@
+name: AgentCI Regression
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -e .
+      - name: Run eval suite
+        run: agentci test examples/evals.yaml --output-dir artifacts
+      - name: Validate growth artifact
+        run: python scripts/validate_growth_artifact.py .company/research/findings/demo-benchmark
+      - name: Generate draft Growth Pack
+        run: python scripts/generate_growth_pack.py .company/research/findings/demo-benchmark --output-root growth
+      - name: Upload AgentCI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentci-report
+          path: |
+            artifacts/agentci-results.json
+            artifacts/agentci-report.md
+            growth/demo-benchmark/

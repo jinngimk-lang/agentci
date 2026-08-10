@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Unit tests
+        run: python -m pytest -q
+      - name: Static syntax check
+        run: python -m compileall src scripts
+      - name: AgentCI sample regression
+        run: agentci test examples/evals.yaml --output-dir artifacts
+      - name: Invalid growth evidence must be rejected
+        run: |
+          set +e
+          python scripts/validate_growth_artifact.py tests/fixtures/growth/invalid-benchmark
+          code=$?
+          set -e
+          test "$code" -eq 1
+      - name: Validate demo growth artifact
+        run: python scripts/validate_growth_artifact.py .company/research/findings/demo-benchmark
+      - name: Generate draft-only growth pack
+        run: python scripts/generate_growth_pack.py .company/research/findings/demo-benchmark --output-root growth
