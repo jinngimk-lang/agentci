@@ -74,6 +74,13 @@ def test_grouped_number_matches_single_structured_value(tmp_path: Path):
     assert (out / 'x.md').exists()
 
 
+@pytest.mark.parametrize('claim', ['We reached 1,000, then grew', 'We reached 1000, then grew'])
+def test_punctuation_comma_after_number_is_not_part_of_numeric_claim(tmp_path: Path, claim: str):
+    artifact = release_artifact(tmp_path, 'punctuation-comma', claim, users=1000)
+    out = generate_growth_pack(artifact, tmp_path / 'out', RULES)
+    assert (out / 'x.md').exists()
+
+
 @pytest.mark.parametrize(
     ('claim', 'facts'),
     [
