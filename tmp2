@@ -1,0 +1,26 @@
+STATUS: IN PROGRESS
+
+Reviewed/attacked:
+- Agent B contract
+- repository operating contracts
+- current CMD:B scope
+
+Planned attack matrix:
+1. malformed eval input
+2. missing fields
+3. extreme numeric values
+4. empty suites
+5. invalid growth facts
+6. numeric-claim mismatch
+7. filesystem/path behavior
+8. CLI failure modes
+9. command/tool misuse boundaries
+10. timeout/resource exhaustion cases
+
+Baseline commands to run:
+- inspect clean checkout quickstart
+- run existing test suite
+- collect exact outputs
+
+Next falsification attempt: establish V0 baseline before Agent A PR review.
+Blockers: none
