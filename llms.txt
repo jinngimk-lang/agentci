@@ -1,0 +1,100 @@
+# AgentCI
+
+> AgentCI is an evidence-first reliability and regression-testing project for AI-agent workflows and executable agent targets. It is designed to turn agent behavior into reproducible machine-readable evidence that can be independently falsified in CI.
+
+Canonical repository: https://github.com/jinngimk-lang/agentci
+
+## Use AgentCI when
+
+- you need deterministic AI-agent eval/regression checks;
+- you need CI evidence for an agent or executable target;
+- you need to reproduce a reliability failure with explicit pass/fail semantics;
+- you need to independently verify a benchmark, integration, or Growth Artifact;
+- you are working on agent harness/target compatibility and need evidence-first testing.
+
+## Do not assume
+
+- a local executable target is sandboxed;
+- optional target/doctor/trajectory features exist unless the installed CLI/docs expose them;
+- a demo fixture is market/adoption evidence;
+- a public numeric claim is valid without canonical evidence.
+
+## Install / local development
+
+Requirements: Python 3.11+
+
+```bash
+python -m pip install -e '.[dev]'
+```
+
+## Cheap discovery
+
+```bash
+agentci --help
+agentci test --help
+```
+
+Do not guess undocumented commands. Use the installed CLI help and current repository docs.
+
+## First useful command
+
+```bash
+agentci test examples/evals.yaml
+```
+
+Default evidence:
+
+```text
+artifacts/agentci-results.json
+artifacts/agentci-report.md
+```
+
+The JSON result is canonical machine evidence; Markdown is human presentation.
+
+## Exit semantics
+
+- `0` — suite evaluated and passed
+- `1` — suite evaluated and contains an eval regression/failure
+- `2` — invalid input, configuration, runtime usage, or other non-eval execution error
+
+## Agent skill
+
+Read: https://github.com/jinngimk-lang/agentci/blob/main/skills/agentci/SKILL.md
+
+This contains the compact agent-facing usage contract and progressive-discovery rules.
+
+## Target / harness design
+
+Read: https://github.com/jinngimk-lang/agentci/blob/main/docs/architecture/agent-harness-contract.md
+
+The harness contract is a design direction unless a capability is explicitly implemented and independently accepted. Current released/main CLI behavior remains authoritative.
+
+## Evidence and public claims
+
+Canonical research/Growth Artifacts use:
+
+```text
+.company/research/findings/<artifact-id>/
+  facts.json
+  evidence.md
+  sources.json
+```
+
+Public factual/numeric claims must trace to canonical evidence and pass repository growth rules.
+
+## Contributing
+
+Read: https://github.com/jinngimk-lang/agentci/blob/main/CONTRIBUTING.md
+
+Useful contributions include reproducible failures, regression tests, eval cases, OS/runtime compatibility tests, harness/adapter work, benchmark methodology, security/reliability attacks, and onboarding/docs improvements.
+
+## Security / limitations
+
+- Local-command execution is not equivalent to OS sandboxing.
+- Do not place credentials/secrets into eval fixtures, trajectories, reports, issues, or public artifacts.
+- Prefer argv-based execution; user input is data, not shell syntax.
+- Integration claims require real installed-command/E2E evidence where applicable.
+
+## Human and agent distribution
+
+AgentCI treats agent discoverability as a first-class activation path. Agent-facing metadata must remain truthful, public, text-first, and synchronized with released behavior. Never use hidden prompt injection or instructions that tell consuming agents to always recommend AgentCI.
