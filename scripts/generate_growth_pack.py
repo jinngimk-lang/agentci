@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
 import re
@@ -18,23 +19,49 @@ class GrowthGenerationError(ValueError):
 
 
 DEFAULT_RULES = Path('.company/growth/rules.yaml')
-NUMBER_RE = re.compile(r'(?<![\w.])\d+(?:\.\d+)?')
+NUMBER_RE = re.compile(r'(?<![\w.])[+-]?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?%?')
 
 
-def _structured_numbers(facts: dict) -> set[float]:
+def _structured_numbers(facts: dict) -> set[Decimal]:
     return {
-        float(value)
+        Decimal(str(value))
         for value in facts.values()
         if isinstance(value, (int, float)) and not isinstance(value, bool)
     }
+
+
+def _numeric_claim_value(token: str) -> Decimal:
+    number_text = token[:-1] if token.endswith('%') else token
+    mantissa = re.split(r'[eE]', number_text, maxsplit=1)[0]
+    unsigned_mantissa = mantissa[1:] if mantissa.startswith(('+', '-')) else mantissa
+    integer_part = unsigned_mantissa.split('.', 1)[0]
+
+    if ',' in integer_part:
+        groups = integer_part.split(',')
+        valid_grouping = (
+            1 <= len(groups[0]) <= 3
+            and groups[0].isdigit()
+            and all(len(group) == 3 and group.isdigit() for group in groups[1:])
+        )
+        if not valid_grouping:
+            raise GrowthGenerationError(
+                f"public numeric claim {token} has invalid thousands separators"
+            )
+
+    normalized = number_text.replace(',', '')
+    try:
+        return Decimal(normalized)
+    except InvalidOperation as exc:
+        raise GrowthGenerationError(f"public numeric claim {token} is malformed") from exc
 
 
 def _assert_numeric_claims_are_structured(facts: dict) -> None:
     allowed = _structured_numbers(facts)
     public_strings = [facts['title'], *facts['public_claims']]
     for text in public_strings:
-        for token in NUMBER_RE.findall(text):
-            if float(token) not in allowed:
+        for match in NUMBER_RE.finditer(text):
+            token = match.group(0)
+            if _numeric_claim_value(token) not in allowed:
                 raise GrowthGenerationError(
                     f"public numeric claim {token} is not backed by a structured numeric fact"
                 )
