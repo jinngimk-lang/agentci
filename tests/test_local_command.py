@@ -1,6 +1,10 @@
 import json
+import os
 from pathlib import Path
+import signal
 import sys
+
+import pytest
 
 from agentci.runner import run_suite
 
@@ -41,6 +45,47 @@ def test_timeout_is_a_normal_failed_case_even_when_false_was_expected(tmp_path: 
     assert case.passed is False
     assert case.actual_success is False
     assert any('timed out' in reason for reason in case.failure_reasons)
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason='process-state assertion uses Linux /proc')
+def test_timeout_terminates_descendant_processes(tmp_path: Path):
+    pid_file = tmp_path / 'descendant.pid'
+    child_code = 'import time; time.sleep(20)'
+    script = write_script(tmp_path / 'target.py', f'''
+from pathlib import Path
+import subprocess, sys, time
+child = subprocess.Popen(
+    [sys.executable, '-c', {child_code!r}],
+    stdin=subprocess.DEVNULL,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+)
+Path({str(pid_file)!r}).write_text(str(child.pid), encoding='utf-8')
+time.sleep(20)
+''')
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 2.5, expected_success=False)
+    result = run_suite(suite, tmp_path / 'out')
+    assert result.cases[0].passed is False
+    assert pid_file.exists(), 'reproduction did not spawn the descendant before timeout'
+    pid = int(pid_file.read_text(encoding='utf-8'))
+
+    def running() -> bool:
+        stat = Path(f'/proc/{pid}/stat')
+        if stat.exists():
+            fields = stat.read_text(encoding='utf-8').split()
+            if len(fields) > 2 and fields[2] == 'Z':
+                return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        return True
+
+    try:
+        assert running() is False, 'descendant survived AgentCI timeout cleanup'
+    finally:
+        if running():
+            os.kill(pid, signal.SIGKILL)
 
 
 def test_nonzero_exit_is_a_normal_failed_case(tmp_path: Path):
