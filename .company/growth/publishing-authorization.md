@@ -24,13 +24,13 @@ When tooling/credentials are actually connected and the platform permits the act
 - demo/video scripts and posts where a real visual artifact exists;
 - truthful public agent-discovery updates such as `llms.txt`, `SKILL.md`, README/package metadata, release notes, examples, schemas/contracts when implemented, and legitimate agent/tool/Skill/MCP/catalog listings when technically verified and submissions are permitted.
 
-The Supervisor may adapt copy per platform and choose timing based on evidence, audience fit, community norms, and agent-discovery needs.
+The Supervisor may adapt copy per platform and choose timing based on evidence, audience fit, community norms, language, and agent-discovery needs.
 
 ## Dual distribution requirement
 
 Promotion should target both humans and capable AI agents.
 
-For every suitable Growth Artifact, consider two separate outputs:
+For every suitable Growth Artifact, produce separate human-facing and agent-facing outputs.
 
 ### Human Campaign Pack
 
@@ -53,6 +53,31 @@ Agent-facing material should make it easy for an unfamiliar agent to determine:
 Update the relevant public surfaces when a capability materially changes: `llms.txt`, `skills/agentci/SKILL.md`, README, CLI help, package/release metadata, examples, schemas/contracts, evidence links, or legitimate ecosystem listings.
 
 Do not use identical human marketing copy as agent metadata; the two audiences have different retrieval and activation needs.
+
+## Three-version release bundle
+
+When a release or Growth Artifact is actually eligible for publication, publish or prepare these three canonical variants from the **same underlying evidence**:
+
+1. **Chinese human version** — compelling Chinese-native launch/research copy for Chinese-speaking developers and communities.
+2. **English human version** — English-native launch/research copy for global developer communities; do not merely translate word-for-word when a platform-native rewrite is stronger.
+3. **Agent-native version** — machine-oriented capability metadata and invocation guidance for agents, search/RAG systems, coding agents, tool/Skill/MCP catalogues, and other legitimate agent discovery surfaces.
+
+The three variants must agree on facts, version, supported capabilities, limitations, benchmark numbers, security claims, and evidence links. Language/style may differ; truth may not.
+
+For a publishable release, the default publication sequence is:
+
+```text
+canonical evidence / Growth Artifact
+→ GitHub-native release/research artifact
+→ Chinese human distribution
+→ English human distribution
+→ Agent-native discovery surfaces
+→ log URLs / timestamps / downstream evidence
+```
+
+If only some external publishing actions are connected, publish on the connected legitimate surfaces and store the remaining finished variants as **not yet published**. Do not delay a valid connected publication merely because an unrelated platform is unavailable.
+
+Do not ask the owner for another per-release or per-language approval once the technical gate and Growth Gate pass.
 
 ## Content standard
 
@@ -106,6 +131,7 @@ For every external publication/listing that can be executed, record when practic
 
 - Growth Artifact ID;
 - platform/registry/surface;
+- language or `agent-native`;
 - URL;
 - timestamp;
 - exact or canonical human copy / agent metadata;
