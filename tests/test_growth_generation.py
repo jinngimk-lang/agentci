@@ -11,6 +11,24 @@ RULES = ROOT / '.company/growth/rules.yaml'
 FIXTURES = ROOT / 'tests/fixtures/growth'
 
 
+def release_artifact(tmp_path: Path, artifact_id: str, claim: str, **extra_facts) -> Path:
+    d = tmp_path / artifact_id
+    d.mkdir()
+    facts = {
+        'artifact_id': artifact_id,
+        'category': 'release',
+        'title': 'Numeric claim test',
+        'public_claims': [claim],
+        'meaningful_changes': 1,
+        'major_capability': True,
+        **extra_facts,
+    }
+    (d / 'facts.json').write_text(json.dumps(facts), encoding='utf-8')
+    (d / 'evidence.md').write_text('# Evidence\n', encoding='utf-8')
+    (d / 'sources.json').write_text('{"sources": []}', encoding='utf-8')
+    return d
+
+
 def test_valid_artifact_generates_complete_draft_pack(tmp_path: Path):
     out = generate_growth_pack(FIXTURES / 'valid-benchmark', tmp_path, RULES)
     expected = {
@@ -37,6 +55,49 @@ def test_security_not_ready_generates_nothing(tmp_path: Path):
 def test_public_numeric_claim_must_match_structured_numeric_fact(tmp_path: Path):
     with pytest.raises(GrowthGenerationError, match='999'):
         generate_growth_pack(FIXTURES / 'invalid-claims', tmp_path, RULES)
+
+
+def test_grouped_number_cannot_be_backed_by_separate_one_and_zero_facts(tmp_path: Path):
+    artifact = release_artifact(
+        tmp_path,
+        'grouped-mismatch',
+        'We reached 1,000 users',
+        unrelated_zero=0,
+    )
+    with pytest.raises(GrowthGenerationError, match='1,000'):
+        generate_growth_pack(artifact, tmp_path / 'out', RULES)
+
+
+def test_grouped_number_matches_single_structured_value(tmp_path: Path):
+    artifact = release_artifact(tmp_path, 'grouped-match', 'We reached 1,000 users', users=1000)
+    out = generate_growth_pack(artifact, tmp_path / 'out', RULES)
+    assert (out / 'x.md').exists()
+
+
+@pytest.mark.parametrize(
+    ('claim', 'facts'),
+    [
+        ('Latency changed by -20%', {'delta_percent': -20}),
+        ('Processed 1e3 events', {'events': 1000}),
+        ('Processed +1.5e3 events', {'events': 1500}),
+        ('Rate reached 20%', {'rate_percent': 20}),
+    ],
+)
+def test_signed_scientific_and_percentage_claims_use_numeric_value(tmp_path: Path, claim: str, facts: dict):
+    artifact = release_artifact(tmp_path, 'normalized-number', claim, **facts)
+    out = generate_growth_pack(artifact, tmp_path / 'out', RULES)
+    assert (out / 'x.md').exists()
+
+
+def test_malformed_thousands_grouping_is_rejected(tmp_path: Path):
+    artifact = release_artifact(
+        tmp_path,
+        'bad-grouping',
+        'We reached 1,00 users',
+        unrelated_zero=0,
+    )
+    with pytest.raises(GrowthGenerationError, match='1,00'):
+        generate_growth_pack(artifact, tmp_path / 'out', RULES)
 
 
 def test_all_generated_public_numbers_exist_as_structured_facts(tmp_path: Path):
