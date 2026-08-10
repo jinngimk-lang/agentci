@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentci.dev/schemas/trajectory-event.schema.json",
+  "title": "AgentCI Trajectory Event v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "case_id", "seq", "kind"],
+  "properties": {
+    "schema_version": {"const": "agentci-trajectory-event/v0.1"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "case_id": {"type": "string", "minLength": 1, "maxLength": 512},
+    "seq": {"type": "integer", "minimum": 0},
+    "kind": {
+      "type": "string",
+      "enum": ["message", "tool_call", "tool_result", "checkpoint", "artifact", "error"]
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "name": {"type": "string", "maxLength": 256},
+    "status": {"type": "string", "enum": ["started", "ok", "failed", "blocked"]},
+    "duration_ms": {"type": "number", "minimum": 0},
+    "metadata": {"type": "object"},
+    "artifact_refs": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {"type": "string", "minLength": 1, "maxLength": 2048}
+    }
+  }
+}
