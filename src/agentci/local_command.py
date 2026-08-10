@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import time
 from typing import Any
@@ -28,9 +29,11 @@ def _parse_output(stdout: str, started: float) -> Actual:
         return _error(started, "local command output.success must be a boolean")
     cost_usd = raw.get("cost_usd")
     if cost_usd is not None:
-        if isinstance(cost_usd, bool) or not isinstance(cost_usd, (int, float)) or cost_usd < 0:
-            return _error(started, "local command output.cost_usd must be a non-negative number")
+        if isinstance(cost_usd, bool) or not isinstance(cost_usd, (int, float)):
+            return _error(started, "local command output.cost_usd must be a non-negative finite number")
         cost_usd = float(cost_usd)
+        if not math.isfinite(cost_usd) or cost_usd < 0:
+            return _error(started, "local command output.cost_usd must be a non-negative finite number")
     return Actual(success=success, latency_ms=_elapsed_ms(started), cost_usd=cost_usd)
 
 
@@ -40,8 +43,7 @@ def execute_local_command(target: LocalCommandTarget, case: EvalCase) -> Actual:
     try:
         completed = subprocess.run(
             list(target.command),
-            input=payload,
-            text=True,
+            input=payload.encode("utf-8"),
             capture_output=True,
             timeout=target.timeout_seconds,
             shell=False,
@@ -56,4 +58,8 @@ def execute_local_command(target: LocalCommandTarget, case: EvalCase) -> Actual:
 
     if completed.returncode != 0:
         return _error(started, f"local command exited with code {completed.returncode}")
-    return _parse_output(completed.stdout, started)
+    try:
+        stdout = completed.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return _error(started, "local command stdout must be UTF-8")
+    return _parse_output(stdout, started)
