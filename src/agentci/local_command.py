@@ -3,12 +3,17 @@ from __future__ import annotations
 import json
 import math
 import os
+import queue
 import signal
 import subprocess
+import threading
 import time
-from typing import Any
+from typing import Any, BinaryIO
 
 from .config import Actual, EvalCase, LocalCommandTarget
+
+LOCAL_COMMAND_OUTPUT_LIMIT_BYTES = 1024 * 1024
+_READ_CHUNK_BYTES = 64 * 1024
 
 
 def _elapsed_ms(started: float) -> float:
@@ -62,11 +67,39 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
         process.kill()
 
     try:
-        process.communicate(timeout=5)
+        process.wait(timeout=5)
     except subprocess.TimeoutExpired:
         if process.poll() is None:
             process.kill()
-        process.communicate()
+        process.wait()
+
+
+def _read_bounded_stream(
+    stream: BinaryIO,
+    name: str,
+    sink: bytearray | None,
+    overflow: queue.Queue[str],
+) -> None:
+    total = 0
+    try:
+        while True:
+            chunk = stream.read(_READ_CHUNK_BYTES)
+            if not chunk:
+                return
+            total += len(chunk)
+            if sink is not None and len(sink) < LOCAL_COMMAND_OUTPUT_LIMIT_BYTES:
+                remaining = LOCAL_COMMAND_OUTPUT_LIMIT_BYTES - len(sink)
+                sink.extend(chunk[:remaining])
+            if total > LOCAL_COMMAND_OUTPUT_LIMIT_BYTES:
+                overflow.put(name)
+                return
+    finally:
+        stream.close()
+
+
+def _join_readers(readers: tuple[threading.Thread, threading.Thread]) -> None:
+    for reader in readers:
+        reader.join(timeout=5)
 
 
 def execute_local_command(target: LocalCommandTarget, case: EvalCase) -> Actual:
@@ -90,16 +123,70 @@ def execute_local_command(target: LocalCommandTarget, case: EvalCase) -> Actual:
     except OSError as exc:
         return _error(started, f"local command could not start: {exc}")
 
+    assert process.stdin is not None
+    assert process.stdout is not None
+    assert process.stderr is not None
+
+    stdout = bytearray()
+    overflow: queue.Queue[str] = queue.Queue()
+    stdout_reader = threading.Thread(
+        target=_read_bounded_stream,
+        args=(process.stdout, "stdout", stdout, overflow),
+        daemon=True,
+    )
+    stderr_reader = threading.Thread(
+        target=_read_bounded_stream,
+        args=(process.stderr, "stderr", None, overflow),
+        daemon=True,
+    )
+    readers = (stdout_reader, stderr_reader)
+    for reader in readers:
+        reader.start()
+
     try:
-        stdout, _ = process.communicate(input=payload.encode("utf-8"), timeout=target.timeout_seconds)
-    except subprocess.TimeoutExpired:
+        process.stdin.write(payload.encode("utf-8"))
+        process.stdin.close()
+    except (BrokenPipeError, OSError):
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
+
+    deadline = time.monotonic() + target.timeout_seconds
+    while True:
+        try:
+            overflow_name = overflow.get_nowait()
+        except queue.Empty:
+            overflow_name = None
+        if overflow_name is not None:
+            _terminate_process_tree(process)
+            _join_readers(readers)
+            return _error(
+                started,
+                f"local command {overflow_name} exceeded {LOCAL_COMMAND_OUTPUT_LIMIT_BYTES} byte limit",
+            )
+        if process.poll() is not None and not any(reader.is_alive() for reader in readers):
+            break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            _terminate_process_tree(process)
+            _join_readers(readers)
+            return _error(started, f"local command timed out after {target.timeout_seconds:g} seconds")
+        try:
+            overflow_name = overflow.get(timeout=min(0.01, remaining))
+        except queue.Empty:
+            continue
         _terminate_process_tree(process)
-        return _error(started, f"local command timed out after {target.timeout_seconds:g} seconds")
+        _join_readers(readers)
+        return _error(
+            started,
+            f"local command {overflow_name} exceeded {LOCAL_COMMAND_OUTPUT_LIMIT_BYTES} byte limit",
+        )
 
     if process.returncode != 0:
         return _error(started, f"local command exited with code {process.returncode}")
     try:
-        decoded_stdout = stdout.decode("utf-8")
+        decoded_stdout = bytes(stdout).decode("utf-8")
     except UnicodeDecodeError:
         return _error(started, "local command stdout must be UTF-8")
     return _parse_output(decoded_stdout, started)
