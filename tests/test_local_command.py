@@ -125,3 +125,27 @@ def test_non_finite_cost_is_a_normal_failed_case(tmp_path: Path):
     result = run_suite(suite, tmp_path / 'out')
     assert result.cases[0].passed is False
     assert any('cost_usd' in reason for reason in result.cases[0].failure_reasons)
+
+
+def test_excessive_stderr_is_a_normal_failed_case(tmp_path: Path):
+    script = write_script(
+        tmp_path / 'target.py',
+        'import sys\nsys.stderr.buffer.write(b"x" * (1024 * 1024 + 1))\nprint(\'{"success": true}\')\n',
+    )
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
+    result = run_suite(suite, tmp_path / 'out')
+    case = result.cases[0]
+    assert case.passed is False
+    assert any('stderr exceeded' in reason for reason in case.failure_reasons)
+
+
+def test_excessive_stdout_has_explicit_output_limit_failure(tmp_path: Path):
+    script = write_script(
+        tmp_path / 'target.py',
+        'import sys\nsys.stdout.buffer.write(b"x" * (1024 * 1024 + 1))\n',
+    )
+    suite = write_suite(tmp_path / 'suite.yaml', [sys.executable, str(script)], 5, expected_success=False)
+    result = run_suite(suite, tmp_path / 'out')
+    case = result.cases[0]
+    assert case.passed is False
+    assert any('stdout exceeded' in reason for reason in case.failure_reasons)
