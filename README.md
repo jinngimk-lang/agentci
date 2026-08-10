@@ -121,6 +121,26 @@ GitHub **branch protection** is authoritative. Use separate least-privilege iden
 
 See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup.md) for the setup checklist and [`docs/operations/labels.md`](docs/operations/labels.md) for the issue state machine.
 
+## Contributing
+
+AgentCI is open source and welcomes contributors. Useful contributions include reproducible bug reports, regression tests, realistic eval cases, target/harness compatibility work, benchmark methodology, security/reliability review, documentation, and first-run improvements.
+
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). If you want to help but do not know where to begin, look for bounded community-sized work or open an issue describing the exact environment/problem you can reproduce.
+
+The long-term community loop is documented in [`docs/community-growth.md`](docs/community-growth.md): verified results should attract real users and contributors, whose issues, benchmarks, and PRs then become product evidence for the next Agent A/B cycle.
+
+## Open-source distribution
+
+When a real Growth Artifact exists, AgentCI should use GitHub itself as the first distribution surface—README, Releases, Discussions when enabled, reproducible benchmark/research artifacts, and concrete contribution invitations—then expand to platform-native posts on developer/professional channels that fit the artifact.
+
+We optimize for:
+
+```text
+repository visit → install → first successful run → issue/question → contribution → verified PR → repeat contributor
+```
+
+Stars and impressions help discovery, but they are not treated as proof of adoption.
+
 ## What V0 intentionally does not do
 
 No real provider adapters, no hosted dashboard, no MCP firewall, no production secrets, no billing, no automated community replies, and no external social-posting API. Those are V1 candidates only after adoption evidence justifies them.
