@@ -51,6 +51,8 @@ target:
 
 AgentCI launches the argv list directly with no shell interpolation. Shell command strings are rejected. The process inherits the directory where `agentci` was invoked.
 
+**Security boundary:** `local-command` executes the program and argv declared by the suite. Only run local-command suites from trusted repositories/branches. Avoiding implicit shell interpolation reduces injection risk, but it does not make untrusted command configuration safe to execute.
+
 For each case, AgentCI writes one JSON object plus a newline to the target's **stdin**:
 
 ```json
@@ -63,9 +65,9 @@ The target must write one JSON object to stdout containing at least a boolean `s
 {"success":true}
 ```
 
-It may also return a non-negative `cost_usd`. AgentCI ignores target-supplied latency and measures elapsed latency itself. `timeout_seconds` defaults to 10 seconds when omitted and is enforced separately for every case.
+It may also return a non-negative finite `cost_usd`. AgentCI ignores target-supplied latency and measures elapsed latency itself. `timeout_seconds` defaults to 10 seconds when omitted, must be positive and finite, and is enforced separately for every case.
 
-Timeouts, missing executables, non-zero exits, malformed JSON, missing/invalid `success`, or invalid `cost_usd` are reported as normal failed cases rather than uncaught crashes. When a `target` is configured, case-level fixture `actual` values are rejected so runtime evidence cannot be mixed ambiguously with fixtures.
+Timeouts, missing executables, non-zero exits, malformed/non-UTF-8 output, missing/invalid `success`, or invalid `cost_usd` are reported as normal failed cases rather than uncaught crashes. When a `target` is configured, case-level fixture `actual` values are rejected so runtime evidence cannot be mixed ambiguously with fixtures.
 
 ## Eval format
 
