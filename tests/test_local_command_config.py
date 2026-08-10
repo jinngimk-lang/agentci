@@ -84,6 +84,21 @@ cases:
         load_suite(path)
 
 
+def test_rejects_non_finite_timeout(tmp_path: Path):
+    path = write(tmp_path / 'suite.yaml', '''
+suite: local-demo
+target:
+  type: local-command
+  command: [python, target.py]
+  timeout_seconds: .inf
+cases:
+  - id: a
+    expected: {success: true}
+''')
+    with pytest.raises(ConfigError, match='timeout_seconds.*finite'):
+        load_suite(path)
+
+
 def test_rejects_fixture_actual_when_target_is_configured(tmp_path: Path):
     path = write(tmp_path / 'suite.yaml', '''
 suite: local-demo
