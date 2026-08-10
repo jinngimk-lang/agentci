@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import html
 import json
 from pathlib import Path
+import re
 
 from .scoring import SuiteResult
+
+_MARKDOWN_ESCAPE_RE = re.compile(r'([\\`*_{}\[\]()#+\-.!|>])')
+
+
+def _markdown_text(value: str) -> str:
+    single_line = value.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+    escaped_html = html.escape(single_line, quote=False)
+    return _MARKDOWN_ESCAPE_RE.sub(r'\\\1', escaped_html)
 
 
 def write_reports(result: SuiteResult, output_dir: Path) -> tuple[Path, Path]:
@@ -14,7 +24,7 @@ def write_reports(result: SuiteResult, output_dir: Path) -> tuple[Path, Path]:
     json_path.write_text(json.dumps(asdict(result), indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
 
     lines = [
-        f'# AgentCI Report: {result.suite}',
+        f'# AgentCI Report: {_markdown_text(result.suite)}',
         '',
         f'- Total: {result.total_cases}',
         f'- Passed: {result.passed_cases}',
@@ -27,9 +37,11 @@ def write_reports(result: SuiteResult, output_dir: Path) -> tuple[Path, Path]:
         '|---|---|---:|---:|---|',
     ]
     for case in result.cases:
-        reasons = '; '.join(case.failure_reasons) if case.failure_reasons else '—'
+        reasons = _markdown_text('; '.join(case.failure_reasons)) if case.failure_reasons else '—'
         latency = '—' if case.latency_ms is None else f'{case.latency_ms:g}'
         cost = '—' if case.cost_usd is None else f'{case.cost_usd:g}'
-        lines.append(f'| {case.id} | {"PASS" if case.passed else "FAIL"} | {latency} | {cost} | {reasons} |')
+        lines.append(
+            f'| {_markdown_text(case.id)} | {"PASS" if case.passed else "FAIL"} | {latency} | {cost} | {reasons} |'
+        )
     md_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     return json_path, md_path
