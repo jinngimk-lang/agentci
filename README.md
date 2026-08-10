@@ -6,7 +6,7 @@ AgentCI V0 is a GitHub-first prototype for testing AI-agent behavior and turning
 Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/release → Growth Pack draft → human publish
 ```
 
-V0 is deliberately deterministic. It does **not** call external LLM providers; eval files contain fixture-style `actual` results so scoring, reporting, governance, and growth policy can be tested reliably.
+V0 keeps deterministic fixture evals for stable regression checks and now also supports one bounded **local-command** target for evaluating a real local process. It still does **not** call external LLM providers, HTTP services, or MCP endpoints.
 
 ## 5-minute quickstart
 
@@ -24,7 +24,7 @@ artifacts/agentci-results.json
 artifacts/agentci-report.md
 ```
 
-A passing suite exits `0`; an eval regression exits `1`; malformed input/usage exits `2`.
+A passing suite exits `0`; an eval regression or target execution failure exits `1`; malformed suite input/CLI usage exits `2`.
 
 Try the intentionally failing fixture:
 
@@ -32,7 +32,48 @@ Try the intentionally failing fixture:
 agentci test examples/evals-failing.yaml
 ```
 
+## Run a local agent/process
+
+A suite can declare one argv-based local command target:
+
+```bash
+agentci test examples/evals-local-command.yaml
+```
+
+Example target configuration:
+
+```yaml
+target:
+  type: local-command
+  command: [python, examples/local_target.py]
+  timeout_seconds: 2
+```
+
+AgentCI launches the argv list directly with no shell interpolation. Shell command strings are rejected. The process inherits the directory where `agentci` was invoked.
+
+**Security boundary:** `local-command` executes the program and argv declared by the suite. Only run local-command suites from trusted repositories/branches. Avoiding implicit shell interpolation reduces injection risk, but it does not make untrusted command configuration safe to execute.
+
+For each case, AgentCI writes one JSON object plus a newline to the target's **stdin**:
+
+```json
+{"id":"refund-confirmation","input":"Refund order #123"}
+```
+
+The target must write one JSON object to stdout containing at least a boolean `success`:
+
+```json
+{"success":true}
+```
+
+It may also return a non-negative finite `cost_usd`. AgentCI ignores target-supplied latency and measures elapsed latency itself. `timeout_seconds` defaults to 10 seconds when omitted, must be positive and finite, and is enforced separately for every case.
+
+AgentCI limits **stdout and stderr independently to 1 MiB per case**. Exceeding either limit terminates the target process tree and is reported as a normal failed case; stderr is drained only for bounding and is not retained in the result. This bounds AgentCI's capture memory for verbose or malfunctioning targets while keeping stdout available for the JSON result contract.
+
+Timeouts, output-limit breaches, missing executables, non-zero exits, malformed/non-UTF-8 output, missing/invalid `success`, or invalid `cost_usd` are reported as normal failed cases rather than uncaught crashes. On POSIX, AgentCI starts each target in a separate session and terminates the whole process group on timeout or output-limit breach; descendant-cleanup behavior is regression-tested on Linux. On Windows, AgentCI creates a new process group and attempts tree termination with `taskkill /T /F`, with direct-process kill as a fallback if that OS command cannot run. These execution bounds are not a CPU, total-memory, filesystem, network, or syscall sandbox. When a `target` is configured, case-level fixture `actual` values are rejected so runtime evidence cannot be mixed ambiguously with fixtures.
+
 ## Eval format
+
+Fixture mode remains supported unchanged:
 
 ```yaml
 suite: demo
@@ -47,6 +88,22 @@ cases:
       success: true
       max_latency_ms: 1500
       max_cost_usd: 0.05
+```
+
+Local-command mode omits `actual` because AgentCI produces it by executing the target:
+
+```yaml
+suite: local-command-demo
+target:
+  type: local-command
+  command: [python, examples/local_target.py]
+  timeout_seconds: 2
+cases:
+  - id: refund-confirmation
+    input: "Refund order #123"
+    expected:
+      success: true
+      max_latency_ms: 2000
 ```
 
 AgentCI checks expected success plus optional maximum latency/cost and writes per-case failure reasons.
@@ -106,12 +163,12 @@ These are operating-policy defaults, not claims about market truth.
 ## Repository architecture
 
 ```text
-src/agentci/                 deterministic eval CLI
+src/agentci/                 deterministic eval CLI + local-command adapter
 scripts/                     growth validation/generation
 .agents/                     Agent A / Agent B system contracts
 .company/                    strategy, metrics, decisions, evidence, growth policy
 .github/                     issue/PR contracts and CI
-examples/                    passing + failing eval suites
+examples/                    fixture suites + runnable local-command example
 tests/                       unit, policy, repository-contract, and E2E tests
 ```
 
@@ -123,4 +180,4 @@ See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup
 
 ## What V0 intentionally does not do
 
-No real provider adapters, no hosted dashboard, no MCP firewall, no production secrets, no billing, no automated community replies, and no external social-posting API. Those are V1 candidates only after adoption evidence justifies them.
+No HTTP/provider/MCP adapters, no hosted dashboard, no production secrets, no billing, no automated community replies, and no external social-posting API. Those are V1 candidates only after adoption evidence justifies them.

@@ -29,7 +29,11 @@ class SuiteResult:
 
 
 def score_case(case: EvalCase) -> CaseResult:
+    if case.actual is None:
+        raise ValueError("case actual result is missing")
     reasons: list[str] = []
+    if case.actual.error is not None:
+        reasons.append(case.actual.error)
     if case.actual.success != case.expected.success:
         reasons.append(f"success expected {case.expected.success} but got {case.actual.success}")
     if case.expected.max_latency_ms is not None:

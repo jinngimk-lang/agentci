@@ -37,7 +37,27 @@ def test_full_v0_loop(tmp_path: Path):
     assert 'NO AUTO-PUBLISH IN V0' in (pack / 'publish-checklist.md').read_text()
 
 
+def test_local_command_example_runs_end_to_end(tmp_path: Path):
+    output = tmp_path / 'local-command'
+    result = run(
+        sys.executable, '-m', 'agentci.cli', 'test', 'examples/evals-local-command.yaml',
+        '--output-dir', str(output),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (output / 'agentci-results.json').exists()
+    assert (output / 'agentci-report.md').exists()
+
+
 def test_readme_explains_quickstart_and_safety_boundary():
     text = (ROOT / 'README.md').read_text(encoding='utf-8')
-    for phrase in ['agentci test examples/evals.yaml', 'Agent A', 'Agent B', 'Growth Pack', 'no auto-publish', 'branch protection']:
+    for phrase in [
+        'agentci test examples/evals.yaml',
+        'agentci test examples/evals-local-command.yaml',
+        'stdin',
+        'Agent A',
+        'Agent B',
+        'Growth Pack',
+        'no auto-publish',
+        'branch protection',
+    ]:
         assert phrase.lower() in text.lower()
