@@ -19,7 +19,7 @@ class GrowthGenerationError(ValueError):
 
 
 DEFAULT_RULES = Path('.company/growth/rules.yaml')
-NUMBER_RE = re.compile(r'(?<![\w.])[+-]?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?%?')
+NUMBER_RE = re.compile(r'(?<![\w.])[+-]?\d(?:\d|,(?=[\d,]))*(?:\.\d+)?(?:[eE][+-]?\d+)?%?')
 
 
 def _structured_numbers(facts: dict) -> set[Decimal]:
