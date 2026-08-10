@@ -82,6 +82,38 @@ Focus on stable onboarding, demos, release readiness, public reproducibility, an
 ### Phase 4 — Distribution Operations
 Only after explicit owner authorization. Use distribution evidence to drive product priorities. Never optimize solely for impressions/stars.
 
+## Agent harness / target contract policy
+
+For executable targets, provider adapters, tool adapters, or future agent harness integrations, the Supervisor must use:
+
+- `docs/architecture/agent-harness-contract.md` as the design boundary;
+- `docs/testing/target-adapter-test-plan-template.md` as the implementation-evidence template;
+- `schemas/target-manifest.schema.json` and `schemas/trajectory-event.schema.json` when the corresponding H2/H3 features are authorized;
+- `skills/agentci/SKILL.md` as the progressive-disclosure entry point for agent-facing usage.
+
+The integration sequence tracked in issue #19 is authoritative unless later evidence supersedes it:
+
+```text
+H1 stabilize executable target
+→ H2 manifest / doctor / installed-entrypoint conformance
+→ H3 bounded trajectory evidence
+→ H4 ecosystem/registry only after real multi-adapter demand
+```
+
+Do not expand an active reliability-critical PR merely because an external project introduced an attractive pattern. Prefer a separate, reversible experiment after the current claim is accepted.
+
+For harness-related work, require evidence for these principles:
+
+- machine-readable structured contract;
+- inspect/compatibility checks before expensive execution when supported;
+- explicit error taxonomy and fail-closed protocol behavior;
+- bounded time/output/process behavior without pretending it is a full sandbox;
+- installed public-entrypoint E2E from an unrelated working directory;
+- observable outcome/artifact verification when available rather than trusting exit code or self-report alone;
+- optional trajectory history remains bounded, ordered, attributable to a run/case, and cheap to summarize.
+
+Treat CLI-Anything as architectural inspiration only. AgentCI must not drift into GUI-to-CLI generation, application rendering, REPL theming, or a package registry without separate user/adoption evidence.
+
 ## Distribution authorization policy
 
 Default state is **Draft Only**.
