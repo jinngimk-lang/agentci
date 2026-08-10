@@ -17,6 +17,7 @@ class Actual:
     success: bool
     latency_ms: float | None = None
     cost_usd: float | None = None
+    error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -27,10 +28,16 @@ class Expected:
 
 
 @dataclass(frozen=True)
+class LocalCommandTarget:
+    command: tuple[str, ...]
+    timeout_seconds: float
+
+
+@dataclass(frozen=True)
 class EvalCase:
     id: str
     input: str | None
-    actual: Actual
+    actual: Actual | None
     expected: Expected
 
 
@@ -38,6 +45,7 @@ class EvalCase:
 class EvalSuite:
     name: str
     cases: list[EvalCase]
+    target: LocalCommandTarget | None = None
 
 
 def _require_mapping(value: Any, where: str) -> dict[str, Any]:
@@ -60,7 +68,27 @@ def _optional_number(mapping: dict[str, Any], key: str, where: str) -> float | N
         raise ConfigError(f"{where}.{key} must be a number")
     if value < 0:
         raise ConfigError(f"{where}.{key} must be >= 0")
-    return value
+    return float(value)
+
+
+def _load_target(root: dict[str, Any]) -> LocalCommandTarget | None:
+    raw = root.get("target")
+    if raw is None:
+        return None
+    mapping = _require_mapping(raw, "target")
+    if mapping.get("type") != "local-command":
+        raise ConfigError("target.type must be 'local-command'")
+    command = mapping.get("command")
+    if not isinstance(command, list):
+        raise ConfigError("target.command must be a list of argv strings")
+    if not command or any(not isinstance(arg, str) or not arg for arg in command):
+        raise ConfigError("target.command must be a non-empty list of non-empty strings")
+    timeout_seconds = mapping.get("timeout_seconds", 10)
+    if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)):
+        raise ConfigError("target.timeout_seconds must be a number")
+    if timeout_seconds <= 0:
+        raise ConfigError("target.timeout_seconds must be > 0")
+    return LocalCommandTarget(tuple(command), float(timeout_seconds))
 
 
 def load_suite(path: str | Path) -> EvalSuite:
@@ -79,6 +107,7 @@ def load_suite(path: str | Path) -> EvalSuite:
     name = root.get("suite")
     if not isinstance(name, str) or not name.strip():
         raise ConfigError("suite must be a non-empty string")
+    target = _load_target(root)
     raw_cases = root.get("cases")
     if not isinstance(raw_cases, list):
         raise ConfigError("cases must be a list")
@@ -93,13 +122,21 @@ def load_suite(path: str | Path) -> EvalSuite:
         if case_id in seen:
             raise ConfigError(f"duplicate case id: {case_id}")
         seen.add(case_id)
-        actual_raw = _require_mapping(mapping.get("actual"), f"cases[{index}].actual")
+
+        actual: Actual | None
+        if target is None:
+            actual_raw = _require_mapping(mapping.get("actual"), f"cases[{index}].actual")
+            actual = Actual(
+                success=_require_bool(actual_raw, "success", f"cases[{index}].actual"),
+                latency_ms=_optional_number(actual_raw, "latency_ms", f"cases[{index}].actual"),
+                cost_usd=_optional_number(actual_raw, "cost_usd", f"cases[{index}].actual"),
+            )
+        else:
+            if "actual" in mapping:
+                raise ConfigError(f"cases[{index}].actual is not allowed when target is configured")
+            actual = None
+
         expected_raw = _require_mapping(mapping.get("expected"), f"cases[{index}].expected")
-        actual = Actual(
-            success=_require_bool(actual_raw, "success", f"cases[{index}].actual"),
-            latency_ms=_optional_number(actual_raw, "latency_ms", f"cases[{index}].actual"),
-            cost_usd=_optional_number(actual_raw, "cost_usd", f"cases[{index}].actual"),
-        )
         expected = Expected(
             success=_require_bool(expected_raw, "success", f"cases[{index}].expected"),
             max_latency_ms=_optional_number(expected_raw, "max_latency_ms", f"cases[{index}].expected"),
@@ -109,4 +146,4 @@ def load_suite(path: str | Path) -> EvalSuite:
         if input_value is not None and not isinstance(input_value, str):
             raise ConfigError(f"cases[{index}].input must be a string when present")
         cases.append(EvalCase(case_id, input_value, actual, expected))
-    return EvalSuite(name=name, cases=cases)
+    return EvalSuite(name=name, cases=cases, target=target)
