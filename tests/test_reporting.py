@@ -32,7 +32,7 @@ def test_markdown_report_flattens_and_escapes_suite_name(tmp_path: Path):
     report = rendered_report(tmp_path, 'ok\n- Failed: 0\n# FORGED')
     assert report.startswith('# AgentCI Report: ok \\- Failed: 0 \\# FORGED\n')
     assert '\n# FORGED\n' not in report
-    assert '\n- Failed: 0\n' not in report
+    assert report.count('\n- Failed: 0\n') == 1
 
 
 def test_markdown_report_escapes_table_delimiters_and_backslashes(tmp_path: Path):
