@@ -47,6 +47,13 @@ def test_performance_boundaries(tmp_path: Path, improvement, samples, eligible):
     assert validate_artifact(d, RULES).eligible is eligible
 
 
+@pytest.mark.parametrize('improvement', [float('nan'), float('inf'), float('-inf')])
+def test_performance_rejects_non_finite_improvement(tmp_path: Path, improvement: float):
+    d = artifact(tmp_path, category='performance', improvement_percent=improvement, samples=100)
+    with pytest.raises(ArtifactError, match='improvement_percent.*finite'):
+        validate_artifact(d, RULES)
+
+
 def test_security_requires_disclosure_ready():
     result = validate_artifact(ROOT / 'tests/fixtures/growth/security-not-ready', RULES)
     assert result.eligible is False
