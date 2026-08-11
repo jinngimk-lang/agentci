@@ -174,6 +174,14 @@ def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
     assert expected_verdict(document) == "FAIL"
 
 
+def test_pass_requires_authorized_utility_evidence():
+    document = _passing_fixture()
+    assert document["case_id"] == "sandbox-sensitive-canary-v0alpha1"
+    assert not any(event.get("event_type") == "utility" for event in document["events"])
+    _rebind_all(document)
+    assert expected_verdict(document) != "PASS"
+
+
 def test_pass_requires_effective_policy_attachment():
     document = _passing_fixture()
     document["policy_attachments"] = []
