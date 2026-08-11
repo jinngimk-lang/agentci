@@ -163,9 +163,20 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 if not workload or not aid or len(matching) != 1:
                     errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment with matching workload identity for policy epoch {epoch}")
                 else:
-                    provenance = attachment_events_by_digest.get(matching[0].get("evidence_digest"), [])
-                    if len(provenance) != 1 or not _event_not_after(provenance[0], event):
-                        errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance at or before the PASS event on both clocks")
+                    attachment = matching[0]
+                    provenance = attachment_events_by_digest.get(attachment.get("evidence_digest"), [])
+                    if len(provenance) != 1:
+                        errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one attachment effectiveness provenance event")
+                    else:
+                        provenance_event = provenance[0]
+                        if (
+                            provenance_event.get("attachment_id") != attachment.get("attachment_id")
+                            or provenance_event.get("workload_identity") != attachment.get("workload_identity")
+                            or provenance_event.get("policy_epoch") != attachment.get("policy_epoch")
+                        ):
+                            errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires matching attachment provenance identity")
+                        elif not _event_not_after(provenance_event, event):
+                            errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance at or before the PASS event on both clocks")
     return errors
 
 def _is_credible_pass(assertion: dict[str, Any]) -> bool: return assertion.get("state") == "PASS" and bool(assertion.get("evidence_event_ids"))
