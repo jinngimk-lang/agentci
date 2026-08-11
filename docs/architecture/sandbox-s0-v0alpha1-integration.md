@@ -4,7 +4,7 @@ Status: **design-stage integration head for independent Agent B review**. This i
 
 ## Purpose
 
-This document is Agent A's canonical S0 integration surface for Supervisor #24 / CMD:A #25. It integrates accepted program invariants and the current bounded inputs from B/D/E while leaving C's not-yet-delivered isolation packet explicit rather than guessed.
+This document is Agent A's canonical S0 integration surface for Supervisor #24 / CMD:A #25. It integrates accepted program invariants and the current bounded inputs from B/C/D/E without inventing provider guarantees.
 
 Canonical schema package:
 
@@ -35,7 +35,7 @@ A final `policy_digest` is insufficient for a mutable sandbox. Every immutable p
 - source principal;
 - `delta_class = contraction | expansion | lateral | no-op | unknown`.
 
-Every trajectory event and policy attachment references the policy epoch that was effective for that event. If the effective epoch cannot be established, the affected assertion is `UNVERIFIED`; it cannot contribute to PASS.
+Every trajectory event and policy attachment references the policy epoch that was effective for that event. Policy history is ordered: duplicate epochs or time regression are invalid evidence. An event cannot precede the effective wall/monotonic time of the policy epoch it claims, and its authority epoch must match that policy-history entry. If the effective epoch cannot be established, the affected assertion is `UNVERIFIED`; it cannot contribute to PASS.
 
 The EvidenceEnvelope binds an ordered `policy_history` plus `policy_history_digest` rather than only one final policy digest.
 
@@ -95,7 +95,7 @@ configured -> selected -> attached -> effective
                       \-> failed / unverified
 ```
 
-Claims that depend on policy selection require attachment evidence linking workload identity/selector, policy digest/epoch and enforcer. Missing attachment visibility yields `UNVERIFIED`, not PASS.
+Claims that depend on policy selection require attachment evidence linking workload identity/selector, policy digest/epoch and enforcer. For this S0 envelope, an `effective` attachment's `evidence_digest` must content-address the `semantic_digest` of a valid `event_type=policy-attachment` event in the same envelope. That event remains behavioral/control-plane evidence; it does not by itself prove D-style grant/decision causation. Missing or dangling attachment evidence yields `UNVERIFIED`, not PASS.
 
 ## Snapshot / restore continuity
 
@@ -117,15 +117,19 @@ A preserved socket/session after restore must be re-bound to the current authori
 
 `execution_status = completed | harness-error | evidence-invalid` is separate from the backend verdict.
 
+The S0 validator executes the Draft 2020-12 JSON Schema with date-time format checking before accepting PASS. Unknown fields, invalid event classes and invalid date-time values therefore fail closed rather than bypassing semantic checks.
+
 Atomic verdict rule used by the S0 helper:
 
-- any valid mandatory assertion violation -> `FAIL`;
+- any valid mandatory assertion or explicit residual cleanup violation -> `FAIL`;
 - every in-scope mandatory assertion observed and satisfied -> `PASS`;
 - at least one mandatory PASS, no FAIL, but a material mandatory UNVERIFIED -> `PARTIAL`;
 - unexecuted probe, harness error, invalid evidence, missing credible mandatory evidence -> `UNVERIFIED`;
 - `NOT-APPLICABLE` is only for a capability genuinely outside claim scope.
 
-A PASS cannot silently contain unverified material post-conditions. Deny-everything behavior is not sufficient because each `TestCase` also carries `authorized_utility` requirements.
+A PASS requires unique event/assertion/telemetry identities, valid event-to-collector references, and at least one observed event from every envelope-local source marked `mandatory`. This last rule proves only that the declared mandatory collector participated; it does **not** prove TestCase event-class or claim-interval completeness. That stronger coverage remains `UNVERIFIED` until an immutable TestCase digest/bundle is bound into evaluation.
+
+A PASS cannot silently contain unverified or residual material post-conditions. Deny-everything behavior is not sufficient because each `TestCase` also carries `authorized_utility` requirements.
 
 ## Canonicalization and digest rule
 
@@ -137,11 +141,11 @@ Design-stage canonicalization is `agentci-json-c14n-v0alpha1`:
 - `NaN`/`Infinity` rejected;
 - the EvidenceEnvelope artifact digest is SHA-256 over the canonical document with `canonicalization.artifact_digest` omitted, avoiding a self-referential digest.
 
-This is intentionally versioned. It may be replaced before S0 freeze if B finds cross-language/numeric ambiguities.
+This is intentionally versioned and is **not** claimed to implement RFC 8785/JCS. It may be replaced before S0 freeze if B finds cross-language/numeric ambiguities.
 
 ## Deliberately permissive red control
 
-`examples/sandbox/v0alpha1-red-control-evidence.json` is a synthetic red control, not provider evidence. The desired claim is that a synthetic sensitive canary is unreadable; the deliberately permissive fixture records an actual read event and a mandatory assertion FAIL.
+`examples/sandbox/v0alpha1-red-control-evidence.json` is a synthetic red control, not provider evidence. The desired claim is that a synthetic sensitive canary is unreadable; the deliberately permissive fixture records an actual read event and a mandatory assertion FAIL. It also contains a separate policy-attachment event so attachment provenance has a real content-addressed target rather than an arbitrary placeholder digest.
 
 Validation command:
 
@@ -152,28 +156,31 @@ pytest -q tests/test_sandbox_evidence_contract.py tests/test_sandbox_authority_c
 
 The validator is an S0 semantic checker, not a sandbox runtime/certifier.
 
-## Current resolved S0 blockers in this draft
+## Current resolved S0 mechanics in this draft
 
 1. `PolicySpec`, `Observation`, `TestCase`, `EvidenceEnvelope` are formally separated.
 2. policy epoch/history and per-event binding are represented.
 3. authority references and the five D authority objects are represented.
 4. network capability and enforcement transport are separate, channel-specific semantics.
-5. attachment/selection evidence is separate from configured/effective behavior.
+5. attachment/selection evidence is separate from configured/effective behavior and has an envelope-local content-addressed evidence target.
 6. restore continuity is explicit and not assumed clean.
-7. execution status, evidence validity, mandatory assertion coverage and cleanup post-conditions are separate from backend verdict.
+7. execution status, schema/evidence validity, mandatory assertion coverage and cleanup post-conditions are separate from backend verdict.
 8. a deliberately permissive red control is present and expected to fail the containment claim.
+
+These are implementation claims awaiting C/D/E fidelity checks and independent B exact-head review; they are not S0 acceptance.
 
 ## Explicit unresolved items — do not infer consensus
 
-The following remain unresolved pending C/#27's bounded isolation semantics packet and B exact-head review:
+The following remain unresolved or intentionally narrowed:
 
-- which `isolation_class` values are semantically portable enough to freeze;
-- minimum generic representation for shared host surface, privileged helper, IPC/devices and inheritance across fork/exec/clone/daemon;
-- exact distinction between enforceable-but-not-observable and observable-but-not-enforceable per reference target;
+- exact minimum representation for D's trusted AuthorityBundle graph, broker audience/scope, endpoint causality and restore/session freshness;
+- receipt provenance strength and observer locus: behavioral evidence must not be upgraded into proof that a specific grant/Decision caused enforcement;
+- true TestCase event-class and claim-interval telemetry completeness, including absence-as-negative-evidence semantics;
+- exact distinction between enforceable-but-not-observable and observable-but-not-enforceable per S1 reference target;
 - ordinary-CI-safe versus nested-disposable-only attack classes;
 - whether the current project-specific canonicalization is sufficiently cross-language stable;
-- exact S1 reference targets and version pins;
-- external JSON Schema validation dependency strategy (the current repo does not add one for S0).
+- formal independent-review identity provenance; same GitHub principal with different role labels is not independent verification;
+- exact S1 reference targets and execution readiness.
 
 These unresolved items must not be hidden in free-form metadata or silently treated as PASS.
 
