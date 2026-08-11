@@ -29,8 +29,8 @@
       "delta_class": "no-op"
     }
   ],
-  "policy_history_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
-  "authority_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
+  "authority_digest": "sha256:02582169b8c3de3e499734df62cc5079b79abc57c9adf499afc41dc1b8cbc6a0",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -72,7 +72,7 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      "semantic_digest": "sha256:315745bf7ef6c6a2d88b73d60a6c81e59d7a4db962c6a8448446384bca6c26f5"
     }
   ],
   "post_conditions": {
@@ -89,6 +89,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:fe073aac29c76d8e93c78d75f7e64afaf86c518aeb13213d1da2732e4b96270a"
+    "artifact_digest": "sha256:2b1d6fa4d56bcaecefeece4770550be0246601f192a37ce7803cfeac123839ad"
   }
 }
