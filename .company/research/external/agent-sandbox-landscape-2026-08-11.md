@@ -98,6 +98,31 @@ AgentCI lesson:
 
 Classification: `experiment + interoperability target`. No host installation or privileged Windows account setup is authorized by this research entry.
 
+### Agent Sandbox for HPC (`katosh/agent_sandbox`)
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/katosh/agent_sandbox
+- security release `v0.13.0` (2026-06-11): https://github.com/katosh/agent_sandbox/releases/tag/v0.13.0
+- annotated tag object `b74d9ed3f634d52cd0b8d0468eea165e5874828f`, resolving to commit `dfbd1480b0d0b1ec77ff57532ccf4d8baef5f2cb`.
+
+License: MIT. The project is small and HPC/Slurm-specific; its release evidence is a threat-model input, not an AgentCI verdict or a recommendation to install it.
+
+Why it matters:
+- `v0.13.0` fixed a Bubblewrap last-wins ordering bug where a later writable project bind re-exposed paths that earlier masks intended to block;
+- it rejected `$HOME` as the project directory after showing that a broad bind could re-expose and persist changes to credential and startup paths;
+- it removed Slurm `srun --multi-prog`, whose alternate execution mode bypassed an appended sandbox launcher and executed agent-selected programs outside that boundary;
+- it constrained Slurm stdin/stdout/stderr paths because `slurmstepd` opens them as the host user before the sandbox boundary exists;
+- it expanded credential-environment filtering and blocked the Linux new-mount API as alternate paths around narrower deny rules.
+
+AgentCI lesson:
+- evidence must bind the ordered effective mount/overlay topology, not only the unordered set of requested rules;
+- a launcher or wrapper receipt is insufficient when a backend mode can select a different execution path;
+- host-side pre-opened files, redirected output and scheduler helpers are external enforcement dependencies and side-effect channels;
+- path policy needs canonical target, alias and parent-boundary tests, including the exact-project-root case;
+- credential and syscall policies need adversarial family/alternate-API cases rather than a finite happy-path name list.
+
+Classification: `adopt-now as threat-taxonomy and red-fixture design input`; `watch` as a runtime. Do not copy its escape reproductions into ordinary CI or infer Bubblewrap failure from wrapper-composition defects.
+
 ### Apple container and pall8t
 
 Sources (verified 2026-08-11):
@@ -369,6 +394,28 @@ Why it matters:
 AgentCI action:
 - add cross-tenant/cross-principal cases to the future certification matrix.
 
+### AgentGovBench
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/agentic-control-plane/agentgovbench
+- immutable reviewed commit: https://github.com/agentic-control-plane/agentgovbench/commit/e0ce93ae175376d7847c69a64d0c36bdfa6ca717
+- exact tree contains 48 YAML scenarios across identity propagation, per-user enforcement, delegation provenance, scope inheritance, rate-limit cascade, audit completeness, fail-mode discipline and cross-tenant isolation.
+
+License: MIT. No immutable release or tag existed at the checked commit. The repository was low-adoption and vendor-authored, and its methodology text contained roadmap/version language that did not fully match the current 48-scenario tree. Published product results are therefore not AgentCI evidence.
+
+Why it matters:
+- scenario records separate setup, deterministic actions and expected governance outcomes without requiring an LLM;
+- delegation-chain, denial-audit, fail-mode and tenant-isolation cases overlap directly with D authority and E evidence requirements;
+- versioned scenario IDs and explicit expected assertions are useful design input for turning D/E prose catalogs into machine-readable TestCase instances.
+
+AgentCI action:
+- map only the reusable scenario semantics into AgentCI's canonical TestCase contract; do not import vendor runners, scores or service credentials;
+- add checks that a denial preserves delegation provenance and that an unavailable governance layer cannot silently allow or omit its audit trail;
+- require enforcement receipts and backend evidence separately from governance decisions, because a policy-layer scenario cannot prove runtime containment;
+- keep this candidate in a bounded local benchmark lane until AgentCI has immutable fixture versions and independent red controls.
+
+Classification: `benchmark/watch`. It is not a sandbox backend, certification authority or promotion claim.
+
 ## Cross-project synthesis
 
 The initial AgentCI Sandbox model should have these dimensions:
@@ -389,13 +436,16 @@ The initial AgentCI Sandbox model should have these dimensions:
 14. runtime drift and crisis transitions;
 15. policy mutation rules;
 16. provenance: backend/version/policy hash/test suite/environment fingerprint.
+17. ordered effective topology and host-side actions that occur before, beside or after the nominal sandbox boundary.
 
 ## Highest-value attack classes
 
 - path traversal, symlink/hardlink and mount escape;
+- last-wins mount/overlay ordering that re-exposes an earlier denied path;
 - malicious image/archive extraction before sandbox launch;
 - secret/SSH/credential-store reads;
 - raw environment secret leakage and ambient host-environment injection;
+- credential-name family gaps and alternate credential/session channels;
 - arbitrary egress, redirects, DNS rebinding, IPv6/private IP/metadata endpoints;
 - proxy tunnelling, package-cache compromise, transitive broker egress and post-redirect destination confusion;
 - Unix sockets and host `docker.sock`;
@@ -409,6 +459,8 @@ The initial AgentCI Sandbox model should have these dimensions:
 - control-plane/MCP authority confusion and route-target override after authorization;
 - implicit capability widening from independently merged subject/resource/port/protocol arrays;
 - coordination bridges that create host processes outside the sandbox;
+- launcher modes that bypass an appended wrapper, plus host-side stdin/stdout/stderr opens outside the boundary;
+- alternate syscall/API families that preserve a forbidden capability after one legacy syscall is denied;
 - benchmark-answer access and other evaluation-integrity failures;
 - malicious README/package/tool output requesting sandbox disablement;
 - attempts to mutate policy or persuade the Sandbox Intelligence Agent to expand privileges;
