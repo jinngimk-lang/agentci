@@ -202,6 +202,14 @@ def test_pass_event_requires_effective_attachment_for_governing_policy_epoch():
     assert any("effective attachment" in error and "policy epoch 1" in error for error in validate(document))
 
 
+def test_pass_event_attachment_must_match_workload_identity():
+    document = _passing_fixture()
+    document["policy_attachments"][0]["workload_identity"] = "different-workload"
+    _rebind_all(document)
+    assert expected_verdict(document) != "PASS"
+    assert any("workload identity" in error for error in validate(document))
+
+
 def test_policy_history_digest_must_bind_the_actual_history():
     document = _passing_fixture()
     document["policy_history_digest"] = "sha256:" + "0" * 64
