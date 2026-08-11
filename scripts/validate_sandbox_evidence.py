@@ -14,7 +14,19 @@ from jsonschema.exceptions import FormatError
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
-SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "sandbox-certification-v0alpha1.schema.json"
+ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = ROOT / "schemas" / "sandbox-certification-v0alpha1.schema.json"
+TEST_CASE_DIR = ROOT / "examples" / "sandbox" / "testcases"
+EVENT_SOURCE_LAYERS = {
+    "process": {"process"},
+    "file": {"filesystem"},
+    "network": {"network"},
+    "credential": {"credential"},
+    "control-plane": {"control-plane"},
+    "policy-delta": {"control-plane"},
+    "policy-attachment": {"control-plane"},
+    "lifecycle": {"lifecycle"},
+}
 
 def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result = {}
@@ -58,6 +70,36 @@ def _schema_validator() -> Draft202012Validator:
     envelope = {"$schema": schema["$schema"], "$id": schema.get("$id", "") + "#EvidenceEnvelopeValidation", "$defs": schema["$defs"], "$ref": "#/$defs/EvidenceEnvelope"}
     return Draft202012Validator(envelope, format_checker=FormatChecker())
 
+@lru_cache(maxsize=1)
+def _test_case_validator() -> Draft202012Validator:
+    schema = load_evidence_json(SCHEMA_PATH.read_text())
+    test_case = {"$schema": schema["$schema"], "$id": schema.get("$id", "") + "#TestCaseValidation", "$defs": schema["$defs"], "$ref": "#/$defs/TestCase"}
+    return Draft202012Validator(test_case, format_checker=FormatChecker())
+
+@lru_cache(maxsize=64)
+def _load_test_case(case_id: str) -> dict[str, Any] | None:
+    if not isinstance(case_id, str) or not case_id or "/" in case_id or "\\" in case_id or case_id in {".", ".."}:
+        return None
+    path = TEST_CASE_DIR / f"{case_id}.json"
+    if not path.is_file():
+        return None
+    try:
+        test_case = load_evidence_json(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+    if list(_test_case_validator().iter_errors(test_case)):
+        return None
+    if test_case.get("kind") != "TestCase" or test_case.get("case_id") != case_id:
+        return None
+    return test_case
+
+def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any], event_type: Any) -> bool:
+    source_id = source.get("source_id")
+    if source_id not in set(test_case.get("mandatory_telemetry_sources", [])):
+        return False
+    required_layers = EVENT_SOURCE_LAYERS.get(event_type)
+    return required_layers is None or source.get("layer") in required_layers
+
 def _parse_datetime(value: Any) -> datetime | None:
     if not isinstance(value, str): return None
     try: return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -97,6 +139,10 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     if c.get("artifact_digest") != artifact_digest(document): errors.append("artifact digest mismatch")
     if document.get("policy_history_digest") != policy_history_digest(document): errors.append("policy history digest mismatch")
     if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
+
+    case_id = document.get("case_id")
+    test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
+    if test_case is None: errors.append(f"case_id {case_id} does not resolve to one canonical TestCase")
 
     history = document.get("policy_history", []); epochs = [x.get("policy_epoch") for x in history]; dup_epochs = _duplicates(epochs)
     if not epochs or any(x is None for x in epochs): errors.append("policy history must contain concrete epochs")
@@ -151,6 +197,8 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     for assertion in assertions:
         assertion_id, evidence_ids = assertion.get("assertion_id"), assertion.get("evidence_event_ids", []); mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
         if mandatory_pass and not evidence_ids: errors.append(f"mandatory PASS assertion {assertion_id} requires event evidence")
+        if mandatory_pass and test_case is not None and assertion_id not in set(test_case.get("mandatory_assertions", [])):
+            errors.append(f"mandatory PASS assertion {assertion_id} is not bound by canonical TestCase")
         for event_id in evidence_ids:
             if event_id not in event_ids: errors.append(f"assertion {assertion_id} references missing evidence event {event_id}"); continue
             if event_id in dup_events: errors.append(f"assertion {assertion_id} evidence event {event_id} does not resolve uniquely"); continue
@@ -158,6 +206,8 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 event = events_by_id[event_id]; source = telemetry_by_source.get(event.get("source_id"))
                 if source is None: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {event.get('source_id')}")
                 elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
+                elif test_case is None or not _source_suitable_for_event(test_case, source, event.get("event_type")):
+                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} fails canonical TestCase source suitability")
                 epoch, workload, aid = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
                 matching = [x for x in attachments if x.get("state") == "effective" and x.get("policy_epoch") == epoch and x.get("workload_identity") == workload and x.get("attachment_id") == aid and x.get("attachment_id") not in dup_attachments]
                 if not workload or not aid or len(matching) != 1:
@@ -182,6 +232,8 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                                 errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance from exactly one declared telemetry source")
                             elif provenance_source.get("coverage") != "mandatory" or provenance_source.get("health") != "healthy":
                                 errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance from a healthy mandatory telemetry source")
+                            elif test_case is None or not _source_suitable_for_event(test_case, provenance_source, provenance_event.get("event_type")):
+                                errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} attachment provenance fails canonical TestCase source suitability")
                             elif not _event_not_after(provenance_event, event):
                                 errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance at or before the PASS event on both clocks")
     return errors
