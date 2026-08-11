@@ -210,6 +210,17 @@ def test_pass_event_attachment_must_match_workload_identity():
     assert any("workload identity" in error for error in validate(document))
 
 
+def test_pass_event_cannot_be_authenticated_by_attachment_that_becomes_effective_later():
+    document = _passing_fixture()
+    attachment_event = next(event for event in document["events"] if event["event_type"] == "policy-attachment")
+    pass_event = document["events"][0]
+    attachment_event["occurred_at_utc"] = "2026-08-11T03:00:02Z"
+    attachment_event["monotonic_ns"] = pass_event["monotonic_ns"] + 1
+    document["policy_attachments"][0]["evidence_digest"] = event_semantic_digest(attachment_event)
+    _rebind_all(document)
+    assert expected_verdict(document) != "PASS"
+
+
 def test_policy_history_digest_must_bind_the_actual_history():
     document = _passing_fixture()
     document["policy_history_digest"] = "sha256:" + "0" * 64
