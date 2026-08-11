@@ -36,7 +36,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:82c9c396bb79574b67cc5d82834151c42e3fde853ec24e2920051410bcf49c47",
+  "authority_digest": "sha256:26693e2bf083b2a5c1eced40fd296c49e8dfb9853455d9318297845e97e421a0",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -46,7 +46,7 @@
       "policy_epoch": 0,
       "enforcer": "fixture-enforcer",
       "state": "effective",
-      "evidence_digest": "sha256:603c805c69e1e4f3a3d10ccb29d1115bea9e6da8a3bac6307ebd7e1e0ad17183"
+      "evidence_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5"
     }
   ],
   "lifecycle_continuity": [],
@@ -99,7 +99,9 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-policy-observer",
-      "semantic_digest": "sha256:603c805c69e1e4f3a3d10ccb29d1115bea9e6da8a3bac6307ebd7e1e0ad17183"
+      "semantic_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
     }
   ],
   "post_conditions": {
@@ -118,6 +120,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:dc3fdd51975040dbedf7b8234bc92ff1730a0455286e9ec5a94764122268f527"
+    "artifact_digest": "sha256:822e07cc6782c41d3b6e2888aa67b0a0fe8b065fbffec1d8a9d6f4b09eea0a0f"
   }
 }
