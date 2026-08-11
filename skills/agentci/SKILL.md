@@ -54,7 +54,7 @@ artifacts/agentci-report.md
 
 Treat JSON as canonical machine evidence and Markdown as human presentation.
 
-Exit semantics:
+`agentci test` exit semantics:
 
 - `0`: suite evaluated and passed
 - `1`: suite evaluated and contains regression/failure
@@ -103,7 +103,9 @@ Use the installed command to inspect provider-neutral local candidate readiness:
 agentci sandbox doctor --json
 ```
 
-This pre-alpha report is not backend execution, isolation proof, or security certification. It runs only bounded local probes; PATH discovery alone and unverified candidates are not ready.
+Default version/status success proves installed client availability and remains `unverified`; it does not prove a Docker engine, Podman runtime/machine, bubblewrap namespace capability, or configured WSL distribution. Only an explicitly route-proving safe probe can set `active_backend`. This pre-alpha report is not backend execution, isolation proof, or security certification.
+
+Doctor exit `0` means the report was collected successfully, including when its human/JSON `state` is `not-ready`. Determine readiness from `state` and `active_backend`; command-usage errors exit `2`.
 
 ## Agent discoverability
 

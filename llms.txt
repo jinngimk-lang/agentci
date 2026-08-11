@@ -56,11 +56,13 @@ artifacts/agentci-report.md
 agentci sandbox doctor --json
 ```
 
-This provider-neutral pre-alpha report safely checks local candidate readiness only. It is not backend execution, isolation proof, or security certification; a resolved executable alone is never ready.
+This provider-neutral pre-alpha report safely checks local candidate readiness only. Default version/status success proves installed client availability and remains `unverified`; it does not prove a Docker engine, Podman runtime/machine, bubblewrap namespace capability, or configured WSL distribution. Only an explicitly route-proving safe probe can set `active_backend`. This is not backend execution, isolation proof, or security certification.
+
+Doctor exit `0` means the report was collected successfully, even when JSON/human `state` is `not-ready`. Readiness is carried by `state` and `active_backend`; command-usage errors exit `2`.
 
 The JSON result is canonical machine evidence; Markdown is human presentation.
 
-## Exit semantics
+## `agentci test` exit semantics
 
 - `0` — suite evaluated and passed
 - `1` — suite evaluated and contains an eval regression/failure

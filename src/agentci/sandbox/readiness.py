@@ -38,7 +38,7 @@ class Candidate:
     backend_class: str
     executable: str | None
     probe_argv: tuple[str, ...] | None
-    requires_success: bool = True
+    proves_runtime_route: bool = False
     unverified_reason: str | None = None
 
 
@@ -88,20 +88,22 @@ def default_candidates(system: str) -> tuple[Candidate, ...]:
     candidates = (
         Candidate('docker', 'container', 'docker', ('docker', '--version')),
         Candidate('podman', 'container', 'podman', ('podman', '--version')),
-        Candidate('bubblewrap', 'os-sandbox', 'bwrap', ('bwrap', '--version')),
     )
-    if system.lower() != 'windows':
-        return candidates
-    return candidates + (
-        Candidate('wsl', 'os-sandbox', 'wsl.exe', ('wsl.exe', '--status')),
-        Candidate(
-            'windows-sandbox',
-            'os-sandbox',
-            'WindowsSandbox.exe',
-            None,
-            unverified_reason='Windows Sandbox has no safe executable readiness handshake.',
-        ),
-    )
+    normalized_system = system.lower()
+    if normalized_system == 'linux':
+        return candidates + (Candidate('bubblewrap', 'os-sandbox', 'bwrap', ('bwrap', '--version')),)
+    if normalized_system == 'windows':
+        return candidates + (
+            Candidate('wsl', 'os-sandbox', 'wsl.exe', ('wsl.exe', '--status')),
+            Candidate(
+                'windows-sandbox',
+                'os-sandbox',
+                'WindowsSandbox.exe',
+                None,
+                unverified_reason='Windows Sandbox has no safe executable readiness handshake.',
+            ),
+        )
+    return candidates
 
 
 def collect_readiness_report(
@@ -168,7 +170,7 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
             installed=None,
             configured=None,
             probed=False,
-            readiness='not-ready',
+            readiness='unverified',
             reason='Executable discovery failed.',
         )
 
@@ -210,24 +212,43 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
     try:
         completed, captured_output = _run_bounded_probe(run, execution_argv)
     except subprocess.TimeoutExpired:
-        return _failed_candidate(candidate, executable, probe_method, 'probe-timeout', 'Probe exceeded its 2-second limit.')
+        return _failed_candidate(
+            candidate, executable, probe_method, 'probe-timeout', 'Probe exceeded its 2-second limit.', 'unverified'
+        )
     except OSError:
         return _failed_candidate(candidate, executable, probe_method, 'broken', 'Executable could not be started.')
     except Exception:
-        return _failed_candidate(candidate, executable, probe_method, 'probe-error', 'Probe failed unexpectedly.')
+        return _failed_candidate(
+            candidate, executable, probe_method, 'probe-error', 'Probe failed unexpectedly.', 'unverified'
+        )
 
     if completed.returncode != 0:
         return _failed_candidate(candidate, executable, probe_method, 'broken', 'Probe exited unsuccessfully.')
+    if not candidate.proves_runtime_route:
+        return CandidateReport(
+            id=candidate.id,
+            candidate_class=candidate.backend_class,
+            executable=executable,
+            version=_extract_version(captured_output),
+            probe_method=probe_method,
+            state='unverified',
+            discovered=True,
+            installed=True,
+            configured=None,
+            probed=True,
+            readiness='unverified',
+            reason='Client probe succeeded; runtime route readiness is unverified.',
+        )
     return CandidateReport(
         id=candidate.id,
         candidate_class=candidate.backend_class,
         executable=executable,
-        version=_extract_version(captured_output or completed.stdout),
+        version=_extract_version(captured_output),
         probe_method=probe_method,
         state='healthy',
         discovered=True,
         installed=True,
-        configured=True if candidate.id == 'wsl' else None,
+        configured=None,
         probed=True,
         readiness='ready',
         reason=None,
@@ -246,10 +267,24 @@ def _extract_version(output: bytes | str | None) -> str | None:
     return match.group(1)[:MAX_VERSION_LENGTH] if match else None
 
 
-def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.CompletedProcess[str], bytes]:
+def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.CompletedProcess[str], bytes | None]:
     """Run a probe while draining stdout and retaining no more than the output limit."""
     read_fd, write_fd = os.pipe()
-    os.set_blocking(read_fd, False)
+    try:
+        os.set_blocking(read_fd, False)
+    except Exception:
+        _close_pipe_fds(read_fd, write_fd)
+        completed = run(
+            argv,
+            shell=False,
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=PROBE_TIMEOUT_SECONDS,
+            text=False,
+        )
+        return completed, None
     captured = bytearray()
     direct_process_finished = threading.Event()
     cleanup_deadline: float | None = None
@@ -302,7 +337,26 @@ def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.Complet
         cleanup_deadline = time.monotonic() + READER_CLEANUP_SECONDS
         direct_process_finished.set()
         reader.join(READER_CLEANUP_SECONDS + READER_POLL_SECONDS)
-    return completed, bytes(captured)
+    bounded_output = bytes(captured)
+    if not bounded_output:
+        bounded_output = _bounded_output_bytes(completed.stdout)
+    return completed, bounded_output
+
+
+def _bounded_output_bytes(output: bytes | str | None) -> bytes:
+    if isinstance(output, bytes):
+        return output[:MAX_PROBE_OUTPUT_BYTES]
+    if isinstance(output, str):
+        return output.encode('utf-8', errors='replace')[:MAX_PROBE_OUTPUT_BYTES]
+    return b''
+
+
+def _close_pipe_fds(*fds: int) -> None:
+    for fd in fds:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
 
 
 def _failed_candidate(
@@ -311,6 +365,7 @@ def _failed_candidate(
     probe_method: str,
     state: str,
     reason: str,
+    readiness: str = 'not-ready',
 ) -> CandidateReport:
     return CandidateReport(
         id=candidate.id,
@@ -321,8 +376,8 @@ def _failed_candidate(
         state=state,
         discovered=True,
         installed=True,
-        configured=False if candidate.id == 'wsl' else None,
+        configured=None,
         probed=True,
-        readiness='not-ready',
+        readiness=readiness,
         reason=reason,
     )

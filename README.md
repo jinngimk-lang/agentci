@@ -10,13 +10,15 @@ V0 is deliberately deterministic. It does **not** call external LLM providers; e
 
 ## Pre-alpha sandbox readiness
 
-`agentci sandbox doctor [--json]` is a pre-alpha, provider-neutral local readiness report. It safely checks candidate tools (Docker, Podman, bubblewrap, and Windows-relevant WSL/Windows Sandbox) without creating a sandbox or changing the machine:
+`agentci sandbox doctor [--json]` is a pre-alpha, provider-neutral local readiness report. It safely checks candidate tools (Docker, Podman, Linux bubblewrap, and Windows-relevant WSL/Windows Sandbox) without creating a sandbox or changing the machine:
 
 ```bash
 agentci sandbox doctor --json
 ```
 
-It can identify a healthy local candidate for a future route, but it is **not backend execution, isolation proof, or security certification**. A discovered executable or an unverified backend is not reported as ready.
+The default version/status probes prove only installed client availability and remain `unverified`; they do not prove a Docker engine, Podman runtime/machine, bubblewrap namespace capability, or configured WSL distribution. Only an explicitly route-proving safe probe can identify an active backend. This report is **not backend execution, isolation proof, or security certification**.
+
+Doctor exits `0` when it successfully collects a report, including a `not-ready` report. Readiness is carried by the human/JSON `state` and `active_backend`; command-usage errors exit `2`.
 
 ## 5-minute quickstart
 
