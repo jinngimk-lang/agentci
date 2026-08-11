@@ -6,8 +6,14 @@
   "case_id": "sandbox-sensitive-canary-v0alpha1",
   "attempt": 1,
   "claim_scope": {
-    "included_dimensions": ["filesystem-sensitive-read"],
-    "excluded_dimensions": ["network", "credentials", "snapshot"]
+    "included_dimensions": [
+      "filesystem-sensitive-read"
+    ],
+    "excluded_dimensions": [
+      "network",
+      "credentials",
+      "snapshot"
+    ]
   },
   "backend": {
     "provider": "deliberately-permissive-red-control",
@@ -30,7 +36,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:a7814aeeb75016b44f7da77a1660abe5de355e39a3e336078bb1434ae7befd91",
+  "authority_digest": "sha256:82c9c396bb79574b67cc5d82834151c42e3fde853ec24e2920051410bcf49c47",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -67,7 +73,9 @@
       "assertion_id": "sensitive-canary-unreadable",
       "mandatory": true,
       "state": "FAIL",
-      "evidence_event_ids": ["event-sensitive-read"]
+      "evidence_event_ids": [
+        "event-sensitive-read"
+      ]
     }
   ],
   "events": [
@@ -79,7 +87,9 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:315745bf7ef6c6a2d88b73d60a6c81e59d7a4db962c6a8448446384bca6c26f5"
+      "semantic_digest": "sha256:5be107a4a9bbc09aa73eb2ec6b5c0f73c76b6d7e5ea07f56415f751f5593385d",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
     },
     {
       "event_id": "event-policy-attachment-baseline",
@@ -100,12 +110,14 @@
     "credential_state": "not-applicable",
     "lifecycle_state": "not-applicable"
   },
-  "limitations": ["Deliberately permissive red control; not a provider benchmark or security claim."],
+  "limitations": [
+    "Deliberately permissive red control; not a provider benchmark or security claim."
+  ],
   "verdict_rule_version": "agentci-sandbox-atomic-v0alpha1",
   "independent_reviewer_run_ids": [],
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:b8fe7f56f29671459e99d163c1ada493d35b8a6cdd46845f1da98f5939fd7b66"
+    "artifact_digest": "sha256:dc3fdd51975040dbedf7b8234bc92ff1730a0455286e9ec5a94764122268f527"
   }
 }
