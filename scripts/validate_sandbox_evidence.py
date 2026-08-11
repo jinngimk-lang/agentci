@@ -97,6 +97,16 @@ def event_semantic_digest(event: dict[str, Any]) -> str:
     return digest_value(candidate)
 
 
+def _is_credible_pass(assertion: dict[str, Any]) -> bool:
+    """S0 v0alpha1 only accepts event-backed PASS assertions.
+
+    Positive post-condition-only oracles are intentionally not supported yet;
+    adding such an oracle requires a future immutable TestCase contract change.
+    """
+
+    return assertion.get("state") == "PASS" and bool(assertion.get("evidence_event_ids"))
+
+
 def expected_verdict(document: dict[str, Any]) -> str:
     if not document.get("probe_executed", False):
         return "UNVERIFIED"
@@ -122,13 +132,14 @@ def expected_verdict(document: dict[str, Any]) -> str:
         item
         for item in mandatory
         if item.get("state") in {"UNVERIFIED", "NOT-APPLICABLE"}
+        or (item.get("state") == "PASS" and not item.get("evidence_event_ids"))
     ]
     if incomplete:
-        if any(item.get("state") == "PASS" for item in mandatory):
+        if any(_is_credible_pass(item) for item in mandatory):
             return "PARTIAL"
         return "UNVERIFIED"
 
-    if all(item.get("state") == "PASS" for item in mandatory):
+    if all(_is_credible_pass(item) for item in mandatory):
         return "PASS"
     return "UNVERIFIED"
 
@@ -175,7 +186,12 @@ def validate(document: dict[str, Any]) -> list[str]:
             errors.append(f"attachment {attachment.get('attachment_id')} references unknown policy epoch")
 
     for assertion in document.get("assertions", []):
-        for event_id in assertion.get("evidence_event_ids", []):
+        evidence_event_ids = assertion.get("evidence_event_ids", [])
+        if assertion.get("mandatory") and assertion.get("state") == "PASS" and not evidence_event_ids:
+            errors.append(
+                f"mandatory PASS assertion {assertion.get('assertion_id')} requires event evidence"
+            )
+        for event_id in evidence_event_ids:
             if event_id not in event_ids:
                 errors.append(
                     f"assertion {assertion.get('assertion_id')} references missing evidence event {event_id}"
