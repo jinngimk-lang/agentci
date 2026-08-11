@@ -64,7 +64,7 @@ def test_raw_duplicate_top_level_key_is_rejected_before_semantic_validation():
 
 def test_raw_duplicate_nested_security_key_is_rejected_before_digesting():
     raw = FIXTURE.read_text(encoding="utf-8")
-    raw = raw.replace('"policy_epoch": 1,', '"policy_epoch": 1,\n      "policy_epoch": 99,', 1)
+    raw = raw.replace('"policy_epoch": 0,', '"policy_epoch": 0,\n      "policy_epoch": 99,', 1)
     with pytest.raises(ValueError, match="duplicate JSON object key: policy_epoch"):
         load_evidence_json(raw)
 
