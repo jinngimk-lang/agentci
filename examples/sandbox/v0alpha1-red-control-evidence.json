@@ -65,7 +65,7 @@
       "layer": "control-plane",
       "version": "v1",
       "health": "healthy",
-      "coverage": "optional"
+      "coverage": "mandatory"
     }
   ],
   "assertions": [
@@ -120,6 +120,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:822e07cc6782c41d3b6e2888aa67b0a0fe8b065fbffec1d8a9d6f4b09eea0a0f"
+    "artifact_digest": "sha256:13a19b1165f0f55af717aa3ac174b1faf7884189370b9587e93252a73280f8f3"
   }
 }
