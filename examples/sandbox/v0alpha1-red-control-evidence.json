@@ -30,7 +30,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:02582169b8c3de3e499734df62cc5079b79abc57c9adf499afc41dc1b8cbc6a0",
+  "authority_digest": "sha256:d4e0c713f287a1dc678dc43a4867215b7631381c5b360f9fa7b59f696c56e857",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -40,7 +40,7 @@
       "policy_epoch": 0,
       "enforcer": "fixture-enforcer",
       "state": "effective",
-      "evidence_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      "evidence_digest": "sha256:2e4de659e01cc7c9fe80d53f13fe0bc917cacbdf909e6f9de579f799299063f9"
     }
   ],
   "lifecycle_continuity": [],
@@ -53,6 +53,13 @@
       "version": "v1",
       "health": "healthy",
       "coverage": "mandatory"
+    },
+    {
+      "source_id": "fixture-policy-observer",
+      "layer": "control-plane",
+      "version": "v1",
+      "health": "healthy",
+      "coverage": "optional"
     }
   ],
   "assertions": [
@@ -64,6 +71,16 @@
     }
   ],
   "events": [
+    {
+      "event_id": "event-policy-attachment",
+      "event_type": "policy-attachment",
+      "occurred_at_utc": "2026-08-11T03:00:00Z",
+      "monotonic_ns": 1500,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-policy-observer",
+      "semantic_digest": "sha256:2e4de659e01cc7c9fe80d53f13fe0bc917cacbdf909e6f9de579f799299063f9"
+    },
     {
       "event_id": "event-sensitive-read",
       "event_type": "file",
@@ -89,6 +106,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:2b1d6fa4d56bcaecefeece4770550be0246601f192a37ce7803cfeac123839ad"
+    "artifact_digest": "sha256:9e9d1012835febec819f2111bc3651fbeace76f52b3feba11ae282899bb75813"
   }
 }
