@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "tests" / "fixtures" / "sandbox" / "authority" / "vectors.json"
-EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b","D-14","D-15a","D-15b","D-15c","D-15d"}
+EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b","D-14","D-15a","D-15b","D-15c","D-15d","D-16"}
 ALLOWED_RESULTS = {"DENY", "PERMIT", "UNVERIFIED", "EXPANSION_GATE"}
 
 def _load():
@@ -11,6 +11,14 @@ def _load():
 
 def _atomic_tuple(item):
     return (item["action"], item["resource"], item["context"])
+
+def _reject_duplicate_pairs(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate object member: {key}")
+        out[key] = value
+    return out
 
 def _oracle(vector):
     f, rule = vector["facts"], vector["rule"]
@@ -59,6 +67,12 @@ def _oracle(vector):
         if f["independence_class"] != "distinct-principal-verified": return "UNVERIFIED"
         if f["reviewed_head"] != f["subject_head"]: return "UNVERIFIED"
         return "PERMIT"
+    if rule == "raw_authority_duplicate_key":
+        try:
+            json.loads(f["raw_authority_json"], object_pairs_hook=_reject_duplicate_pairs)
+        except (json.JSONDecodeError, ValueError):
+            return "UNVERIFIED"
+        return "UNVERIFIED"
     raise AssertionError(f"unknown rule: {rule}")
 
 def test_vector_pack_is_complete_and_single_oracle():
@@ -98,6 +112,18 @@ def test_d15_review_independence_requires_distinct_verified_principal_and_exact_
     same_principal = json.loads(json.dumps(by_id["D-15b"]))
     same_principal["facts"]["reviewer_principal_ref"] = same_principal["facts"]["author_principal_ref"]
     assert _oracle(same_principal) == "UNVERIFIED"
+
+def test_d16_rejects_duplicate_raw_authority_member_before_semantic_resolution():
+    vector = next(v for v in _load()["vectors"] if v["id"] == "D-16")
+    raw = vector["facts"]["raw_authority_json"]
+    assert json.loads(raw)["effect"] == "PERMIT"  # ordinary parsing silently overwrites DENY
+    assert _oracle(vector) == "UNVERIFIED"
+    try:
+        json.loads(raw, object_pairs_hook=_reject_duplicate_pairs)
+    except ValueError as exc:
+        assert "duplicate object member: effect" in str(exc)
+    else:
+        raise AssertionError("duplicate authority member was not rejected")
 
 def test_vectors_do_not_embed_secret_material():
     raw = VECTORS.read_text(encoding="utf-8").lower()
