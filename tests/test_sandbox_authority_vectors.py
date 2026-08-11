@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "tests" / "fixtures" / "sandbox" / "authority" / "vectors.json"
-EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b","D-14"}
+EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b","D-14","D-15a","D-15b","D-15c","D-15d"}
 ALLOWED_RESULTS = {"DENY", "PERMIT", "UNVERIFIED", "EXPANSION_GATE"}
 
 def _load():
@@ -53,6 +53,12 @@ def _oracle(vector):
     if rule == "unique_authority_identity":
         matches = [item for item in f["objects"] if item["id"] == f["reference"]]
         return "UNVERIFIED" if len(matches) != 1 else matches[0].get("effect", "UNVERIFIED")
+    if rule == "review_independence":
+        if not f["reviewer_identity_ref_resolved"]: return "UNVERIFIED"
+        if f["reviewer_principal_ref"] == f["author_principal_ref"]: return "UNVERIFIED"
+        if f["independence_class"] != "distinct-principal-verified": return "UNVERIFIED"
+        if f["reviewed_head"] != f["subject_head"]: return "UNVERIFIED"
+        return "PERMIT"
     raise AssertionError(f"unknown rule: {rule}")
 
 def test_vector_pack_is_complete_and_single_oracle():
@@ -82,6 +88,16 @@ def test_d14_duplicate_security_identity_is_not_order_selectable():
     reversed_vector = json.loads(json.dumps(vector))
     reversed_vector["facts"]["objects"].reverse()
     assert _oracle(reversed_vector) == "UNVERIFIED"
+
+def test_d15_review_independence_requires_distinct_verified_principal_and_exact_head():
+    by_id = {v["id"]: v for v in _load()["vectors"]}
+    assert _oracle(by_id["D-15a"]) == "UNVERIFIED"
+    assert _oracle(by_id["D-15b"]) == "PERMIT"
+    assert _oracle(by_id["D-15c"]) == "UNVERIFIED"
+    assert _oracle(by_id["D-15d"]) == "UNVERIFIED"
+    same_principal = json.loads(json.dumps(by_id["D-15b"]))
+    same_principal["facts"]["reviewer_principal_ref"] = same_principal["facts"]["author_principal_ref"]
+    assert _oracle(same_principal) == "UNVERIFIED"
 
 def test_vectors_do_not_embed_secret_material():
     raw = VECTORS.read_text(encoding="utf-8").lower()
