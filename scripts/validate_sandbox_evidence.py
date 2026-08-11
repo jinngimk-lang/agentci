@@ -179,9 +179,9 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                             provenance_source_id = provenance_event.get("source_id")
                             provenance_source = telemetry_by_source.get(provenance_source_id)
                             if provenance_source_id in dup_sources or provenance_source is None:
-                                errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment provenance from exactly one declared telemetry source")
+                                errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance from exactly one declared telemetry source")
                             elif provenance_source.get("coverage") != "mandatory" or provenance_source.get("health") != "healthy":
-                                errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment provenance from a healthy mandatory telemetry source")
+                                errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance from a healthy mandatory telemetry source")
                             elif not _event_not_after(provenance_event, event):
                                 errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance at or before the PASS event on both clocks")
     return errors
