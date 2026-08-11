@@ -160,6 +160,16 @@ def test_mandatory_pass_event_source_must_resolve_to_declared_healthy_telemetry(
     )
 
 
+def test_duplicate_telemetry_source_ids_cannot_authenticate_mandatory_pass():
+    document = _passing_fixture()
+    duplicate = copy.deepcopy(document["telemetry"][0])
+    duplicate["coverage"] = "optional"
+    duplicate["health"] = "degraded"
+    document["telemetry"].append(duplicate)
+    _rehash(document)
+    assert any("duplicate" in error.lower() and "source" in error.lower() for error in validate(document))
+
+
 def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
     document = _passing_fixture()
     document["assertions"].append(
