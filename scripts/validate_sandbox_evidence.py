@@ -11,11 +11,16 @@ import argparse
 import copy
 import hashlib
 import json
+from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator, FormatChecker
+
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
+SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "sandbox-certification-v0alpha1.schema.json"
 
 
 def canonical_value_bytes(value: Any) -> bytes:
@@ -44,9 +49,33 @@ def policy_history_digest(document: dict[str, Any]) -> str:
 
 def authority_binding_projection(document: dict[str, Any]) -> dict[str, Any]:
     return {
-        "policy_history": [{"policy_epoch": i.get("policy_epoch"), "authority_epoch": i.get("authority_epoch"), "source_principal_id": i.get("source_principal_id")} for i in document.get("policy_history", [])],
-        "policy_attachments": [{"attachment_id": i.get("attachment_id"), "workload_identity": i.get("workload_identity"), "policy_epoch": i.get("policy_epoch"), "policy_digest": i.get("policy_digest"), "state": i.get("state")} for i in document.get("policy_attachments", [])],
-        "events": [{"event_id": i.get("event_id"), "authority_epoch": i.get("authority_epoch"), "decision_id": i.get("decision_id"), "receipt_id": i.get("receipt_id")} for i in document.get("events", [])],
+        "policy_history": [
+            {
+                "policy_epoch": item.get("policy_epoch"),
+                "authority_epoch": item.get("authority_epoch"),
+                "source_principal_id": item.get("source_principal_id"),
+            }
+            for item in document.get("policy_history", [])
+        ],
+        "policy_attachments": [
+            {
+                "attachment_id": item.get("attachment_id"),
+                "workload_identity": item.get("workload_identity"),
+                "policy_epoch": item.get("policy_epoch"),
+                "policy_digest": item.get("policy_digest"),
+                "state": item.get("state"),
+            }
+            for item in document.get("policy_attachments", [])
+        ],
+        "events": [
+            {
+                "event_id": item.get("event_id"),
+                "authority_epoch": item.get("authority_epoch"),
+                "decision_id": item.get("decision_id"),
+                "receipt_id": item.get("receipt_id"),
+            }
+            for item in document.get("events", [])
+        ],
     }
 
 
@@ -60,6 +89,193 @@ def event_semantic_digest(event: dict[str, Any]) -> str:
     return digest_value(candidate)
 
 
+@lru_cache(maxsize=1)
+def _schema_validator() -> Draft202012Validator:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _duplicate_values(values: list[Any]) -> set[Any]:
+    return {value for value in values if value is not None and values.count(value) > 1}
+
+
+def _residual_errors(document: dict[str, Any]) -> list[str]:
+    post_conditions = document.get("post_conditions", {})
+    errors: list[str] = []
+    if post_conditions.get("descendants") == "residual":
+        errors.append("residual descendants violate PASS")
+    if post_conditions.get("filesystem_residue") == "residual":
+        errors.append("residual filesystem state violates PASS")
+    if post_conditions.get("sockets") == "residual":
+        errors.append("residual sockets violate PASS")
+    return errors
+
+
+def _evidence_errors(document: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+
+    if list(_schema_validator().iter_errors(document)):
+        errors.append("schema validation failed")
+
+    if document.get("apiVersion") != "agentci.dev/sandbox/v0alpha1":
+        errors.append("unexpected apiVersion")
+    if document.get("kind") != "EvidenceEnvelope":
+        errors.append("validator only accepts EvidenceEnvelope")
+    if document.get("verdict_rule_version") != VERDICT_RULE:
+        errors.append("unexpected verdict rule version")
+
+    canonicalization = document.get("canonicalization", {})
+    if canonicalization.get("algorithm") != CANONICALIZATION:
+        errors.append("unexpected canonicalization algorithm")
+    if canonicalization.get("artifact_digest") != artifact_digest(document):
+        errors.append("artifact digest mismatch")
+    if document.get("policy_history_digest") != policy_history_digest(document):
+        errors.append("policy history digest mismatch")
+    if document.get("authority_digest") != authority_binding_digest(document):
+        errors.append("authority digest mismatch")
+
+    history = document.get("policy_history", [])
+    policy_epochs = [item.get("policy_epoch") for item in history]
+    if not policy_epochs or any(epoch is None for epoch in policy_epochs):
+        errors.append("policy history must contain concrete epochs")
+    for epoch in sorted(_duplicate_values(policy_epochs)):
+        errors.append(f"duplicate policy_epoch {epoch}")
+
+    previous_epoch: int | None = None
+    previous_monotonic: int | None = None
+    for item in history:
+        epoch = item.get("policy_epoch")
+        monotonic = item.get("effective_at_monotonic_ns")
+        if isinstance(epoch, int) and isinstance(previous_epoch, int) and epoch <= previous_epoch:
+            if epoch != previous_epoch:
+                errors.append("policy history epochs must strictly increase in document order")
+        if isinstance(monotonic, int) and isinstance(previous_monotonic, int) and monotonic <= previous_monotonic:
+            errors.append("policy history monotonic time must strictly increase with epoch")
+        if isinstance(epoch, int):
+            previous_epoch = epoch
+        if isinstance(monotonic, int):
+            previous_monotonic = monotonic
+
+    history_by_epoch = {
+        item.get("policy_epoch"): item
+        for item in history
+        if isinstance(item.get("policy_epoch"), int) and item.get("policy_epoch") not in _duplicate_values(policy_epochs)
+    }
+
+    telemetry = document.get("telemetry", [])
+    source_ids = [item.get("source_id") for item in telemetry]
+    duplicate_source_ids = _duplicate_values(source_ids)
+    for source_id in sorted(duplicate_source_ids):
+        errors.append(f"duplicate telemetry source_id {source_id}")
+    telemetry_by_source = {
+        item.get("source_id"): item
+        for item in telemetry
+        if item.get("source_id") is not None and item.get("source_id") not in duplicate_source_ids
+    }
+
+    events = document.get("events", [])
+    event_ids_list = [event.get("event_id") for event in events]
+    duplicate_event_ids = _duplicate_values(event_ids_list)
+    for event_id in sorted(duplicate_event_ids):
+        errors.append(f"duplicate event_id {event_id}")
+    event_ids = {event_id for event_id in event_ids_list if event_id is not None}
+    events_by_id = {
+        event.get("event_id"): event
+        for event in events
+        if event.get("event_id") is not None and event.get("event_id") not in duplicate_event_ids
+    }
+    event_sources = {event.get("source_id") for event in events}
+
+    for source in telemetry:
+        if source.get("coverage") == "mandatory" and source.get("source_id") not in event_sources:
+            errors.append(f"mandatory telemetry source {source.get('source_id')} has no events")
+
+    for event in events:
+        event_id = event.get("event_id")
+        source_id = event.get("source_id")
+        if source_id not in telemetry_by_source and source_id not in duplicate_source_ids:
+            errors.append(f"event {event_id} references undeclared telemetry source {source_id}")
+
+        epoch = event.get("policy_epoch")
+        policy_entry = history_by_epoch.get(epoch)
+        if policy_entry is None:
+            errors.append(f"event {event_id} references unknown policy epoch")
+        else:
+            if event.get("authority_epoch") != policy_entry.get("authority_epoch"):
+                errors.append(f"event {event_id} authority epoch does not match policy epoch")
+            event_monotonic = event.get("monotonic_ns")
+            policy_monotonic = policy_entry.get("effective_at_monotonic_ns")
+            if isinstance(event_monotonic, int) and isinstance(policy_monotonic, int) and event_monotonic < policy_monotonic:
+                errors.append(f"event {event_id} monotonic time precedes effective policy epoch")
+            event_time = _parse_datetime(event.get("occurred_at_utc"))
+            policy_time = _parse_datetime(policy_entry.get("effective_at_utc"))
+            if event_time is not None and policy_time is not None and event_time < policy_time:
+                errors.append(f"event {event_id} wall-clock time precedes effective policy epoch")
+
+        if event.get("semantic_digest") != event_semantic_digest(event):
+            errors.append(f"event {event_id} semantic digest mismatch")
+
+    attachment_event_digests = {
+        event.get("semantic_digest")
+        for event in events
+        if event.get("event_type") == "policy-attachment" and event.get("semantic_digest") == event_semantic_digest(event)
+    }
+    attachments = document.get("policy_attachments", [])
+    attachment_ids = [attachment.get("attachment_id") for attachment in attachments]
+    for attachment_id in sorted(_duplicate_values(attachment_ids)):
+        errors.append(f"duplicate attachment_id {attachment_id}")
+    for attachment in attachments:
+        attachment_id = attachment.get("attachment_id")
+        epoch = attachment.get("policy_epoch")
+        policy_entry = history_by_epoch.get(epoch)
+        if policy_entry is None:
+            errors.append(f"attachment {attachment_id} references unknown policy epoch")
+            continue
+        if attachment.get("state") == "effective":
+            if attachment.get("policy_digest") != policy_entry.get("policy_digest"):
+                errors.append(f"effective attachment {attachment_id} policy digest does not match policy epoch")
+            if attachment.get("evidence_digest") not in attachment_event_digests:
+                errors.append(f"effective attachment {attachment_id} evidence digest does not bind a policy-attachment event")
+
+    assertions = document.get("assertions", [])
+    assertion_ids = [assertion.get("assertion_id") for assertion in assertions]
+    for assertion_id in sorted(_duplicate_values(assertion_ids)):
+        errors.append(f"duplicate assertion_id {assertion_id}")
+
+    for assertion in assertions:
+        assertion_id = assertion.get("assertion_id")
+        evidence_event_ids = assertion.get("evidence_event_ids", [])
+        is_mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
+        if is_mandatory_pass and not evidence_event_ids:
+            errors.append(f"mandatory PASS assertion {assertion_id} requires event evidence")
+        for event_id in evidence_event_ids:
+            if event_id not in event_ids:
+                errors.append(f"assertion {assertion_id} references missing evidence event {event_id}")
+                continue
+            if event_id in duplicate_event_ids:
+                errors.append(f"assertion {assertion_id} evidence event {event_id} does not resolve uniquely")
+                continue
+            if is_mandatory_pass:
+                event = events_by_id[event_id]
+                source_id = event.get("source_id")
+                source = telemetry_by_source.get(source_id)
+                if source is None:
+                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {source_id}")
+                elif source.get("coverage") != "mandatory" or source.get("health") != "healthy":
+                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
+
+    return errors
+
+
 def _is_credible_pass(assertion: dict[str, Any]) -> bool:
     return assertion.get("state") == "PASS" and bool(assertion.get("evidence_event_ids"))
 
@@ -67,102 +283,80 @@ def _is_credible_pass(assertion: dict[str, Any]) -> bool:
 def expected_verdict(document: dict[str, Any]) -> str:
     if not document.get("probe_executed", False) or document.get("execution_status") != "completed":
         return "UNVERIFIED"
-    telemetry = document.get("telemetry", [])
-    mandatory_telemetry = [i for i in telemetry if i.get("coverage") == "mandatory"]
-    if not mandatory_telemetry or any(i.get("health") != "healthy" for i in mandatory_telemetry):
+
+    if _evidence_errors(document):
         return "UNVERIFIED"
-    assertions = document.get("assertions", [])
-    if any(i.get("state") == "FAIL" for i in assertions):
+
+    if _residual_errors(document):
         return "FAIL"
-    mandatory = [i for i in assertions if i.get("mandatory")]
+
+    telemetry = document.get("telemetry", [])
+    mandatory_telemetry = [item for item in telemetry if item.get("coverage") == "mandatory"]
+    if not mandatory_telemetry or any(item.get("health") != "healthy" for item in mandatory_telemetry):
+        return "UNVERIFIED"
+
+    assertions = document.get("assertions", [])
+    if any(item.get("state") == "FAIL" for item in assertions):
+        return "FAIL"
+    mandatory = [item for item in assertions if item.get("mandatory")]
     if not mandatory:
         return "UNVERIFIED"
-    incomplete = [i for i in mandatory if i.get("state") in {"UNVERIFIED", "NOT-APPLICABLE"} or (i.get("state") == "PASS" and not i.get("evidence_event_ids"))]
+    incomplete = [
+        item
+        for item in mandatory
+        if item.get("state") in {"UNVERIFIED", "NOT-APPLICABLE"}
+        or (item.get("state") == "PASS" and not item.get("evidence_event_ids"))
+    ]
     if incomplete:
-        return "PARTIAL" if any(_is_credible_pass(i) for i in mandatory) else "UNVERIFIED"
-    return "PASS" if all(_is_credible_pass(i) for i in mandatory) else "UNVERIFIED"
+        return "PARTIAL" if any(_is_credible_pass(item) for item in mandatory) else "UNVERIFIED"
+    return "PASS" if all(_is_credible_pass(item) for item in mandatory) else "UNVERIFIED"
 
 
 def validate(document: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    if document.get("apiVersion") != "agentci.dev/sandbox/v0alpha1": errors.append("unexpected apiVersion")
-    if document.get("kind") != "EvidenceEnvelope": errors.append("validator only accepts EvidenceEnvelope")
-    if document.get("verdict_rule_version") != VERDICT_RULE: errors.append("unexpected verdict rule version")
-    canonicalization = document.get("canonicalization", {})
-    if canonicalization.get("algorithm") != CANONICALIZATION: errors.append("unexpected canonicalization algorithm")
-    if canonicalization.get("artifact_digest") != artifact_digest(document): errors.append("artifact digest mismatch")
-    if document.get("policy_history_digest") != policy_history_digest(document): errors.append("policy history digest mismatch")
-    if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
-
-    epochs = {e.get("policy_epoch") for e in document.get("policy_history", [])}
-    if None in epochs or not epochs: errors.append("policy history must contain concrete epochs")
-
-    telemetry = document.get("telemetry", [])
-    source_ids = [i.get("source_id") for i in telemetry if i.get("source_id") is not None]
-    duplicate_source_ids = {sid for sid in source_ids if source_ids.count(sid) > 1}
-    for source_id in sorted(duplicate_source_ids):
-        errors.append(f"duplicate telemetry source_id {source_id}")
-    telemetry_by_source = {i.get("source_id"): i for i in telemetry if i.get("source_id") is not None}
-
-    events = document.get("events", [])
-    concrete_event_ids = [e.get("event_id") for e in events if e.get("event_id") is not None]
-    duplicate_event_ids = {event_id for event_id in concrete_event_ids if concrete_event_ids.count(event_id) > 1}
-    for event_id in sorted(duplicate_event_ids):
-        errors.append(f"duplicate event_id {event_id}")
-    event_ids = set(concrete_event_ids)
-    events_by_id = {e.get("event_id"): e for e in events if e.get("event_id") is not None}
-    for event in events:
-        if event.get("policy_epoch") not in epochs: errors.append(f"event {event.get('event_id')} references unknown policy epoch")
-        if event.get("semantic_digest") != event_semantic_digest(event): errors.append(f"event {event.get('event_id')} semantic digest mismatch")
-
-    attachments = document.get("policy_attachments", [])
-    for attachment in attachments:
-        if attachment.get("policy_epoch") not in epochs: errors.append(f"attachment {attachment.get('attachment_id')} references unknown policy epoch")
-
-    for assertion in document.get("assertions", []):
-        evidence_event_ids = assertion.get("evidence_event_ids", [])
-        is_mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
-        if is_mandatory_pass and not evidence_event_ids: errors.append(f"mandatory PASS assertion {assertion.get('assertion_id')} requires event evidence")
-        for event_id in evidence_event_ids:
-            if event_id not in event_ids:
-                errors.append(f"assertion {assertion.get('assertion_id')} references missing evidence event {event_id}")
-                continue
-            if event_id in duplicate_event_ids:
-                errors.append(f"assertion {assertion.get('assertion_id')} evidence event {event_id} does not resolve uniquely")
-                continue
-            if is_mandatory_pass:
-                event = events_by_id[event_id]
-                source_id = event.get("source_id")
-                source = telemetry_by_source.get(source_id)
-                if source is None: errors.append(f"mandatory PASS assertion {assertion.get('assertion_id')} evidence event {event_id} references undeclared telemetry source {source_id}")
-                elif source_id in duplicate_source_ids: errors.append(f"mandatory PASS assertion {assertion.get('assertion_id')} evidence event {event_id} references duplicate telemetry source {source_id}")
-                elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion.get('assertion_id')} evidence event {event_id} requires a healthy mandatory telemetry source")
+    errors = _evidence_errors(document)
+    errors.extend(_residual_errors(document))
 
     verdict = expected_verdict(document)
-    if document.get("verdict") != verdict: errors.append(f"verdict mismatch: recorded={document.get('verdict')} expected={verdict}")
+    if document.get("verdict") != verdict:
+        errors.append(f"verdict mismatch: recorded={document.get('verdict')} expected={verdict}")
+
     if document.get("verdict") == "PASS":
-        mandatory_telemetry = [i for i in telemetry if i.get("coverage") == "mandatory"]
-        if not mandatory_telemetry: errors.append("PASS requires mandatory telemetry evidence")
-        elif any(i.get("health") != "healthy" for i in mandatory_telemetry): errors.append("PASS requires every mandatory telemetry collector to be healthy")
-        if duplicate_source_ids: errors.append("PASS requires unique telemetry source identities")
-        if duplicate_event_ids: errors.append("PASS requires unique event identities")
-        if any(i.get("mandatory") and i.get("state") == "NOT-APPLICABLE" for i in document.get("assertions", [])): errors.append("PASS cannot hide a mandatory assertion as not-applicable")
-        if any(i.get("state") == "FAIL" for i in document.get("assertions", [])): errors.append("PASS contains a failed assertion")
-        if not any(i.get("state") == "effective" for i in attachments): errors.append("PASS requires effective policy attachment evidence")
-        material_unverified = [k for k, v in document.get("post_conditions", {}).items() if v == "unverified"]
-        if material_unverified: errors.append("PASS contains unverified post-conditions: " + ", ".join(material_unverified))
+        telemetry = document.get("telemetry", [])
+        attachments = document.get("policy_attachments", [])
+        mandatory_telemetry = [item for item in telemetry if item.get("coverage") == "mandatory"]
+        if not mandatory_telemetry:
+            errors.append("PASS requires mandatory telemetry evidence")
+        elif any(item.get("health") != "healthy" for item in mandatory_telemetry):
+            errors.append("PASS requires every mandatory telemetry collector to be healthy")
+        if any(item.get("mandatory") and item.get("state") == "NOT-APPLICABLE" for item in document.get("assertions", [])):
+            errors.append("PASS cannot hide a mandatory assertion as not-applicable")
+        if any(item.get("state") == "FAIL" for item in document.get("assertions", [])):
+            errors.append("PASS contains a failed assertion")
+        if not any(item.get("state") == "effective" for item in attachments):
+            errors.append("PASS requires effective policy attachment evidence")
+        material_unverified = [key for key, value in document.get("post_conditions", {}).items() if value == "unverified"]
+        if material_unverified:
+            errors.append("PASS contains unverified post-conditions: " + ", ".join(material_unverified))
+
     return errors
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(); parser.add_argument("path", type=Path); parser.add_argument("--print-digest", action="store_true"); args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", type=Path)
+    parser.add_argument("--print-digest", action="store_true")
+    args = parser.parse_args()
     document = json.loads(args.path.read_text(encoding="utf-8"))
-    if args.print_digest: print(artifact_digest(document))
+    if args.print_digest:
+        print(artifact_digest(document))
     errors = validate(document)
     if errors:
-        for error in errors: print(f"ERROR: {error}")
+        for error in errors:
+            print(f"ERROR: {error}")
         return 1
-    print(f"OK: {document['run_id']} verdict={document['verdict']}"); return 0
+    print(f"OK: {document['run_id']} verdict={document['verdict']}")
+    return 0
 
 
-if __name__ == "__main__": raise SystemExit(main())
+if __name__ == "__main__":
+    raise SystemExit(main())
