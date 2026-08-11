@@ -185,7 +185,8 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     attachment_event_digests = {event.get("semantic_digest") for event in events if event.get("event_type") == "policy-attachment" and event.get("semantic_digest") == event_semantic_digest(event)}
     attachments = document.get("policy_attachments", [])
     attachment_values = [item.get("attachment_id") for item in attachments]
-    for attachment_id in sorted(_duplicates(attachment_values)): errors.append(f"duplicate attachment_id {attachment_id}")
+    duplicate_attachments = _duplicates(attachment_values)
+    for attachment_id in sorted(duplicate_attachments): errors.append(f"duplicate attachment_id {attachment_id}")
     for attachment in attachments:
         attachment_id, policy_entry = attachment.get("attachment_id"), history_by_epoch.get(attachment.get("policy_epoch"))
         if policy_entry is None:
@@ -207,6 +208,15 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 event = events_by_id[event_id]; source_id = event.get("source_id"); source = telemetry_by_source.get(source_id)
                 if source is None: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {source_id}")
                 elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
+                governing_epoch = event.get("policy_epoch")
+                matching_attachments = [
+                    item for item in attachments
+                    if item.get("state") == "effective"
+                    and item.get("policy_epoch") == governing_epoch
+                    and item.get("attachment_id") not in duplicate_attachments
+                ]
+                if len(matching_attachments) != 1:
+                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment for policy epoch {governing_epoch}")
     return errors
 
 
