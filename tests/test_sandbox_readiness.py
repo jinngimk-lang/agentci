@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import threading
 
 import pytest
 
@@ -168,6 +170,39 @@ def test_resolver_failure_isolated_and_resolved_path_is_probed():
     assert report.active_backend == 'podman'
     assert calls == [['C:/tools/podman.exe', '--version']]
     assert report.candidates[1].executable == 'podman.exe'
+
+
+def test_bounded_probe_cleanup_does_not_wait_for_retained_stdout_writer():
+    """Breaks if an inherited stdout writer can outlive the probe cleanup deadline."""
+    from agentci.sandbox.readiness import _run_bounded_probe
+
+    retained_writers = []
+    finished = threading.Event()
+    result = []
+
+    def run(argv, **kwargs):
+        output = kwargs['stdout']
+        retained_writers.append(os.fdopen(os.dup(output.fileno()), 'wb'))
+        output.write(b'tool version 1.2.3')
+        output.flush()
+        return subprocess.CompletedProcess(argv, 0, stdout=None, stderr=None)
+
+    def invoke():
+        try:
+            result.append(_run_bounded_probe(run, ['C:/tools/tool.exe', '--version']))
+        finally:
+            finished.set()
+
+    worker = threading.Thread(target=invoke, daemon=True)
+    worker.start()
+    try:
+        assert finished.wait(0.25), 'bounded cleanup must not wait for inherited stdout EOF'
+        assert result[0][1] == b'tool version 1.2.3'
+    finally:
+        for writer in retained_writers:
+            writer.close()
+        worker.join(timeout=1)
+    assert not worker.is_alive()
 
 
 def test_windows_sandbox_absence_differs_from_detected_unverified_presence():

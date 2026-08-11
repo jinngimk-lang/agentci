@@ -19,6 +19,8 @@ REPORT_VERSION = 'v0alpha1'
 PROBE_TIMEOUT_SECONDS = 2
 MAX_PROBE_OUTPUT_BYTES = 256
 MAX_VERSION_LENGTH = 32
+READER_CLEANUP_SECONDS = 0.1
+READER_POLL_SECONDS = 0.01
 VERSION_PATTERN = re.compile(r'\b(\d+(?:\.\d+){1,3})\b')
 LIMITATIONS = (
     'Readiness is not backend execution.',
@@ -246,14 +248,37 @@ def _extract_version(output: bytes | str | None) -> str | None:
 def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.CompletedProcess[str], bytes]:
     """Run a probe while draining stdout and retaining no more than the output limit."""
     read_fd, write_fd = os.pipe()
+    os.set_blocking(read_fd, False)
     captured = bytearray()
+    direct_process_finished = threading.Event()
 
     def drain_output() -> None:
-        with os.fdopen(read_fd, 'rb') as stream:
-            while chunk := stream.read(4096):
+        final_empty_read = False
+        try:
+            while True:
+                try:
+                    chunk = os.read(read_fd, 4096)
+                except BlockingIOError:
+                    if direct_process_finished.is_set():
+                        if final_empty_read:
+                            return
+                        final_empty_read = True
+                        continue
+                    direct_process_finished.wait(READER_POLL_SECONDS)
+                    continue
+                if not chunk:
+                    return
+                final_empty_read = False
                 remaining = MAX_PROBE_OUTPUT_BYTES - len(captured)
                 if remaining > 0:
                     captured.extend(chunk[:remaining])
+        except OSError:
+            pass
+        finally:
+            try:
+                os.close(read_fd)
+            except OSError:
+                pass
 
     reader = threading.Thread(target=drain_output, daemon=True)
     reader.start()
@@ -270,7 +295,13 @@ def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.Complet
                 text=False,
             )
     finally:
-        reader.join()
+        direct_process_finished.set()
+        reader.join(READER_CLEANUP_SECONDS)
+        if reader.is_alive():
+            try:
+                os.close(read_fd)
+            except OSError:
+                pass
     return completed, bytes(captured)
 
 
