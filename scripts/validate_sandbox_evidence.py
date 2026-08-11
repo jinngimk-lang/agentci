@@ -48,7 +48,12 @@ def digest_value(value: Any) -> str: return "sha256:" + hashlib.sha256(canonical
 def canonical_bytes(document: dict[str, Any]) -> bytes:
     candidate = copy.deepcopy(document)
     if isinstance(candidate.get("canonicalization"), dict): candidate["canonicalization"].pop("artifact_digest", None)
-    return canonical_value_bytes(candidate)
+    case_id = candidate.get("case_id")
+    test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
+    return canonical_value_bytes({
+        "evidence": candidate,
+        "test_case_digest": digest_value(test_case) if test_case is not None else None,
+    })
 
 def artifact_digest(document: dict[str, Any]) -> str: return "sha256:" + hashlib.sha256(canonical_bytes(document)).hexdigest()
 def policy_history_digest(document: dict[str, Any]) -> str: return digest_value(document.get("policy_history", []))
