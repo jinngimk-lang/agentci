@@ -105,7 +105,11 @@ def validate(document: dict[str, Any]) -> list[str]:
     telemetry_by_source = {i.get("source_id"): i for i in telemetry if i.get("source_id") is not None}
 
     events = document.get("events", [])
-    event_ids = {e.get("event_id") for e in events}
+    concrete_event_ids = [e.get("event_id") for e in events if e.get("event_id") is not None]
+    duplicate_event_ids = {event_id for event_id in concrete_event_ids if concrete_event_ids.count(event_id) > 1}
+    for event_id in sorted(duplicate_event_ids):
+        errors.append(f"duplicate event_id {event_id}")
+    event_ids = set(concrete_event_ids)
     events_by_id = {e.get("event_id"): e for e in events if e.get("event_id") is not None}
     for event in events:
         if event.get("policy_epoch") not in epochs: errors.append(f"event {event.get('event_id')} references unknown policy epoch")
@@ -123,6 +127,9 @@ def validate(document: dict[str, Any]) -> list[str]:
             if event_id not in event_ids:
                 errors.append(f"assertion {assertion.get('assertion_id')} references missing evidence event {event_id}")
                 continue
+            if event_id in duplicate_event_ids:
+                errors.append(f"assertion {assertion.get('assertion_id')} evidence event {event_id} does not resolve uniquely")
+                continue
             if is_mandatory_pass:
                 event = events_by_id[event_id]
                 source_id = event.get("source_id")
@@ -138,6 +145,7 @@ def validate(document: dict[str, Any]) -> list[str]:
         if not mandatory_telemetry: errors.append("PASS requires mandatory telemetry evidence")
         elif any(i.get("health") != "healthy" for i in mandatory_telemetry): errors.append("PASS requires every mandatory telemetry collector to be healthy")
         if duplicate_source_ids: errors.append("PASS requires unique telemetry source identities")
+        if duplicate_event_ids: errors.append("PASS requires unique event identities")
         if any(i.get("mandatory") and i.get("state") == "NOT-APPLICABLE" for i in document.get("assertions", [])): errors.append("PASS cannot hide a mandatory assertion as not-applicable")
         if any(i.get("state") == "FAIL" for i in document.get("assertions", [])): errors.append("PASS contains a failed assertion")
         if not any(i.get("state") == "effective" for i in attachments): errors.append("PASS requires effective policy attachment evidence")
