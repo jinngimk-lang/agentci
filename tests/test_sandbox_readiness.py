@@ -7,27 +7,74 @@ import pytest
 
 
 def test_public_parser_and_cli_json_contract(monkeypatch, capsys):
-    """Breaks if the public doctor command or its JSON transport disappears."""
+    """Breaks if required report/candidate facts disappear from public doctor JSON."""
     from agentci import cli
+    from agentci.sandbox.readiness import Candidate, collect_readiness_report
 
-    class Report:
-        def to_dict(self):
-            return {
-                'report_version': 'v0alpha1',
-                'agentci_version': '0.1.0',
-                'platform': {'system': 'Windows', 'release': '11', 'machine': 'AMD64', 'python': '3.11'},
-                'state': 'ready',
-                'active_backend': 'docker',
-                'candidates': [],
-                'limitations': ['Readiness is not isolation proof.'],
-            }
+    candidates = (
+        Candidate('docker', 'container', 'docker', ('docker', '--version')),
+        Candidate('bubblewrap', 'os-sandbox', 'bwrap', ('bwrap', '--version')),
+        Candidate('wsl', 'os-sandbox', 'wsl.exe', ('wsl.exe', '--status')),
+        Candidate('windows-sandbox', 'os-sandbox', 'WindowsSandbox.exe', None, unverified_reason='no safe handshake'),
+    )
 
-    monkeypatch.setattr(cli, 'collect_readiness_report', lambda: Report())
+    def resolve(name):
+        return {
+            'docker': 'C:/tools/docker.exe',
+            'wsl.exe': 'C:/Windows/System32/wsl.exe',
+            'WindowsSandbox.exe': 'C:/Windows/System32/WindowsSandbox.exe',
+        }.get(name)
+
+    def run(argv, **kwargs):
+        if argv[0] == 'C:/tools/docker.exe':
+            return subprocess.CompletedProcess(argv, 0, stdout='Docker version 27.3.1, build private-token', stderr='')
+        return subprocess.CompletedProcess(argv, 1, stdout='', stderr='not configured')
+
+    report = collect_readiness_report(
+        candidates=candidates,
+        resolve=resolve,
+        run=run,
+        platform_facts=('Windows', '11', 'AMD64', '3.11.9'),
+    )
+
+    monkeypatch.setattr(cli, 'collect_readiness_report', lambda: report)
     assert cli.main(['sandbox', 'doctor', '--json']) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload['report_version'] == 'v0alpha1'
+    assert set(payload) == {
+        'report_version', 'api_version', 'agentci_version', 'platform', 'state', 'active_backend', 'candidates', 'limitations',
+    }
+    assert payload['report_version'] == payload['api_version'] == 'v0alpha1'
+    assert payload['platform'] == {'system': 'Windows', 'release': '11', 'machine': 'AMD64', 'python': '3.11.9'}
+    assert payload['state'] == 'ready'
     assert payload['active_backend'] == 'docker'
-    assert payload['limitations'] == ['Readiness is not isolation proof.']
+    assert 'not isolation proof' in ' '.join(payload['limitations']).lower()
+    expected_candidate_fields = {
+        'id', 'candidate_class', 'executable', 'version', 'probe_method', 'state', 'discovered', 'installed',
+        'configured', 'probed', 'readiness', 'reason',
+    }
+    assert all(set(candidate) == expected_candidate_fields for candidate in payload['candidates'])
+    assert payload['candidates'] == [
+        {
+            'id': 'docker', 'candidate_class': 'container', 'executable': 'docker.exe', 'version': '27.3.1',
+            'probe_method': 'docker --version', 'state': 'healthy', 'discovered': True, 'installed': True,
+            'configured': None, 'probed': True, 'readiness': 'ready', 'reason': None,
+        },
+        {
+            'id': 'bubblewrap', 'candidate_class': 'os-sandbox', 'executable': None, 'version': None,
+            'probe_method': 'bwrap --version', 'state': 'missing', 'discovered': False, 'installed': False,
+            'configured': None, 'probed': False, 'readiness': 'not-ready', 'reason': 'Executable was not found on PATH.',
+        },
+        {
+            'id': 'wsl', 'candidate_class': 'os-sandbox', 'executable': 'wsl.exe', 'version': None,
+            'probe_method': 'wsl.exe --status', 'state': 'broken', 'discovered': True, 'installed': True,
+            'configured': False, 'probed': True, 'readiness': 'not-ready', 'reason': 'Probe exited unsuccessfully.',
+        },
+        {
+            'id': 'windows-sandbox', 'candidate_class': 'os-sandbox', 'executable': 'WindowsSandbox.exe', 'version': None,
+            'probe_method': None, 'state': 'unverified', 'discovered': True, 'installed': True,
+            'configured': None, 'probed': False, 'readiness': 'unverified', 'reason': 'no safe handshake',
+        },
+    ]
     assert cli.build_parser().parse_args(['sandbox', 'doctor', '--json']).json is True
 
 
@@ -44,7 +91,7 @@ def test_broken_preferred_candidate_falls_back_to_healthy_candidate():
         return f'C:/tools/{name}.exe'
 
     def run(argv, **kwargs):
-        if argv[0] == 'docker':
+        if argv[0].endswith('docker.exe'):
             raise OSError('stale launcher')
         return subprocess.CompletedProcess(argv, 0, stdout='podman 5.0', stderr='')
 
@@ -67,9 +114,9 @@ def test_timeout_and_unexpected_probe_errors_do_not_abort_fallback():
     )
 
     def run(argv, **kwargs):
-        if argv[0] == 'docker':
+        if argv[0].endswith('docker'):
             raise subprocess.TimeoutExpired(argv, 2)
-        if argv[0] == 'podman':
+        if argv[0].endswith('podman'):
             raise RuntimeError('unexpected')
         return subprocess.CompletedProcess(argv, 0, stdout='bwrap 1.0', stderr='')
 
@@ -95,21 +142,79 @@ def test_all_missing_or_unverified_candidates_have_no_active_backend():
     assert [candidate.state for candidate in report.candidates] == ['missing', 'unverified']
 
 
+def test_resolver_failure_isolated_and_resolved_path_is_probed():
+    """Breaks if resolver failure aborts later candidates or probes a different executable."""
+    from agentci.sandbox.readiness import Candidate, collect_readiness_report
+
+    candidates = (
+        Candidate('docker', 'container', 'docker', ('docker', '--version')),
+        Candidate('podman', 'container', 'podman', ('podman', '--version')),
+    )
+    calls = []
+
+    def resolve(name):
+        if name == 'docker':
+            raise OSError('resolver failure with C:/Users/alice')
+        return 'C:/tools/podman.exe'
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout='podman version 5.2.0', stderr='')
+
+    report = collect_readiness_report(candidates=candidates, resolve=resolve, run=run)
+    assert report.candidates[0].state == 'probe-error'
+    assert report.candidates[0].discovered is False
+    assert report.candidates[0].reason == 'Executable discovery failed.'
+    assert report.active_backend == 'podman'
+    assert calls == [['C:/tools/podman.exe', '--version']]
+    assert report.candidates[1].executable == 'podman.exe'
+
+
+def test_windows_sandbox_absence_differs_from_detected_unverified_presence():
+    """Breaks if absent and present-without-safe-handshake Windows Sandbox look identical."""
+    from agentci.sandbox.readiness import Candidate, collect_readiness_report
+
+    candidate = Candidate(
+        'windows-sandbox', 'os-sandbox', 'WindowsSandbox.exe', None, unverified_reason='no safe handshake',
+    )
+    absent = collect_readiness_report(candidates=(candidate,), resolve=lambda name: None)
+    present = collect_readiness_report(
+        candidates=(candidate,), resolve=lambda name: 'C:/Windows/System32/WindowsSandbox.exe',
+    )
+    assert (absent.candidates[0].state, absent.candidates[0].discovered, absent.candidates[0].installed) == (
+        'missing', False, False,
+    )
+    assert (present.candidates[0].state, present.candidates[0].discovered, present.candidates[0].installed) == (
+        'unverified', True, True,
+    )
+
+
 def test_report_redacts_local_details_and_states_truth_boundary():
     """Breaks if reports disclose local paths/output or omit their readiness limitation."""
     from agentci.sandbox.readiness import Candidate, collect_readiness_report
 
+    captured_stdout = []
+
+    def run(argv, **kwargs):
+        captured_stdout.append(kwargs['stdout'])
+        return subprocess.CompletedProcess(
+            argv, 0, stdout='Docker version 27.3.1, build token=secret-value' + ('x' * 1000), stderr='',
+        )
+
     report = collect_readiness_report(
         candidates=(Candidate('docker', 'container', 'docker', ('docker', '--version')),),
         resolve=lambda name: 'C:/Users/alice/.secret/bin/docker.exe',
-        run=lambda argv, **kwargs: subprocess.CompletedProcess(argv, 0, stdout='token=secret-value', stderr=''),
+        run=run,
         platform_facts=('Windows', '11', 'AMD64', '3.11.9'),
     ).to_dict()
     encoded = json.dumps(report)
     assert report['candidates'][0]['executable'] == 'docker.exe'
     assert report['candidates'][0]['probe_method'] == 'docker --version'
+    assert report['candidates'][0]['version'] == '27.3.1'
     assert 'alice' not in encoded
     assert 'secret-value' not in encoded
+    assert len(report['candidates'][0]['version']) <= 32
+    assert captured_stdout[0] is not subprocess.PIPE
     assert 'current working directory' not in encoded
     assert 'not isolation proof' in ' '.join(report['limitations']).lower()
     assert 'not security certification' in ' '.join(report['limitations']).lower()

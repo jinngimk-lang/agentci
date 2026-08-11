@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
+import threading
 from typing import Callable, Sequence
 
 from agentci import __version__
@@ -14,6 +17,9 @@ from agentci import __version__
 
 REPORT_VERSION = 'v0alpha1'
 PROBE_TIMEOUT_SECONDS = 2
+MAX_PROBE_OUTPUT_BYTES = 256
+MAX_VERSION_LENGTH = 32
+VERSION_PATTERN = re.compile(r'\b(\d+(?:\.\d+){1,3})\b')
 LIMITATIONS = (
     'Readiness is not backend execution.',
     'Readiness is not isolation proof.',
@@ -88,7 +94,7 @@ def default_candidates(system: str) -> tuple[Candidate, ...]:
         Candidate(
             'windows-sandbox',
             'os-sandbox',
-            None,
+            'WindowsSandbox.exe',
             None,
             unverified_reason='Windows Sandbox has no safe executable readiness handshake.',
         ),
@@ -129,7 +135,7 @@ def collect_readiness_report(
 
 
 def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) -> CandidateReport:
-    if candidate.unverified_reason:
+    if candidate.executable is None:
         return CandidateReport(
             id=candidate.id,
             candidate_class=candidate.backend_class,
@@ -142,28 +148,28 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
             configured=None,
             probed=False,
             readiness='unverified',
-            reason=candidate.unverified_reason,
+            reason=candidate.unverified_reason or 'No safe readiness probe is defined.',
         )
 
-    if candidate.executable is None or candidate.probe_argv is None:
+    try:
+        resolved = resolve(candidate.executable)
+    except Exception:
         return CandidateReport(
             id=candidate.id,
             candidate_class=candidate.backend_class,
             executable=None,
             version=None,
-            probe_method=None,
-            state='unverified',
-            discovered=None,
+            probe_method=' '.join(candidate.probe_argv) if candidate.probe_argv else None,
+            state='probe-error',
+            discovered=False,
             installed=None,
             configured=None,
             probed=False,
-            readiness='unverified',
-            reason='No safe readiness probe is defined.',
+            readiness='not-ready',
+            reason='Executable discovery failed.',
         )
 
-    resolved = resolve(candidate.executable)
-    executable = Path(resolved).name if resolved else None
-    probe_method = ' '.join(candidate.probe_argv)
+    probe_method = ' '.join(candidate.probe_argv) if candidate.probe_argv else None
     if not resolved:
         return CandidateReport(
             id=candidate.id,
@@ -180,17 +186,26 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
             reason='Executable was not found on PATH.',
         )
 
-    try:
-        completed = run(
-            list(candidate.probe_argv),
-            shell=False,
-            check=False,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=PROBE_TIMEOUT_SECONDS,
-            text=True,
+    executable = Path(resolved).name
+    if candidate.unverified_reason or candidate.probe_argv is None:
+        return CandidateReport(
+            id=candidate.id,
+            candidate_class=candidate.backend_class,
+            executable=executable,
+            version=None,
+            probe_method=probe_method,
+            state='unverified',
+            discovered=True,
+            installed=True,
+            configured=None,
+            probed=False,
+            readiness='unverified',
+            reason=candidate.unverified_reason or 'No safe readiness probe is defined.',
         )
+
+    execution_argv = [str(resolved), *candidate.probe_argv[1:]]
+    try:
+        completed, captured_output = _run_bounded_probe(run, execution_argv)
     except subprocess.TimeoutExpired:
         return _failed_candidate(candidate, executable, probe_method, 'probe-timeout', 'Probe exceeded its 2-second limit.')
     except OSError:
@@ -204,7 +219,7 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
         id=candidate.id,
         candidate_class=candidate.backend_class,
         executable=executable,
-        version=None,
+        version=_extract_version(captured_output or completed.stdout),
         probe_method=probe_method,
         state='healthy',
         discovered=True,
@@ -214,6 +229,49 @@ def _inspect_candidate(candidate: Candidate, *, resolve: Resolver, run: Runner) 
         readiness='ready',
         reason=None,
     )
+
+
+def _extract_version(output: bytes | str | None) -> str | None:
+    """Return only a bounded numeric version token; never report raw probe output."""
+    if isinstance(output, bytes):
+        bounded_output = output[:MAX_PROBE_OUTPUT_BYTES].decode('utf-8', errors='replace')
+    elif isinstance(output, str):
+        bounded_output = output[:MAX_PROBE_OUTPUT_BYTES]
+    else:
+        return None
+    match = VERSION_PATTERN.search(bounded_output)
+    return match.group(1)[:MAX_VERSION_LENGTH] if match else None
+
+
+def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.CompletedProcess[str], bytes]:
+    """Run a probe while draining stdout and retaining no more than the output limit."""
+    read_fd, write_fd = os.pipe()
+    captured = bytearray()
+
+    def drain_output() -> None:
+        with os.fdopen(read_fd, 'rb') as stream:
+            while chunk := stream.read(4096):
+                remaining = MAX_PROBE_OUTPUT_BYTES - len(captured)
+                if remaining > 0:
+                    captured.extend(chunk[:remaining])
+
+    reader = threading.Thread(target=drain_output, daemon=True)
+    reader.start()
+    try:
+        with os.fdopen(write_fd, 'wb') as output:
+            completed = run(
+                argv,
+                shell=False,
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.DEVNULL,
+                timeout=PROBE_TIMEOUT_SECONDS,
+                text=False,
+            )
+    finally:
+        reader.join()
+    return completed, bytes(captured)
 
 
 def _failed_candidate(
