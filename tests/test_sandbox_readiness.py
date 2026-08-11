@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import threading
+import time
 
 import pytest
 
@@ -203,6 +204,80 @@ def test_bounded_probe_cleanup_does_not_wait_for_retained_stdout_writer():
             writer.close()
         worker.join(timeout=1)
     assert not worker.is_alive()
+
+
+def test_bounded_probe_reader_solely_owns_descriptor_during_continuous_output(monkeypatch):
+    """Breaks if cleanup double-closes or races a still-active reader's descriptor."""
+    from agentci.sandbox import readiness
+
+    real_os = os
+    close_calls = []
+    reader_closed = threading.Event()
+    writer_finished = threading.Event()
+    stop_writing = threading.Event()
+    keepalive_read, keepalive_write = real_os.pipe()
+
+    class DescriptorOps:
+        read_fd = None
+        reused_fd = None
+
+        @staticmethod
+        def pipe():
+            read_fd, write_fd = real_os.pipe()
+            DescriptorOps.read_fd = read_fd
+            return read_fd, write_fd
+
+        set_blocking = staticmethod(real_os.set_blocking)
+        read = staticmethod(real_os.read)
+        fdopen = staticmethod(real_os.fdopen)
+
+        @staticmethod
+        def close(fd):
+            origin = threading.current_thread().name
+            close_calls.append((origin, fd))
+            if fd == DescriptorOps.read_fd and origin != 'agentci-sandbox-probe-reader' and DescriptorOps.reused_fd is None:
+                real_os.close(fd)
+                real_os.dup2(keepalive_read, fd)
+                DescriptorOps.reused_fd = fd
+                return
+            real_os.close(fd)
+            if fd == DescriptorOps.read_fd:
+                reader_closed.set()
+
+    monkeypatch.setattr(readiness, 'os', DescriptorOps)
+
+    def run(argv, **kwargs):
+        writer = real_os.fdopen(real_os.dup(kwargs['stdout'].fileno()), 'wb', buffering=0)
+
+        def write_continuously():
+            try:
+                while not stop_writing.is_set():
+                    writer.write(b'tool version 1.2.3\n')
+            except OSError:
+                pass
+            finally:
+                writer.close()
+                writer_finished.set()
+
+        threading.Thread(target=write_continuously, name='retained-writer', daemon=True).start()
+        return subprocess.CompletedProcess(argv, 0, stdout=None, stderr=None)
+
+    started = time.monotonic()
+    try:
+        _, captured = readiness._run_bounded_probe(run, ['C:/tools/tool.exe', '--version'])
+        assert time.monotonic() - started < 0.5
+        assert captured.startswith(b'tool version 1.2.3')
+        assert reader_closed.wait(0.25)
+        assert DescriptorOps.reused_fd is None
+        assert close_calls == [('agentci-sandbox-probe-reader', DescriptorOps.read_fd)]
+        assert writer_finished.wait(0.5)
+    finally:
+        stop_writing.set()
+        for fd in (keepalive_read, keepalive_write):
+            try:
+                real_os.close(fd)
+            except OSError:
+                pass
 
 
 def test_windows_sandbox_absence_differs_from_detected_unverified_presence():

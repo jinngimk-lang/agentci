@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 from typing import Callable, Sequence
 
 from agentci import __version__
@@ -251,11 +252,14 @@ def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.Complet
     os.set_blocking(read_fd, False)
     captured = bytearray()
     direct_process_finished = threading.Event()
+    cleanup_deadline: float | None = None
 
     def drain_output() -> None:
         final_empty_read = False
         try:
             while True:
+                if cleanup_deadline is not None and time.monotonic() >= cleanup_deadline:
+                    return
                 try:
                     chunk = os.read(read_fd, 4096)
                 except BlockingIOError:
@@ -280,7 +284,7 @@ def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.Complet
             except OSError:
                 pass
 
-    reader = threading.Thread(target=drain_output, daemon=True)
+    reader = threading.Thread(target=drain_output, name='agentci-sandbox-probe-reader', daemon=True)
     reader.start()
     try:
         with os.fdopen(write_fd, 'wb') as output:
@@ -295,13 +299,9 @@ def _run_bounded_probe(run: Runner, argv: list[str]) -> tuple[subprocess.Complet
                 text=False,
             )
     finally:
+        cleanup_deadline = time.monotonic() + READER_CLEANUP_SECONDS
         direct_process_finished.set()
-        reader.join(READER_CLEANUP_SECONDS)
-        if reader.is_alive():
-            try:
-                os.close(read_fd)
-            except OSError:
-                pass
+        reader.join(READER_CLEANUP_SECONDS + READER_POLL_SECONDS)
     return completed, bytes(captured)
 
 
