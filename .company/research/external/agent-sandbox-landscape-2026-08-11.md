@@ -191,7 +191,12 @@ Classification: `benchmark + experiment`
 
 ### Vercel Sandbox
 
-Sources:
+Sources (verified 2026-08-11):
+- repository: https://github.com/vercel/sandbox at `9f46a39561c057eaba9d9a9f4e78373d330e7ad6`
+- Apache-2.0 license: https://github.com/vercel/sandbox
+- managed-image migration, `@vercel/sandbox@3.0.0` (2026-08-07): https://github.com/vercel/sandbox/commit/bf2bc66003fc89cf07a1346a7ea63951747cbec6
+- in-memory SDK-compatible mock, `@vercel/sandbox-mock@2.8.0` (2026-07-20): https://github.com/vercel/sandbox/commit/2de1abbe2a1f54091ce61aac74effc3f55200497
+- server-side fork copies source environment and image, `@vercel/sandbox@2.9.0` (2026-07-24): https://github.com/vercel/sandbox/commit/b13244dbd6c81f42c9fa8ccdfffe9c807b92fa0b
 - https://vercel.com/docs/vercel-sandbox
 - https://vercel.com/kb/guide/running-opencode-securely-with-the-vercel-sandbox
 
@@ -200,13 +205,20 @@ Why it matters:
 - configurable network policies and domain allowlists;
 - snapshots and SDK-driven lifecycle;
 - patterns for credential brokering/separation and agent-code execution.
+- version 3.0 changes unspecified creation from the former Amazon Linux `node24` runtime to a Vercel managed Ubuntu universal image, so a stable SDK call does not imply a stable tested image or package baseline;
+- the official mock deliberately runs SDK-compatible command/filesystem/snapshot/fork flows locally through `just-bash` and an in-memory filesystem, making it useful harness evidence but not real backend or containment evidence;
+- server-side fork copies the source sandbox environment and image, creating explicit lineage, credential-inheritance and stale-policy questions.
 
 AgentCI lesson:
 - distinguish harness identity/credentials from generated-code identity;
 - verify configured egress policy with runtime probes;
 - backend readiness is not containment evidence.
+- bind every certification target to API generation, resolved image identity/digest and observed guest baseline; an unpinned provider default change invalidates portability of the prior result;
+- add a first-class `mock/simulated` execution-reality marker and a negative-control invariant: SDK/API compatibility may validate harness behavior but can never satisfy S1 runtime/containment proof;
+- bind fork/snapshot evidence to parent identity, child identity, lineage operation, copied environment/credential policy, effective image and post-fork authority/restore epochs;
+- require a fork contamination fixture that proves revoked or parent-only environment authority cannot silently become valid child authority.
 
-Classification: `benchmark`
+Classification: `benchmark + design-source`; use the official mock only as a negative control, never as an S1 backend.
 
 ### Azure Container Apps Sandboxes
 
