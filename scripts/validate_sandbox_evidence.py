@@ -172,8 +172,20 @@ def validate(document: dict[str, Any]) -> list[str]:
     if None in epochs or not epochs:
         errors.append("policy history must contain concrete epochs")
 
+    telemetry = document.get("telemetry", [])
+    telemetry_by_source = {
+        item.get("source_id"): item
+        for item in telemetry
+        if item.get("source_id") is not None
+    }
+
     events = document.get("events", [])
     event_ids = {event.get("event_id") for event in events}
+    events_by_id = {
+        event.get("event_id"): event
+        for event in events
+        if event.get("event_id") is not None
+    }
     for event in events:
         if event.get("policy_epoch") not in epochs:
             errors.append(f"event {event.get('event_id')} references unknown policy epoch")
@@ -187,7 +199,8 @@ def validate(document: dict[str, Any]) -> list[str]:
 
     for assertion in document.get("assertions", []):
         evidence_event_ids = assertion.get("evidence_event_ids", [])
-        if assertion.get("mandatory") and assertion.get("state") == "PASS" and not evidence_event_ids:
+        is_mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
+        if is_mandatory_pass and not evidence_event_ids:
             errors.append(
                 f"mandatory PASS assertion {assertion.get('assertion_id')} requires event evidence"
             )
@@ -196,6 +209,21 @@ def validate(document: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"assertion {assertion.get('assertion_id')} references missing evidence event {event_id}"
                 )
+                continue
+            if is_mandatory_pass:
+                event = events_by_id[event_id]
+                source_id = event.get("source_id")
+                source = telemetry_by_source.get(source_id)
+                if source is None:
+                    errors.append(
+                        f"mandatory PASS assertion {assertion.get('assertion_id')} evidence event "
+                        f"{event_id} references undeclared telemetry source {source_id}"
+                    )
+                elif source.get("coverage") != "mandatory" or source.get("health") != "healthy":
+                    errors.append(
+                        f"mandatory PASS assertion {assertion.get('assertion_id')} evidence event "
+                        f"{event_id} requires a healthy mandatory telemetry source"
+                    )
 
     verdict = expected_verdict(document)
     if document.get("verdict") != verdict:
