@@ -4,7 +4,7 @@ Status: **design-stage integration head for independent Agent B review**. This i
 
 ## Purpose
 
-This document is Agent A's canonical S0 integration surface for Supervisor #24 / CMD:A #25. It integrates accepted program invariants and the current bounded inputs from B/C/D/E without inventing provider guarantees.
+This document is Agent A's canonical S0 integration surface for Supervisor #24 / CMD:A #25. It integrates only the program invariants that are actually represented by the current canonical schemas/validator and records the current bounded inputs from B/C/D/E. A specialist packet being accepted as research input does **not** mean every packet semantic is already encoded. Unimplemented or disputed semantics stay explicitly unresolved rather than being inferred from prose, provider class names, or free-form assumptions.
 
 Canonical schema package:
 
@@ -49,7 +49,9 @@ The canonical authority module defines five immutable object classes:
 - `Decision`;
 - `EnforcementReceipt`.
 
-A grant and decision are bound to principal, action, resource, context, policy/authority epoch and validity information. An enforcement receipt binds a decision to the actual backend/environment and, when applicable, actual endpoint, credential epoch and restore epoch.
+The current schema represents these object classes and core fields, but it does **not yet** prove a complete typed authority graph or formal reviewer independence. In particular, bundle-level unique typed-ID/reference resolution, principal-attestation-backed reviewer identity, and exact reviewed-head/artifact binding from D-14/D-15 remain unresolved.
+
+A grant and decision are intended to bind principal, action, resource, context, policy/authority epoch and validity information. An enforcement receipt is intended to bind a decision to the actual backend/environment and, when applicable, actual endpoint, credential epoch and restore epoch. Behavioral evidence must not be upgraded into proof that a specific grant or Decision caused enforcement unless the receipt/provenance chain supports that claim.
 
 Unknown/error authorization is intended to fail closed. The LLM, workload, repository, MCP/tool output and other observations cannot be the only grant issuer/approver for privilege expansion.
 
@@ -86,6 +88,8 @@ Each channel is independently `blocked | mediated | direct | unverified | not-ap
 
 Enforcement transport is a separate object, for example an application proxy, stream proxy, packet filter, namespace boundary, service mesh or host broker. A Unix socket can therefore be an intended enforcement transport without implying arbitrary workload Unix-socket authority. No channel verdict is inferred from another channel.
 
+This vocabulary does not yet prove enforcement topology/locus, hidden shared-host/control surfaces, helper/device/IPC authority, or actual endpoint/broker causality. Those remain explicit C/D-domain unresolved items until represented and independently attacked.
+
 ## Configured -> selected/attached -> effective
 
 A policy existing in a control plane does not prove that it applies to the tested workload. `PolicyAttachment.state` distinguishes:
@@ -111,13 +115,13 @@ Restore is not modeled as an implicit clean reset. `LifecycleContinuity` records
 
 Each continuity state is `preserved | revalidated | revoked | replaced | unverified`.
 
-A preserved socket/session after restore must be re-bound to the current authority/policy/credential evidence or the affected claim remains failed/unverified. Same-policy equality before/after restore does not by itself prove fresh authority.
+A preserved socket/session after restore must be re-bound to the current authority/policy/credential evidence or the affected claim remains failed/unverified. Same-policy equality before/after restore does not by itself prove fresh authority. The current contract also does not yet prove that cleanup/continuity was observed from outside the lifecycle boundary; external observer locus/trust remains unresolved.
 
 ## Evidence and verdict semantics
 
 `execution_status = completed | harness-error | evidence-invalid` is separate from the backend verdict.
 
-The S0 validator executes the Draft 2020-12 JSON Schema with date-time format checking before accepting PASS. Unknown fields, invalid event classes and invalid date-time values therefore fail closed rather than bypassing semantic checks.
+The S0 validator executes the Draft 2020-12 JSON Schema with active date-time format checking before accepting PASS. The project now requires the `jsonschema[format]` dependency set because upstream `jsonschema` documents that a missing format dependency can otherwise cause format validation to succeed silently. Unknown fields, invalid event classes and invalid date-time values are therefore expected to fail closed rather than bypassing semantic checks.
 
 Atomic verdict rule used by the S0 helper:
 
@@ -160,10 +164,10 @@ The validator is an S0 semantic checker, not a sandbox runtime/certifier.
 
 1. `PolicySpec`, `Observation`, `TestCase`, `EvidenceEnvelope` are formally separated.
 2. policy epoch/history and per-event binding are represented.
-3. authority references and the five D authority objects are represented.
-4. network capability and enforcement transport are separate, channel-specific semantics.
+3. the five D authority object classes and core fields are represented, while typed graph uniqueness/causality/reviewer identity remain unresolved.
+4. network capability and enforcement transport are separate, channel-specific vocabulary; enforcement topology and hidden control surfaces are not yet proved.
 5. attachment/selection evidence is separate from configured/effective behavior and has an envelope-local content-addressed evidence target.
-6. restore continuity is explicit and not assumed clean.
+6. restore continuity is explicit and not assumed clean; external observer trust/locus is not yet proved.
 7. execution status, schema/evidence validity, mandatory assertion coverage and cleanup post-conditions are separate from backend verdict.
 8. a deliberately permissive red control is present and expected to fail the containment claim.
 
@@ -173,11 +177,30 @@ These are implementation claims awaiting C/D/E fidelity checks and independent B
 
 The following remain unresolved or intentionally narrowed:
 
-- exact minimum representation for D's trusted AuthorityBundle graph, broker audience/scope, endpoint causality and restore/session freshness;
-- receipt provenance strength and observer locus: behavioral evidence must not be upgraded into proof that a specific grant/Decision caused enforcement;
-- true TestCase event-class and claim-interval telemetry completeness, including absence-as-negative-evidence semantics;
+### C / isolation-runtime semantics
+
+- explicit enforcement topology/locus per capability; an `isolation_class` label is provenance, not proof of the actual enforcing boundary;
+- shared-host and control surfaces, including helpers, devices, IPC, runtime sockets and other host-coupled paths that can bypass a narrower claim;
+- lifecycle-boundary observer trust: cleanup/termination evidence observed only from inside the workload boundary cannot prove absence outside that boundary;
+- portable semantic claim versus backend-specific mechanism, including which probes are ordinary-CI-safe, nested-disposable-only, privileged, or unavailable;
 - exact distinction between enforceable-but-not-observable and observable-but-not-enforceable per S1 reference target;
-- ordinary-CI-safe versus nested-disposable-only attack classes;
+- receipt provenance strength / observer locus: behavioral evidence must not be upgraded into Decision -> enforcement causation without a trustworthy chain.
+
+### D / authority-identity-network semantics
+
+- exact minimum representation for D's trusted AuthorityBundle graph, broker audience/scope, endpoint causality and restore/session freshness;
+- deterministic unique resolution for typed TrustRoot/PrincipalAttestation/CapabilityGrant/Decision/EnforcementReceipt identities and references (D-14);
+- formal reviewer identity via canonical PrincipalAttestation/TrustRoot semantics, plus exact reviewed-head/artifact binding; role labels or `independent_reviewer_run_ids[]` are not sufficient (D-15);
+- unresolved reviewer principal or ambiguous typed reference remains `UNVERIFIED` rather than independent PASS.
+
+### E / evidence-replay semantics
+
+- true TestCase event-class and claim-interval telemetry completeness, including absence-as-negative-evidence semantics;
+- immutable TestCase/suite/comparator/normalizer binding and replay recipe sufficient for cross-run semantic comparison;
+- stronger side-effect/trajectory/recovery/authorized-utility oracles beyond the current envelope-local evidence checks.
+
+### Cross-cutting
+
 - whether the current project-specific canonicalization is sufficiently cross-language stable;
 - formal independent-review identity provenance; same GitHub principal with different role labels is not independent verification;
 - exact S1 reference targets and execution readiness.
