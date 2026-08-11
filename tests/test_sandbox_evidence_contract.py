@@ -2,7 +2,7 @@ import copy
 import json
 from pathlib import Path
 
-from scripts.validate_sandbox_evidence import artifact_digest, expected_verdict, validate
+from scripts.validate_sandbox_evidence import artifact_digest, event_semantic_digest, expected_verdict, validate
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
@@ -153,6 +153,7 @@ def test_mandatory_pass_requires_nonempty_event_evidence():
 def test_mandatory_pass_event_source_must_resolve_to_declared_healthy_telemetry():
     document = _passing_fixture()
     document["events"][0]["source_id"] = "ghost-source"
+    document["events"][0]["semantic_digest"] = event_semantic_digest(document["events"][0])
     _rehash(document)
     assert any(
         "ghost-source" in error or "telemetry source" in error.lower() or "event source" in error.lower()
@@ -168,6 +169,18 @@ def test_duplicate_telemetry_source_ids_cannot_authenticate_mandatory_pass():
     document["telemetry"].append(duplicate)
     _rehash(document)
     assert any("duplicate" in error.lower() and "source" in error.lower() for error in validate(document))
+
+
+def test_duplicate_event_ids_cannot_authenticate_mandatory_pass():
+    document = _passing_fixture()
+    ghost = copy.deepcopy(document["events"][0])
+    ghost["source_id"] = "ghost-source"
+    ghost["semantic_digest"] = event_semantic_digest(ghost)
+    trusted = copy.deepcopy(document["events"][0])
+    trusted["semantic_digest"] = event_semantic_digest(trusted)
+    document["events"] = [ghost, trusted]
+    _rehash(document)
+    assert any("duplicate" in error.lower() and "event_id" in error.lower() for error in validate(document))
 
 
 def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
