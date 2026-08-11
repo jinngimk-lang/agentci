@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "tests" / "fixtures" / "sandbox" / "authority" / "vectors.json"
-EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b"}
+EXPECTED_IDS = {"D-01","D-02","D-03","D-04","D-05","D-06","D-07","D-08","D-09","D-10","D-11","D-12","D-13a","D-13b","D-14"}
 ALLOWED_RESULTS = {"DENY", "PERMIT", "UNVERIFIED", "EXPANSION_GATE"}
 
 def _load():
@@ -50,6 +50,9 @@ def _oracle(vector):
         required = [f["trust_root_ref"], f["principal_attestation_ref"], f["grant_ref"], f["decision_ref"], f["receipt_ref"]]
         if f["provenance_strength"] != "decision-bound-native-receipt" or not f["immutable_refs_resolved"] or not all(required): return "UNVERIFIED"
         return f["receipt_result"] if f["receipt_result"] in {"DENY", "PERMIT"} else "UNVERIFIED"
+    if rule == "unique_authority_identity":
+        matches = [item for item in f["objects"] if item["id"] == f["reference"]]
+        return "UNVERIFIED" if len(matches) != 1 else matches[0].get("effect", "UNVERIFIED")
     raise AssertionError(f"unknown rule: {rule}")
 
 def test_vector_pack_is_complete_and_single_oracle():
@@ -72,6 +75,13 @@ def test_d13_has_both_required_provenance_variants():
     assert by_id["D-13b"]["expected"] == "DENY" and by_id["D-13b"]["facts"]["provenance_strength"] == "decision-bound-native-receipt"
     for key in ("enforcement_locus","observer_locus","policy_epoch","authority_epoch","credential_epoch"):
         assert key in by_id["D-13a"]["facts"] and key in by_id["D-13b"]["facts"]
+
+def test_d14_duplicate_security_identity_is_not_order_selectable():
+    vector = next(v for v in _load()["vectors"] if v["id"] == "D-14")
+    assert _oracle(vector) == "UNVERIFIED"
+    reversed_vector = json.loads(json.dumps(vector))
+    reversed_vector["facts"]["objects"].reverse()
+    assert _oracle(reversed_vector) == "UNVERIFIED"
 
 def test_vectors_do_not_embed_secret_material():
     raw = VECTORS.read_text(encoding="utf-8").lower()
