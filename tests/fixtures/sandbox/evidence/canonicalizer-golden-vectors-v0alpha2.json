@@ -1,0 +1,28 @@
+{
+  "profile_version": "agentci-semantic-c14n-v0alpha2-proposed",
+  "status": "E-owned golden vectors for A integration; not released canonical behavior",
+  "construction": "sha256(utf8('agentci:<domain>:v0alpha2\\n' + canonical_json))",
+  "canonical_json_rules": [
+    "UTF-8",
+    "object keys sorted lexicographically",
+    "no insignificant whitespace",
+    "arrays preserve order unless A canonical schema explicitly designates the field as a semantic set",
+    "reject duplicate JSON keys before canonicalization",
+    "reject duplicate semantic IDs in security-relevant collections",
+    "integers only in this v0alpha2 vector set; no floating-point normalization is implied"
+  ],
+  "vectors": [
+    {"vector_id":"V-01","domain":"testcase","payload":{"case_id":"E-01","mandatory_assertions":["a","b"],"timeout_ms":5000},"canonical_json":"{\"case_id\":\"E-01\",\"mandatory_assertions\":[\"a\",\"b\"],\"timeout_ms\":5000}","expected_digest":"sha256:8d06ca13e70515edcd242a3cfb45ae7ce6f6a15e9ff77d29ba656426a41a7ffe"},
+    {"vector_id":"V-02","domain":"testcase","payload":{"mandatory_assertions":["a","b"],"timeout_ms":5000,"case_id":"E-01"},"canonical_json":"{\"case_id\":\"E-01\",\"mandatory_assertions\":[\"a\",\"b\"],\"timeout_ms\":5000}","expected_digest":"sha256:8d06ca13e70515edcd242a3cfb45ae7ce6f6a15e9ff77d29ba656426a41a7ffe"},
+    {"vector_id":"V-03","domain":"policy-history","payload":{"epochs":[{"policy_epoch":1,"digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"},{"policy_epoch":2,"digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222"}]},"canonical_json":"{\"epochs\":[{\"digest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"policy_epoch\":1},{\"digest\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\",\"policy_epoch\":2}]}","expected_digest":"sha256:aa1362debef1798c1d14aae0cddc2aacda3a426be19e68bdd3393d8cf422e2b1"},
+    {"vector_id":"V-04","domain":"policy-history","payload":{"epochs":[{"policy_epoch":2,"digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222"},{"policy_epoch":1,"digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}]},"canonical_json":"{\"epochs\":[{\"digest\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\",\"policy_epoch\":2},{\"digest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"policy_epoch\":1}]}","expected_digest":"sha256:ce952939321f9cd0ac7a1c6ae2139b475bc2b0ee2183d0e660c161b076c23fc0"},
+    {"vector_id":"V-05","domain":"run-evidence","payload":{"run_id":"r-α","events":["e1","e2"]},"canonical_json":"{\"events\":[\"e1\",\"e2\"],\"run_id\":\"r-α\"}","expected_digest":"sha256:eded6a1f0cb4752a437519fe5c9813356194a7a1b7b1cf44afe0a83f6b466d6a"},
+    {"vector_id":"V-06","domain":"artifact","payload":{"media_type":"application/json","size_bytes":3,"sha256":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"canonical_json":"{\"media_type\":\"application/json\",\"sha256\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"size_bytes\":3}","expected_digest":"sha256:ef02b694496af1d17c1d877fa7193f291889e9fb6e882e09f391bcf010a236e1"}
+  ],
+  "negative_requirements": [
+    "duplicate JSON keys must be rejected before hashing",
+    "same payload under different digest domains must yield different digests",
+    "policy-history epoch sequence order is security-significant and must change digest",
+    "semantic-set normalization must be explicitly field-declared by A; unlisted arrays are ordered"
+  ]
+}
