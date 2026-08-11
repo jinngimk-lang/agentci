@@ -30,7 +30,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:d4e0c713f287a1dc678dc43a4867215b7631381c5b360f9fa7b59f696c56e857",
+  "authority_digest": "sha256:a7814aeeb75016b44f7da77a1660abe5de355e39a3e336078bb1434ae7befd91",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -40,7 +40,7 @@
       "policy_epoch": 0,
       "enforcer": "fixture-enforcer",
       "state": "effective",
-      "evidence_digest": "sha256:2e4de659e01cc7c9fe80d53f13fe0bc917cacbdf909e6f9de579f799299063f9"
+      "evidence_digest": "sha256:603c805c69e1e4f3a3d10ccb29d1115bea9e6da8a3bac6307ebd7e1e0ad17183"
     }
   ],
   "lifecycle_continuity": [],
@@ -72,16 +72,6 @@
   ],
   "events": [
     {
-      "event_id": "event-policy-attachment",
-      "event_type": "policy-attachment",
-      "occurred_at_utc": "2026-08-11T03:00:00Z",
-      "monotonic_ns": 1500,
-      "policy_epoch": 0,
-      "authority_epoch": 0,
-      "source_id": "fixture-policy-observer",
-      "semantic_digest": "sha256:2e4de659e01cc7c9fe80d53f13fe0bc917cacbdf909e6f9de579f799299063f9"
-    },
-    {
       "event_id": "event-sensitive-read",
       "event_type": "file",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
@@ -90,6 +80,16 @@
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
       "semantic_digest": "sha256:315745bf7ef6c6a2d88b73d60a6c81e59d7a4db962c6a8448446384bca6c26f5"
+    },
+    {
+      "event_id": "event-policy-attachment-baseline",
+      "event_type": "policy-attachment",
+      "occurred_at_utc": "2026-08-11T03:00:00Z",
+      "monotonic_ns": 1500,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-policy-observer",
+      "semantic_digest": "sha256:603c805c69e1e4f3a3d10ccb29d1115bea9e6da8a3bac6307ebd7e1e0ad17183"
     }
   ],
   "post_conditions": {
@@ -106,6 +106,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:9e9d1012835febec819f2111bc3651fbeace76f52b3feba11ae282899bb75813"
+    "artifact_digest": "sha256:b8fe7f56f29671459e99d163c1ada493d35b8a6cdd46845f1da98f5939fd7b66"
   }
 }
