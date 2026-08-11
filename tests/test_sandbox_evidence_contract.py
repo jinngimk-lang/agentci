@@ -18,6 +18,16 @@ def _rehash(document):
     return document
 
 
+def _passing_fixture():
+    document = _fixture()
+    document["assertions"][0]["state"] = "PASS"
+    document["verdict"] = "PASS"
+    _rehash(document)
+    assert expected_verdict(document) == "PASS"
+    assert validate(document) == []
+    return document
+
+
 def test_red_control_is_deterministically_fail():
     document = _fixture()
     assert expected_verdict(document) == "FAIL"
@@ -91,3 +101,85 @@ def test_schema_tracks_attachment_and_restore_continuity():
     assert attachment_states == ["configured", "selected", "attached", "effective", "failed", "unverified"]
     continuity = schema["$defs"]["LifecycleContinuity"]["properties"]
     assert {"process_state", "socket_fd_state", "credential_session_state", "policy_attachment_state"}.issubset(continuity)
+
+
+# SBX-EVID-001 RED corpus: every mutation below must stop a recorded PASS.
+
+
+def test_pass_requires_mandatory_telemetry():
+    document = _passing_fixture()
+    document["telemetry"] = []
+    _rehash(document)
+    assert any("telemetry" in error for error in validate(document))
+
+
+def test_degraded_mandatory_collector_cannot_support_pass():
+    document = _passing_fixture()
+    document["telemetry"][0]["health"] = "degraded"
+    _rehash(document)
+    assert any("collector" in error or "telemetry" in error for error in validate(document))
+
+
+def test_mandatory_not_applicable_cannot_be_hidden_inside_pass():
+    document = _passing_fixture()
+    document["assertions"].append(
+        {
+            "assertion_id": "material-network-check",
+            "mandatory": True,
+            "state": "NOT-APPLICABLE",
+            "evidence_event_ids": [],
+        }
+    )
+    document["verdict"] = "PASS"
+    _rehash(document)
+    assert any("not-applicable" in error.lower() or "verdict mismatch" in error for error in validate(document))
+
+
+def test_assertion_evidence_refs_must_resolve_to_existing_events():
+    document = _passing_fixture()
+    document["assertions"][0]["evidence_event_ids"] = ["missing-event"]
+    _rehash(document)
+    assert any("missing-event" in error or "evidence event" in error for error in validate(document))
+
+
+def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
+    document = _passing_fixture()
+    document["assertions"].append(
+        {
+            "assertion_id": "material-sensitive-read-failure",
+            "mandatory": False,
+            "state": "FAIL",
+            "evidence_event_ids": ["event-sensitive-read"],
+        }
+    )
+    document["verdict"] = "PASS"
+    _rehash(document)
+    assert any("failed assertion" in error.lower() or "verdict mismatch" in error for error in validate(document))
+
+
+def test_pass_requires_effective_policy_attachment():
+    document = _passing_fixture()
+    document["policy_attachments"] = []
+    _rehash(document)
+    assert any("attachment" in error for error in validate(document))
+
+
+def test_policy_history_digest_must_bind_the_actual_history():
+    document = _passing_fixture()
+    document["policy_history_digest"] = "sha256:" + "a" * 64
+    _rehash(document)
+    assert any("policy history digest" in error.lower() for error in validate(document))
+
+
+def test_authority_digest_must_bind_the_authority_projection():
+    document = _passing_fixture()
+    document["authority_digest"] = "sha256:" + "b" * 64
+    _rehash(document)
+    assert any("authority digest" in error.lower() for error in validate(document))
+
+
+def test_event_semantic_digest_must_bind_event_semantics():
+    document = _passing_fixture()
+    document["events"][0]["semantic_digest"] = "sha256:" + "c" * 64
+    _rehash(document)
+    assert any("semantic digest" in error.lower() for error in validate(document))
