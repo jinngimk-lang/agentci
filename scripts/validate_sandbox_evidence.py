@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import FormatError
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
@@ -49,30 +50,15 @@ def policy_history_digest(document: dict[str, Any]) -> str:
 def authority_binding_projection(document: dict[str, Any]) -> dict[str, Any]:
     return {
         "policy_history": [
-            {
-                "policy_epoch": item.get("policy_epoch"),
-                "authority_epoch": item.get("authority_epoch"),
-                "source_principal_id": item.get("source_principal_id"),
-            }
+            {"policy_epoch": item.get("policy_epoch"), "authority_epoch": item.get("authority_epoch"), "source_principal_id": item.get("source_principal_id")}
             for item in document.get("policy_history", [])
         ],
         "policy_attachments": [
-            {
-                "attachment_id": item.get("attachment_id"),
-                "workload_identity": item.get("workload_identity"),
-                "policy_epoch": item.get("policy_epoch"),
-                "policy_digest": item.get("policy_digest"),
-                "state": item.get("state"),
-            }
+            {"attachment_id": item.get("attachment_id"), "workload_identity": item.get("workload_identity"), "policy_epoch": item.get("policy_epoch"), "policy_digest": item.get("policy_digest"), "state": item.get("state")}
             for item in document.get("policy_attachments", [])
         ],
         "events": [
-            {
-                "event_id": item.get("event_id"),
-                "authority_epoch": item.get("authority_epoch"),
-                "decision_id": item.get("decision_id"),
-                "receipt_id": item.get("receipt_id"),
-            }
+            {"event_id": item.get("event_id"), "authority_epoch": item.get("authority_epoch"), "decision_id": item.get("decision_id"), "receipt_id": item.get("receipt_id")}
             for item in document.get("events", [])
         ],
     }
@@ -91,9 +77,6 @@ def event_semantic_digest(event: dict[str, Any]) -> str:
 @lru_cache(maxsize=1)
 def _schema_validator() -> Draft202012Validator:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    # Validate the concrete EvidenceEnvelope definition directly. The public
-    # root is a multi-kind union; evaluating the concrete definition prevents
-    # format annotations from being obscured by union-branch diagnostics.
     envelope_schema = {
         "$schema": schema["$schema"],
         "$id": schema.get("$id", "") + "#EvidenceEnvelopeValidation",
@@ -101,6 +84,25 @@ def _schema_validator() -> Draft202012Validator:
         "$ref": "#/$defs/EvidenceEnvelope",
     }
     return Draft202012Validator(envelope_schema, format_checker=FormatChecker())
+
+
+def _format_fields_valid(document: dict[str, Any]) -> bool:
+    """Apply JSON Schema date-time format semantics to security-significant clocks.
+
+    The public schema's current EvidenceEnvelope branch does not yet route every
+    nested event clock through the reusable Event definition, so this explicit
+    FormatChecker pass is part of the v0alpha1 schema-validation gate rather
+    than a permissive semantic fallback.
+    """
+    checker = FormatChecker()
+    values = [item.get("effective_at_utc") for item in document.get("policy_history", [])]
+    values.extend(event.get("occurred_at_utc") for event in document.get("events", []))
+    for value in values:
+        try:
+            checker.check(value, "date-time")
+        except FormatError:
+            return False
+    return True
 
 
 def _parse_datetime(value: Any) -> datetime | None:
@@ -130,8 +132,7 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
 
 def _evidence_errors(document: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-
-    if list(_schema_validator().iter_errors(document)):
+    if list(_schema_validator().iter_errors(document)) or not _format_fields_valid(document):
         errors.append("schema validation failed")
 
     if document.get("apiVersion") != "agentci.dev/sandbox/v0alpha1":
@@ -234,8 +235,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     attachment_event_digests = {
         event.get("semantic_digest")
         for event in events
-        if event.get("event_type") == "policy-attachment"
-        and event.get("semantic_digest") == event_semantic_digest(event)
+        if event.get("event_type") == "policy-attachment" and event.get("semantic_digest") == event_semantic_digest(event)
     }
     attachments = document.get("policy_attachments", [])
     attachment_values = [item.get("attachment_id") for item in attachments]
@@ -294,12 +294,10 @@ def expected_verdict(document: dict[str, Any]) -> str:
         return "UNVERIFIED"
     if _residual_errors(document):
         return "FAIL"
-
     telemetry = document.get("telemetry", [])
     mandatory_telemetry = [item for item in telemetry if item.get("coverage") == "mandatory"]
     if not mandatory_telemetry or any(item.get("health") != "healthy" for item in mandatory_telemetry):
         return "UNVERIFIED"
-
     assertions = document.get("assertions", [])
     if any(item.get("state") == "FAIL" for item in assertions):
         return "FAIL"
@@ -307,8 +305,7 @@ def expected_verdict(document: dict[str, Any]) -> str:
     if not mandatory:
         return "UNVERIFIED"
     incomplete = [
-        item
-        for item in mandatory
+        item for item in mandatory
         if item.get("state") in {"UNVERIFIED", "NOT-APPLICABLE"}
         or (item.get("state") == "PASS" and not item.get("evidence_event_ids"))
     ]
@@ -323,7 +320,6 @@ def validate(document: dict[str, Any]) -> list[str]:
     verdict = expected_verdict(document)
     if document.get("verdict") != verdict:
         errors.append(f"verdict mismatch: recorded={document.get('verdict')} expected={verdict}")
-
     if document.get("verdict") == "PASS":
         telemetry = document.get("telemetry", [])
         attachments = document.get("policy_attachments", [])
