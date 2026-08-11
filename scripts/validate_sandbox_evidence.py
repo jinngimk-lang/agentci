@@ -75,7 +75,14 @@ def authority_binding_projection(document: dict[str, Any]) -> dict[str, Any]:
             for item in document.get("policy_attachments", [])
         ],
         "events": [
-            {"event_id": item.get("event_id"), "authority_epoch": item.get("authority_epoch"), "decision_id": item.get("decision_id"), "receipt_id": item.get("receipt_id")}
+            {
+                "event_id": item.get("event_id"),
+                "authority_epoch": item.get("authority_epoch"),
+                "decision_id": item.get("decision_id"),
+                "receipt_id": item.get("receipt_id"),
+                "workload_identity": item.get("workload_identity"),
+                "attachment_id": item.get("attachment_id"),
+            }
             for item in document.get("events", [])
         ],
     }
@@ -209,14 +216,18 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 if source is None: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {source_id}")
                 elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
                 governing_epoch = event.get("policy_epoch")
+                workload_identity = event.get("workload_identity")
+                attachment_id = event.get("attachment_id")
                 matching_attachments = [
                     item for item in attachments
                     if item.get("state") == "effective"
                     and item.get("policy_epoch") == governing_epoch
+                    and item.get("workload_identity") == workload_identity
+                    and item.get("attachment_id") == attachment_id
                     and item.get("attachment_id") not in duplicate_attachments
                 ]
-                if len(matching_attachments) != 1:
-                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment for policy epoch {governing_epoch}")
+                if not workload_identity or not attachment_id or len(matching_attachments) != 1:
+                    errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment with matching workload identity for policy epoch {governing_epoch}")
     return errors
 
 
