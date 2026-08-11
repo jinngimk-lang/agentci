@@ -218,6 +218,8 @@ def expected_verdict(document: dict[str, Any]) -> str:
     if not document.get("probe_executed", False) or document.get("execution_status") != "completed": return "UNVERIFIED"
     if _evidence_errors(document): return "UNVERIFIED"
     if _residual_errors(document): return "FAIL"
+    attachments = document.get("policy_attachments", [])
+    if not any(item.get("state") == "effective" for item in attachments): return "UNVERIFIED"
     mandatory_telemetry = [item for item in document.get("telemetry", []) if item.get("coverage") == "mandatory"]
     if not mandatory_telemetry or any(item.get("health") != "healthy" for item in mandatory_telemetry): return "UNVERIFIED"
     assertions = document.get("assertions", [])
