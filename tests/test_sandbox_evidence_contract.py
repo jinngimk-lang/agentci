@@ -142,6 +142,14 @@ def test_assertion_evidence_refs_must_resolve_to_existing_events():
     assert any("missing-event" in error or "evidence event" in error for error in validate(document))
 
 
+def test_mandatory_pass_requires_nonempty_event_evidence():
+    document = _passing_fixture()
+    document["assertions"][0]["evidence_event_ids"] = []
+    document["events"] = []
+    _rehash(document)
+    assert any("mandatory pass" in error.lower() or "evidence" in error.lower() for error in validate(document))
+
+
 def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
     document = _passing_fixture()
     document["assertions"].append(
