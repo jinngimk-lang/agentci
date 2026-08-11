@@ -120,6 +120,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:13a19b1165f0f55af717aa3ac174b1faf7884189370b9587e93252a73280f8f3"
+    "artifact_digest": "sha256:d247c8540abd8c07d73090ee4f47694f28b7cd933bc82313adaaf6c6dfb8d222"
   }
 }
