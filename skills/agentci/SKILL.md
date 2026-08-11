@@ -22,6 +22,7 @@ Then use the installed CLI rather than guessing capabilities:
 ```bash
 agentci --help
 agentci test --help
+agentci sandbox doctor --help
 ```
 
 Load only the detail needed for the task:
@@ -93,6 +94,16 @@ Core rules:
 If the installed AgentCI version exposes target introspection/doctor commands, call them before running a new target suite. Use `agentci --help` rather than guessing command names.
 
 A readiness/doctor result does not prove task correctness or security.
+
+## Pre-alpha sandbox readiness
+
+Use the installed command to inspect provider-neutral local candidate readiness:
+
+```bash
+agentci sandbox doctor --json
+```
+
+This pre-alpha report is not backend execution, isolation proof, or security certification. It runs only bounded local probes; PATH discovery alone and unverified candidates are not ready.
 
 ## Agent discoverability
 

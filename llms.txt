@@ -32,6 +32,7 @@ python -m pip install -e '.[dev]'
 ```bash
 agentci --help
 agentci test --help
+agentci sandbox doctor --help
 ```
 
 Do not guess undocumented commands. Use the installed CLI help and current repository docs.
@@ -48,6 +49,14 @@ Default evidence:
 artifacts/agentci-results.json
 artifacts/agentci-report.md
 ```
+
+## Pre-alpha sandbox readiness
+
+```bash
+agentci sandbox doctor --json
+```
+
+This provider-neutral pre-alpha report safely checks local candidate readiness only. It is not backend execution, isolation proof, or security certification; a resolved executable alone is never ready.
 
 The JSON result is canonical machine evidence; Markdown is human presentation.
 

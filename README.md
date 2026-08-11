@@ -8,6 +8,16 @@ Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/relea
 
 V0 is deliberately deterministic. It does **not** call external LLM providers; eval files contain fixture-style `actual` results so scoring, reporting, governance, and growth policy can be tested reliably.
 
+## Pre-alpha sandbox readiness
+
+`agentci sandbox doctor [--json]` is a pre-alpha, provider-neutral local readiness report. It safely checks candidate tools (Docker, Podman, bubblewrap, and Windows-relevant WSL/Windows Sandbox) without creating a sandbox or changing the machine:
+
+```bash
+agentci sandbox doctor --json
+```
+
+It can identify a healthy local candidate for a future route, but it is **not backend execution, isolation proof, or security certification**. A discovered executable or an unverified backend is not reported as ready.
+
 ## 5-minute quickstart
 
 Requirements: Python 3.11+.
@@ -43,6 +53,7 @@ llms.txt
 skills/agentci/SKILL.md
 agentci --help
 agentci test --help
+agentci sandbox doctor --help
 ```
 
 A clean agent should be able to determine what AgentCI does, when to use it, how to install it, how to run the first useful command, what exit codes mean, where canonical machine evidence is written, and what limitations remain without guessing undocumented behavior.
