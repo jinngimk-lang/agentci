@@ -32,9 +32,9 @@ Core invariant:
 Sources (verified 2026-08-11):
 - repository: https://github.com/kubernetes-sigs/agent-sandbox
 - release `v0.5.4` (2026-07-30): https://github.com/kubernetes-sigs/agent-sandbox/releases/tag/v0.5.4
-- scoped-token router authorization: https://github.com/kubernetes-sigs/agent-sandbox/pull/1243
-- recycle and contamination guards: https://github.com/kubernetes-sigs/agent-sandbox/pull/1232
-- threat-model expansion: https://github.com/kubernetes-sigs/agent-sandbox/pull/1299
+- scoped-token router authorization: https://github.com/kubernetes-sigs/agent-sandbox/pull/1243 (merge `945016a7b97f46cd2edf8633d6b6a22d5355ecc1`)
+- recycle and contamination guards: https://github.com/kubernetes-sigs/agent-sandbox/pull/1232 (merge `2b68984b91524efd7c13df27c5cd0b02e9d25e9b`)
+- threat-model expansion: https://github.com/kubernetes-sigs/agent-sandbox/pull/1299 (merge `c180b29fc8f42986d25f417ce9d1fc45bbfefed1`)
 
 License: Apache-2.0.
 
@@ -58,7 +58,7 @@ Classification: `benchmark + design-source`
 Sources (verified 2026-08-11):
 - repository: https://github.com/NVIDIA/OpenShell
 - release `v0.0.102` (2026-08-10): https://github.com/NVIDIA/OpenShell/releases/tag/v0.0.102
-- authorization-inheritance fix: https://github.com/NVIDIA/OpenShell/pull/2499
+- authorization-inheritance fix: https://github.com/NVIDIA/OpenShell/pull/2499 (merge `5e2f0d1b374aadda86344b3ee7f3196f7d7722f5`)
 
 License: Apache-2.0. Upstream labels the project alpha and single-player; no AgentCI containment verdict exists yet.
 
@@ -105,6 +105,7 @@ Sources (verified 2026-08-11):
 - Apple container release `1.2.2` (2026-08-08): https://github.com/apple/container/releases/tag/1.2.2
 - Apple container security-fix release `0.8.0`: https://github.com/apple/container/releases/tag/0.8.0
 - agent wrapper and documented limitations: https://github.com/TakiTake/pall8t
+- pall8t release `v0.4.0` (2026-08-09), tag commit `21f16d88c6220fa8f4a068a532b6f74a967989d5`: https://github.com/TakiTake/pall8t/releases/tag/v0.4.0
 
 Licenses: Apple container is Apache-2.0; pall8t is MIT.
 
