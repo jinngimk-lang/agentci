@@ -181,6 +181,27 @@ def test_pass_requires_effective_policy_attachment():
     assert expected_verdict(document) != "PASS"
 
 
+def test_pass_event_requires_effective_attachment_for_governing_policy_epoch():
+    document = _passing_fixture()
+    p1 = copy.deepcopy(document["policy_history"][0])
+    p1["policy_epoch"] = 1
+    p1["policy_digest"] = "sha256:" + "4" * 64
+    p1["authority_epoch"] = 1
+    p1["effective_at_utc"] = "2026-08-11T03:00:02Z"
+    p1["effective_at_monotonic_ns"] = 2500
+    p1["previous_policy_digest"] = document["policy_history"][0]["policy_digest"]
+    document["policy_history"].append(p1)
+    event = document["events"][0]
+    event["policy_epoch"] = 1
+    event["authority_epoch"] = 1
+    event["occurred_at_utc"] = "2026-08-11T03:00:03Z"
+    event["monotonic_ns"] = 3000
+    document["verdict"] = "PASS"
+    _rebind_all(document)
+    assert expected_verdict(document) != "PASS"
+    assert any("effective attachment" in error and "policy epoch 1" in error for error in validate(document))
+
+
 def test_policy_history_digest_must_bind_the_actual_history():
     document = _passing_fixture()
     document["policy_history_digest"] = "sha256:" + "0" * 64
