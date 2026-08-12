@@ -36,7 +36,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:afd128bc87eab988f9160a7c715ee916860c4230c5fddd53a8387ce161487533",
+  "authority_digest": "sha256:64279f6dbfee7dd887bf44105b89c8650f36c384424a91a82c5681d4512afa8d",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -66,13 +66,6 @@
       "version": "v1",
       "health": "healthy",
       "coverage": "mandatory"
-    },
-    {
-      "source_id": "fixture-process-observer",
-      "layer": "process",
-      "version": "v1",
-      "health": "healthy",
-      "coverage": "mandatory"
     }
   ],
   "assertions": [
@@ -94,18 +87,6 @@
     }
   ],
   "events": [
-    {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
-      "event_type": "process",
-      "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
-      "monotonic_ns": 1600,
-      "policy_epoch": 0,
-      "authority_epoch": 0,
-      "source_id": "fixture-process-observer",
-      "semantic_digest": "sha256:ee76d30d7ae1c3f94aad82cf65c9c00bc67f26a3ade3a094fae43dc0ea82b1c5",
-      "workload_identity": "fixture-workload",
-      "attachment_id": "attach-1"
-    },
     {
       "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
       "event_type": "file",
@@ -141,6 +122,18 @@
       "semantic_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1"
+    },
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+      "event_type": "process",
+      "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
+      "monotonic_ns": 1600,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-policy-observer",
+      "semantic_digest": "sha256:ca46918c2e18270ec212b32799326a34e11c8cda307238c282e30e0d0f4caa05",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
     }
   ],
   "post_conditions": {
@@ -159,6 +152,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:a229892a61ad6a9617087de15d4be7741771e05402469dbdd5d857bd4e95f04f"
+    "artifact_digest": "sha256:e6ac9af53f05ad9a2965cae9282dd532124f5f6afb106469da1e0c5d5029f389"
   }
 }
