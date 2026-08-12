@@ -107,7 +107,8 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:8c718643e662a5e0d24be80b4463849b79b0e4c32ab2d2598174780a2fc2d293",
+      "semantic_digest": "sha256:7dc764c666825921887e1d4ae9c7efbc4ad38a4c73adc4e6b9c201db8fe7cb30",
+      "oracle_ref": "sha256:7fc1817ee53ee823c7bbd31f2975645630c382e32dfd88cc2310207afc742b3b",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1"
     },
@@ -140,6 +141,6 @@
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:e12ccba8e4ecba13aa9a3545830cc7cd468f58da543756699f75aced96373182"
+    "artifact_digest": "sha256:b3a41d83737cfc89f1b694236939709912946558c35a442acae1acb7d4b27158"
   }
 }
