@@ -27,6 +27,7 @@ EVENT_SOURCE_LAYERS = {
     "policy-attachment": {"control-plane"},
     "lifecycle": {"lifecycle"},
 }
+PROBE_ASSERTION_PREFIX = "probe-assertion:"
 
 def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result = {}
@@ -78,6 +79,15 @@ def _test_case_validator() -> Draft202012Validator:
     test_case = {"$schema": schema["$schema"], "$id": schema.get("$id", "") + "#TestCaseValidation", "$defs": schema["$defs"], "$ref": "#/$defs/TestCase"}
     return Draft202012Validator(test_case, format_checker=FormatChecker())
 
+def _canonical_probe_owner_ids(test_case: dict[str, Any]) -> list[str]:
+    owners = []
+    for oracle in test_case.get("oracle", []):
+        if isinstance(oracle, str) and oracle.startswith(PROBE_ASSERTION_PREFIX):
+            owner = oracle[len(PROBE_ASSERTION_PREFIX):]
+            if owner:
+                owners.append(owner)
+    return owners
+
 @lru_cache(maxsize=64)
 def _load_test_case(case_id: str) -> dict[str, Any] | None:
     if not isinstance(case_id, str) or not case_id or "/" in case_id or "\\" in case_id or case_id in {".", ".."}: return None
@@ -93,7 +103,9 @@ def _load_test_case(case_id: str) -> dict[str, Any] | None:
     probe = test_case.get("probe", {})
     probe_assertion_ids = probe.get("assertion_ids", [])
     if len(set(probe_assertion_ids)) != len(probe_assertion_ids) or any(x not in mandatory_ids for x in probe_assertion_ids): return None
-    if test_case.get("capability_domain") == "network" and probe.get("network_channel") is not None and not probe_assertion_ids: return None
+    if test_case.get("capability_domain") == "network" and probe.get("network_channel") is not None:
+        owner_ids = _canonical_probe_owner_ids(test_case)
+        if not probe_assertion_ids or len(set(owner_ids)) != len(owner_ids) or set(owner_ids) != set(probe_assertion_ids): return None
     return test_case
 
 def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any], event_type: Any) -> bool:
@@ -109,15 +121,15 @@ def _event_matches_canonical_probe(test_case: dict[str, Any], assertion_id: Any,
         return True
     probe_assertion_ids = probe.get("assertion_ids")
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
+    owner_ids = _canonical_probe_owner_ids(test_case)
     if (
         not isinstance(probe_assertion_ids, list)
         or not probe_assertion_ids
         or len(set(probe_assertion_ids)) != len(probe_assertion_ids)
         or any(x not in mandatory_ids for x in probe_assertion_ids)
+        or len(set(owner_ids)) != len(owner_ids)
+        or set(owner_ids) != set(probe_assertion_ids)
     ):
-        # A material network probe without explicit canonical assertion binding
-        # is ambiguous. Fail closed instead of inferring ownership from utility
-        # roles or whichever evidence event happens to look network-like.
         return False
     if assertion_id not in set(probe_assertion_ids):
         return True
@@ -252,7 +264,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 if source is None: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {event.get('source_id')}")
                 elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
                 elif test_case is None or not _source_suitable_for_event(test_case, source, event.get("event_type")): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} fails canonical TestCase source suitability")
-                elif not _event_matches_canonical_probe(test_case, assertion_id, event): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} does not match canonical probe channel")
+                elif not _event_matches_canonical_probe(test_case, assertion_id, event): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} does not match canonical probe assertion/channel binding")
                 epoch, workload, aid = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
                 matching = [x for x in attachments if x.get("state") == "effective" and x.get("policy_epoch") == epoch and x.get("workload_identity") == workload and x.get("attachment_id") == aid and x.get("attachment_id") not in dup_attachments]
                 if not workload or not aid or len(matching) != 1: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment with matching workload identity for policy epoch {epoch}")
