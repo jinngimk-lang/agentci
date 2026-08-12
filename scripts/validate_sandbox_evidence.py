@@ -116,7 +116,7 @@ def _duplicates(values: list[Any]) -> set[Any]: return {v for v in values if v i
 def _residual_errors(document: dict[str, Any]) -> list[str]:
     post, errors = document.get("post_conditions", {}), []
     if post.get("descendants") == "residual": errors.append("residual descendants violate PASS")
-    if post.get("filesystem_residue") == "residual": errors.append("residual filesystem state violates PASS")
+    if post.get("filesystem_residue") == "residual": errors.append("residual filesystem state violate PASS")
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
     return errors
 
@@ -219,9 +219,13 @@ def _authorized_utility_complete(document: dict[str, Any]) -> bool:
     if test_case is None: return False
     assertions = document.get("assertions", []); duplicates = _duplicates([x.get("assertion_id") for x in assertions])
     by_id = {x.get("assertion_id"): x for x in assertions if x.get("assertion_id") is not None and x.get("assertion_id") not in duplicates}
+    events = document.get("events", []); duplicate_event_ids = _duplicates([x.get("event_id") for x in events])
+    events_by_id = {x.get("event_id"): x for x in events if x.get("event_id") is not None and x.get("event_id") not in duplicate_event_ids}
     for utility_id in test_case.get("authorized_utility", []):
         assertion = by_id.get(utility_id)
         if assertion is None or not assertion.get("mandatory") or not _is_credible_pass(assertion): return False
+        utility_events = [events_by_id.get(event_id) for event_id in assertion.get("evidence_event_ids", [])]
+        if not any(event is not None and event.get("event_type") == "utility" for event in utility_events): return False
     return True
 
 def expected_verdict(document: dict[str, Any]) -> str:
