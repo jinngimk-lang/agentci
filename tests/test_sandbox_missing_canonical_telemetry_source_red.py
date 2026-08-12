@@ -27,15 +27,18 @@ def test_pass_requires_every_canonical_mandatory_telemetry_source(monkeypatch, t
     monkeypatch.setattr(validator, "TEST_CASE_DIR", testcase_dir)
     validator._load_test_case.cache_clear()
 
-    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
-    # Deliberately omit the newly canonical mandatory source from the envelope.
-    assert {source["source_id"] for source in document["telemetry"]} == {
-        "fixture-file-observer",
-        "fixture-policy-observer",
-    }
-    _rebind_all(document)
+    try:
+        document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        document["assertions"][0]["state"] = "PASS"
+        document["verdict"] = "PASS"
+        # Deliberately omit the newly canonical mandatory source from the envelope.
+        assert {source["source_id"] for source in document["telemetry"]} == {
+            "fixture-file-observer",
+            "fixture-policy-observer",
+        }
+        _rebind_all(document)
 
-    # A canonical mandatory collector is absent, so PASS must be impossible.
-    assert validator.expected_verdict(document) != "PASS"
+        # A canonical mandatory collector is absent, so PASS must be impossible.
+        assert validator.expected_verdict(document) != "PASS"
+    finally:
+        validator._load_test_case.cache_clear()
