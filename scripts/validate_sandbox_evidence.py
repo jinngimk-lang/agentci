@@ -127,6 +127,18 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
         continuity = document.get("lifecycle_continuity", [])
         safe_states = {"revalidated", "revoked", "replaced"}
         continuity_fields = ("process_state", "socket_fd_state", "credential_session_state", "policy_attachment_state")
+        telemetry = document.get("telemetry", [])
+        source_ids = [source.get("source_id") for source in telemetry]
+        duplicate_sources = _duplicates(source_ids)
+        telemetry_by_source = {
+            source.get("source_id"): source
+            for source in telemetry
+            if source.get("source_id") is not None and source.get("source_id") not in duplicate_sources
+        }
+        attachments = document.get("policy_attachments", [])
+        attachment_ids = [attachment.get("attachment_id") for attachment in attachments]
+        duplicate_attachments = _duplicates(attachment_ids)
+        events = document.get("events", [])
         if not continuity:
             errors.append("revalidated lifecycle state requires lifecycle continuity evidence")
         for item in continuity:
@@ -136,6 +148,30 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
             for field in continuity_fields:
                 if item.get(field) not in safe_states:
                     errors.append(f"lifecycle continuity {field} must be revalidated, revoked, or replaced before PASS")
+            matching_events = []
+            for event in events:
+                if event.get("event_type") != "lifecycle" or event.get("restore_epoch") != restore_epoch:
+                    continue
+                source = telemetry_by_source.get(event.get("source_id"))
+                if source is None or source.get("coverage") != "mandatory" or source.get("health") != "healthy" or source.get("layer") != "lifecycle":
+                    continue
+                epoch, workload, attachment_id = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
+                effective_attachments = [
+                    attachment
+                    for attachment in attachments
+                    if attachment.get("state") == "effective"
+                    and attachment.get("policy_epoch") == epoch
+                    and attachment.get("workload_identity") == workload
+                    and attachment.get("attachment_id") == attachment_id
+                    and attachment.get("attachment_id") not in duplicate_attachments
+                ]
+                if workload and attachment_id and len(effective_attachments) == 1:
+                    matching_events.append(event)
+            if len(matching_events) != 1:
+                errors.append(
+                    "lifecycle continuity requires exactly one observed lifecycle event from healthy mandatory lifecycle telemetry "
+                    "with matching restore epoch and effective policy attachment context"
+                )
     return errors
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
