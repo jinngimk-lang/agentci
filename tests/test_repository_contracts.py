@@ -102,3 +102,14 @@ def test_public_agent_surfaces_route_current_sandbox_roles_and_external_verifier
     assert verifier_path.lower() in llms
     assert 'external verifier' in agents
     assert 'external verifier' in llms
+
+
+def test_agentci_skill_routes_current_sandbox_program_without_overclaiming_release():
+    skill = read('skills/agentci/SKILL.md').lower()
+    assert 'skills/sandbox-research-certification/skill.md' in skill
+    assert 'agent sandbox certification' in skill
+    for issue in ['#24', '#25', '#26', '#27', '#28', '#29']:
+        assert issue in skill
+    assert 'no backend' in skill and 'certified' in skill
+    assert 'design-stage' in skill or 'experimental' in skill
+    assert 'observation' in skill and 'authority' in skill
