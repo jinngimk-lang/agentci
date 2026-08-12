@@ -27,11 +27,12 @@ Start with:
 - [Sandbox Program #24](../../issues/24) — canonical architecture and stage decisions;
 - [Agent A / contract + probes #25](../../issues/25);
 - [Agent B / independent red team #26](../../issues/26);
-- [Isolation & runtime semantics #27](../../issues/27);
-- [Authority / identity / credentials / network policy #28](../../issues/28);
-- [Evidence / telemetry / replay #29](../../issues/29);
+- [Agent C / isolation & runtime semantics #27](../../issues/27);
+- [Agent D / authority / identity / credentials / network policy #28](../../issues/28);
+- [Agent E / evidence / telemetry / replay #29](../../issues/29);
 - [Current S0 integration PR #34](../../pull/34);
-- [Contributor call #42](../../issues/42) — concrete ways to help.
+- [Contributor call #42](../../issues/42) — concrete ways to help;
+- [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) — clean external-developer/agent verification protocol.
 
 We especially want contributors who can help with:
 
@@ -87,7 +88,9 @@ A clean agent should be able to determine what AgentCI does, when to use it, how
 Canonical agent entry points:
 
 - [`llms.txt`](llms.txt) — concise machine-readable project/use/install/evidence overview;
+- [`AGENTS.md`](AGENTS.md) — current agent-role and skill router;
 - [`skills/agentci/SKILL.md`](skills/agentci/SKILL.md) — compact agent-facing operating contract;
+- [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) — clean public-only External Verifier lane;
 - [`docs/architecture/agent-harness-contract.md`](docs/architecture/agent-harness-contract.md) — target/harness design direction; current implemented behavior remains authoritative;
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — reproducible contribution paths.
 
@@ -112,15 +115,37 @@ cases:
 
 AgentCI checks expected success plus optional maximum latency/cost and writes per-case failure reasons.
 
-## The two-agent operating loop
+## Current operating roles
 
-### Agent A — Builder / Researcher
+The original V0 reliability loop still uses Agent A and Agent B, but the active Sandbox Program is a six-role system plus a clean external-verification perspective:
 
-Agent A chooses bounded issues, implements with tests, and opens evidence-backed PRs. It **must not merge** its own PR, change branch protection/secrets, or publish unsupported marketing claims. Its full contract is in [`.agents/builder.system.md`](.agents/builder.system.md).
+### Agent A — Product / Contract / Probe Integrator
 
-### Agent B — Critic / Red Team / Growth
+Agent A chooses bounded claims, implements with tests, and opens evidence-backed PRs. It **must not merge** its own PR, change branch protection/secrets, or publish unsupported marketing claims. Its full contract is in [`AGENT_A.md`](AGENT_A.md) and [`.agents/builder.system.md`](.agents/builder.system.md).
 
-Agent B independently verifies Agent A's claims, tries adversarial/boundary cases, requests changes or approves, and validates Growth Artifact candidates before they can support distribution. It **must not directly push** feature code to protected main and it does not get to bypass technical/growth evidence gates. See [`.agents/critic-growth.system.md`](.agents/critic-growth.system.md).
+### Agent B — Independent Critic / Red Team
+
+Agent B independently verifies Agent A's claims, tries adversarial/boundary cases, and produces separate Spec + Standards verdicts. It **must not directly push** feature code to protected main and it does not get to bypass technical/growth evidence gates. See [`AGENT_B.md`](AGENT_B.md) and [`.agents/critic-growth.system.md`](.agents/critic-growth.system.md).
+
+### Agent C — Isolation / Runtime Semantics
+
+Agent C owns the actual enforcement meaning and portability limits of microVM/container/OS-native/WASM/runtime primitives. Current coordination surface: [#27](../../issues/27).
+
+### Agent D — Authority / Identity / Credentials / Network Policy
+
+Agent D owns who may grant capability, how workload identity and credentials are established, and how network/control-plane authority is represented. Current coordination surface: [#28](../../issues/28).
+
+### Agent E — Evidence / Telemetry / Replay
+
+Agent E owns what evidence is required to prove containment, cleanup, recovery, authorized utility, replay, and observability coverage. Current coordination surface: [#29](../../issues/29).
+
+### Supervisor — Gate / WIP / Program Decisions
+
+Supervisor resolves scope and stage transitions, coordinates A/B/C/D/E, and cannot substitute its own confidence for a valid B counterexample.
+
+### External Verifier — Clean-perspective testing lane
+
+The External Verifier behaves like an unknown external developer or agent using only public repository surfaces. It finds onboarding, discoverability, reproducibility, documentation-contract, and public-evidence defects, then routes findings to the owning role. It is **not** a seventh approval authority and does not replace Agent B. See [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md).
 
 ## Growth Pack: evidence first
 
@@ -171,7 +196,8 @@ src/agentci/                 deterministic eval CLI
 scripts/                     growth validation/generation
 skills/                      agent-facing discovery/operating skills
 llms.txt                     compact public agent discovery entry point
-.agents/                     Agent A / Agent B system contracts
+AGENTS.md                    current multi-agent routing entry point
+.agents/                     legacy A/B system contracts used by the V0 loop
 .company/                    strategy, metrics, decisions, evidence, growth policy
 .github/                     issue/PR contracts and CI
 examples/                    passing + failing eval suites
@@ -189,6 +215,8 @@ See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup
 AgentCI is open source and welcomes contributors. Useful contributions include reproducible bug reports, regression tests, realistic eval cases, target/harness compatibility work, benchmark methodology, security/reliability review, documentation, and first-run improvements.
 
 For the active Sandbox Program, see [Contributor Call #42](../../issues/42). We welcome both builders and adversarial reviewers; a reproducible false-PASS is a valuable contribution.
+
+If you want to test the project as a clean outsider, use [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md). Do not use private project memory to paper over missing public instructions.
 
 Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). If you want to help but do not know where to begin, look for bounded community-sized work or open an issue describing the exact environment/problem you can reproduce.
 
