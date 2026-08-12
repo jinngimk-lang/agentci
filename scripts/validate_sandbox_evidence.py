@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import FormatError
+from scripts.runtime_environment_attestation import runtime_environment_attestation_valid
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
@@ -159,6 +160,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     if document.get("policy_history_digest") != policy_history_digest(document): errors.append("policy history digest mismatch")
     if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
     errors.extend(_authority_expansion_errors(document))
+    if not runtime_environment_attestation_valid(document): errors.append("runtime/environment provenance is not independently bound to this execution")
     case_id = document.get("case_id"); test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
     if test_case is None: errors.append(f"case_id {case_id} does not resolve to one canonical TestCase")
     history = document.get("policy_history", []); epochs = [x.get("policy_epoch") for x in history]; dup_epochs = _duplicates(epochs)
