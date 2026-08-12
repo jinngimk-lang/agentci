@@ -2,6 +2,46 @@
 
 AgentCI is an open-source reliability, evaluation, and evidence layer for AI agents and agent-native tool harnesses. Contributions are welcome from users, agent/tool builders, security researchers, benchmark authors, and maintainers.
 
+## Active research program: Agent Sandbox Certification
+
+AgentCI's primary open research line is currently **provider-neutral Agent Sandbox Certification**: testing whether a sandbox's *effective* isolation, authority, credential, network, lifecycle, and cleanup behavior matches the security claim being made.
+
+The program is experimental. **No sandbox backend is currently claimed as certified or secure by AgentCI.** We deliberately publish the work while it is being attacked so outside contributors can help find false-PASS behavior before the contract hardens.
+
+Start with:
+
+- Program decisions: https://github.com/jinngimk-lang/agentci/issues/24
+- Product contract/probes: https://github.com/jinngimk-lang/agentci/issues/25
+- Independent red team: https://github.com/jinngimk-lang/agentci/issues/26
+- Isolation/runtime semantics: https://github.com/jinngimk-lang/agentci/issues/27
+- Authority/identity/credentials/network policy: https://github.com/jinngimk-lang/agentci/issues/28
+- Evidence/telemetry/replay: https://github.com/jinngimk-lang/agentci/issues/29
+- Current S0 integration PR: https://github.com/jinngimk-lang/agentci/pull/34
+- Open contributor call: https://github.com/jinngimk-lang/agentci/issues/42
+
+High-value Sandbox contributions include:
+
+- a reproducible false-PASS or false-equivalence counterexample;
+- a RED regression for a real contract weakness;
+- primary-source-backed mapping of one runtime/provider semantic into the generic model;
+- safe process/filesystem/network/credential/lifecycle probe or collector adapters;
+- telemetry-completeness and cleanup/recovery oracles;
+- authority-confusion tests, stale restore/session tests, or alternate-channel tests;
+- cross-backend experiments that use the same semantic TestCase without hiding backend-specific differences.
+
+For Sandbox claims, prefer the pattern:
+
+```text
+falsifiable claim
+→ exact RED reproduction
+→ smallest correction
+→ exact immutable head
+→ independent falsification
+→ limitations / remaining UNVERIFIED
+```
+
+Do not treat a backend name such as `microVM`, `gVisor`, `Kata`, or `container` as a security verdict. Missing observability is `UNVERIFIED`, not PASS.
+
 ## Good ways to contribute
 
 You do not need to start with a large feature. High-value contributions include:
@@ -21,10 +61,11 @@ For security findings, do not publish exploit-enabling details in a public issue
 ## Before starting
 
 1. Read `README.md`.
-2. For executable target work, read `docs/architecture/agent-harness-contract.md`.
-3. Search existing Issues and PRs to avoid duplicates.
-4. Prefer an existing issue before starting a substantial change. If no issue exists, open one describing the user problem, proposed evidence, and smallest useful scope.
-5. Keep one PR focused on one problem.
+2. For active Sandbox work, read issue #24 and the role-specific issue most relevant to your contribution.
+3. For executable target work, read `docs/architecture/agent-harness-contract.md`.
+4. Search existing Issues and PRs to avoid duplicates.
+5. Prefer an existing issue before starting a substantial change. If no issue exists, open one describing the user problem, proposed evidence, and smallest useful scope.
+6. Keep one PR focused on one problem.
 
 The repository uses an evidence-first development model. A plausible implementation is not enough: important claims should be reproducible by another contributor.
 
@@ -95,16 +136,19 @@ Do not present a benchmark score as product truth if the benchmark itself has no
 
 Contributors are welcome to share AgentCI and their work, but please keep public claims evidence-backed. Do not fabricate adoption, user quotes, benchmark wins, security impact, performance gains, or partnerships.
 
+It is fine to publicly describe the Sandbox Program as **experimental open research** and invite builders/red-team reviewers before S0 acceptance. Do not claim that AgentCI has certified a backend, proved a provider secure, or established a cross-provider benchmark until the corresponding exact-head evidence and independent review exist.
+
 When a contribution produces a real reusable benchmark, dataset, integration, research finding, or major capability, link the canonical evidence so maintainers can decide whether it qualifies for a Growth Artifact and broader project distribution.
 
 ## New contributor path
 
 If you want to help but do not know where to start:
 
-1. Look for small reproducible bugs, docs friction, test gaps, or issues marked for community contribution.
-2. Comment with the scope you want to take.
-3. Start with a narrow PR that can be independently verified.
-4. Ask questions on the relevant issue rather than silently expanding scope.
+1. Read the Sandbox contributor call in issue #42 if sandbox security interests you.
+2. Look for small reproducible bugs, docs friction, test gaps, or issues marked for community contribution.
+3. Comment with the scope you want to take.
+4. Start with a narrow PR that can be independently verified.
+5. Ask questions on the relevant issue rather than silently expanding scope.
 
 Maintainers should keep a healthy queue of newcomer-sized work and clearly separate `good first issue` tasks from deep architecture/security tasks.
 
