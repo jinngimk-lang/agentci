@@ -34,4 +34,33 @@ def test_pass_must_bind_evidence_to_the_canonical_probe_that_actually_ran_on_cur
 
     assert validator.expected_verdict(document) != "PASS"
     errors = validator.validate(document)
-    assert any("probe" in error.lower() or "execution" in error.lower() for error in errors)
+    assert any("probe execution" in error.lower() or "execution provenance" in error.lower() for error in errors)
+
+
+def test_missing_execution_provenance_event_is_unverified():
+    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    execution_id = validator.execution_binding_id(
+        document,
+        validator._load_test_case(document["case_id"]),
+        next(event for event in document["events"] if event["event_type"] == "file"),
+    )
+    document["events"] = [event for event in document["events"] if event["event_id"] != execution_id]
+    document["assertions"][0]["state"] = "PASS"
+    document["verdict"] = "PASS"
+    _rebind(document)
+
+    assert validator.expected_verdict(document) == "UNVERIFIED"
+    assert any("execution provenance event" in error.lower() for error in validator.validate(document))
+
+
+def test_execution_provenance_is_distinct_from_authority_receipts():
+    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    execution_event = next(event for event in document["events"] if event["event_type"] == "process")
+    execution_event["decision_id"] = "opaque-decision-string"
+    execution_event["receipt_id"] = "opaque-enforcement-receipt-string"
+    execution_event["semantic_digest"] = validator.event_semantic_digest(execution_event)
+    document["assertions"][0]["state"] = "PASS"
+    document["verdict"] = "PASS"
+    _rebind(document)
+
+    assert validator.expected_verdict(document) == "PASS"

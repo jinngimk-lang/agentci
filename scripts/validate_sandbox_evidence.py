@@ -66,6 +66,23 @@ def authority_binding_digest(document: dict[str, Any]) -> str: return digest_val
 def event_semantic_digest(event: dict[str, Any]) -> str:
     candidate = copy.deepcopy(event); candidate.pop("semantic_digest", None); return digest_value(candidate)
 
+def execution_binding_id(document: dict[str, Any], test_case: dict[str, Any], event: dict[str, Any]) -> str:
+    """Deterministic identity for one canonical probe execution context.
+
+    This is deliberately distinct from authority Decision/EnforcementReceipt IDs.
+    A healthy mandatory process observer must emit the matching execution event;
+    assertion evidence then lives in that execution namespace.
+    """
+    return digest_value({
+        "run_id": document.get("run_id"),
+        "case_id": document.get("case_id"),
+        "attempt": document.get("attempt"),
+        "probe": test_case.get("probe"),
+        "workload_identity": event.get("workload_identity"),
+        "policy_epoch": event.get("policy_epoch"),
+        "authority_epoch": event.get("authority_epoch"),
+    })
+
 @lru_cache(maxsize=1)
 def _schema_validator() -> Draft202012Validator:
     schema = load_evidence_json(SCHEMA_PATH.read_text())
@@ -146,6 +163,33 @@ def _event_not_after(provenance: dict[str, Any], event: dict[str, Any]) -> bool:
     pmono, emono = provenance.get("monotonic_ns"), event.get("monotonic_ns")
     ptime, etime = _parse_datetime(provenance.get("occurred_at_utc")), _parse_datetime(event.get("occurred_at_utc"))
     return isinstance(pmono, int) and isinstance(emono, int) and pmono <= emono and ptime is not None and etime is not None and ptime <= etime
+
+def _execution_binding_errors(document: dict[str, Any], test_case: dict[str, Any] | None, telemetry_by_source: dict[str, dict[str, Any]], events_by_id: dict[str, dict[str, Any]], duplicate_events: set[Any], assertion: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if test_case is None or not assertion.get("mandatory") or assertion.get("state") not in {"PASS", "FAIL"}:
+        return errors
+    for event_id in assertion.get("evidence_event_ids", []):
+        if event_id in duplicate_events or event_id not in events_by_id:
+            continue
+        event = events_by_id[event_id]
+        binding_id = execution_binding_id(document, test_case, event)
+        if not isinstance(event_id, str) or not event_id.startswith(binding_id + ":"):
+            errors.append(f"assertion {assertion.get('assertion_id')} evidence event {event_id} is not bound to exact canonical probe execution")
+            continue
+        execution_event = events_by_id.get(binding_id)
+        if execution_event is None or binding_id in duplicate_events:
+            errors.append(f"assertion {assertion.get('assertion_id')} requires exactly one execution provenance event {binding_id}")
+            continue
+        source = telemetry_by_source.get(execution_event.get("source_id"))
+        if execution_event.get("event_type") != "process":
+            errors.append(f"execution provenance event {binding_id} must be a process observation")
+        elif source is None or source.get("coverage") != "mandatory" or source.get("health") != "healthy" or source.get("layer") != "process":
+            errors.append(f"execution provenance event {binding_id} requires a healthy mandatory process observer")
+        elif execution_event.get("workload_identity") != event.get("workload_identity") or execution_event.get("policy_epoch") != event.get("policy_epoch") or execution_event.get("authority_epoch") != event.get("authority_epoch"):
+            errors.append(f"execution provenance event {binding_id} does not match assertion evidence execution context")
+        elif not _event_not_after(execution_event, event):
+            errors.append(f"execution provenance event {binding_id} must occur at or before assertion evidence")
+    return errors
 
 def _evidence_errors(document: dict[str, Any]) -> list[str]:
     errors = []
@@ -229,6 +273,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
         assertion_id, evidence_ids = assertion.get("assertion_id"), assertion.get("evidence_event_ids", []); mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
         if mandatory_pass and not evidence_ids: errors.append(f"mandatory PASS assertion {assertion_id} requires event evidence")
         if mandatory_pass and test_case is not None and assertion_id not in set(test_case.get("mandatory_assertions", [])): errors.append(f"mandatory PASS assertion {assertion_id} is not bound by canonical TestCase")
+        errors.extend(_execution_binding_errors(document, test_case, telemetry_by_source, events_by_id, dup_events, assertion))
         for event_id in evidence_ids:
             if event_id not in event_ids: errors.append(f"assertion {assertion_id} references missing evidence event {event_id}"); continue
             if event_id in dup_events: errors.append(f"assertion {assertion_id} evidence event {event_id} does not resolve uniquely"); continue
