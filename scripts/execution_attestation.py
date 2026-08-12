@@ -20,8 +20,8 @@ ALGORITHM = "rsa-pkcs1v15-sha256"
 # Public verification material only. The private signing key is not stored in
 # this repository and is not derivable from EvidenceEnvelope fields.
 TRUSTED_RSA_KEYS = {
-    "fixture-runner-key-v1": {
-        "modulus_hex": "9f5ce794d6b9b06f49e064ef42fc3c0ae032a913e34c76233160804e5bd3878654208c4937423df7e9d2ab277c4818c830f215d971cc3a256ed09fe86416a476f1b3d3e75fe26f895812080585c17fd260027da604b1bbe116df7f3921db6e657736271cb5fac2a94ec7ea443956101701f380c87abf6535b1082df9b956ce2b6254e987f2a5dfb37df63e2cdf0d5c3dd6066f54f644de6f1e3b989a6ecd3b0c1f73dab29241a09231175459613f34df869db2236023a2e68a03975381d14bf722704917c2c78167a63bbbfb8fbbb1a702d08abbb679ce8cf07d0ff8dfa8d581f03421bfbd68927ea101929d27ef7cbf8ed07ac98dfa8a748d47a4fcb1cbbdff",
+    "fixture-runner-key-v2": {
+        "modulus_hex": "bfee16e846ba53691fe81c306df4faf3ef164db5d4798973336b09532d13c2bc8d1ee9337cc1fac88ad3287678b50f8b02538ab463e8ad1bd761c812b1f4664d169dbc7100c2149e45afa7d0a981f0cb6e306874cabe88129b60350f8bf14c64434c5ffb0892a395cc3f28483fe61aedf6a708007a842dc99656fb30c487e38e5a96b0a6ec806d09c8f76787768d26462545f0f2dd6461a8cb3c2f88a987f5fc3833bbaadf94e3e62796a08cd5211a56748eafc8e7b17fa898b00a302a62d9b53134ebb7f952d4851a6ee196ea55208b35615b339bd088603211fda294c0a69919e4bf5e3eb1021c7f85367ade7d82d66aedaabd4c09a631c087ba105f6766f7",
         "exponent": 65537,
     }
 }
@@ -66,6 +66,22 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
     case_id = _safe_token(document.get("case_id"))
     if run_id is None or case_id is None or not isinstance(source_id, str):
         return False
+
+    matching_events = [
+        event
+        for event in document.get("events", [])
+        if isinstance(event, dict)
+        and event.get("event_id") == binding_id
+        and event.get("source_id") == source_id
+    ]
+    if len(matching_events) != 1:
+        return False
+    binding_event = matching_events[0]
+    occurred_at_utc = binding_event.get("occurred_at_utc")
+    monotonic_ns = binding_event.get("monotonic_ns")
+    if not isinstance(occurred_at_utc, str) or not isinstance(monotonic_ns, int):
+        return False
+
     path = ATTESTATION_DIR / f"{run_id}.json"
     if not path.is_file():
         return False
@@ -81,6 +97,8 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
         "attempt": document.get("attempt"),
         "execution_binding": binding_id,
         "source_id": source_id,
+        "occurred_at_utc": occurred_at_utc,
+        "monotonic_ns": monotonic_ns,
         "key_id": attestation.get("key_id"),
         "algorithm": attestation.get("algorithm"),
     }
