@@ -21,9 +21,9 @@ Canonical public program surfaces:
 - Program decisions: https://github.com/jinngimk-lang/agentci/issues/24
 - Product contract and probes: https://github.com/jinngimk-lang/agentci/issues/25
 - Independent red team: https://github.com/jinngimk-lang/agentci/issues/26
-- Isolation/runtime semantics: https://github.com/jinngimk-lang/agentci/issues/27
-- Authority/identity/credentials/network policy: https://github.com/jinngimk-lang/agentci/issues/28
-- Evidence/telemetry/replay: https://github.com/jinngimk-lang/agentci/issues/29
+- Isolation/runtime semantics — Agent C: https://github.com/jinngimk-lang/agentci/issues/27
+- Authority/identity/credentials/network policy — Agent D: https://github.com/jinngimk-lang/agentci/issues/28
+- Evidence/telemetry/replay — Agent E: https://github.com/jinngimk-lang/agentci/issues/29
 - Current S0 integration PR: https://github.com/jinngimk-lang/agentci/pull/34
 - Contributor call: https://github.com/jinngimk-lang/agentci/issues/42
 
@@ -38,6 +38,16 @@ For sandbox work, preserve these invariants:
 - automatic privilege contraction is different from privilege expansion;
 - untrusted repository, README, MCP, tool, web, or model output cannot grant authority;
 - destructive escape research belongs only in explicitly nested, disposable, bounded environments.
+
+## External Verifier lane
+
+External agents and developers should also read:
+
+https://github.com/jinngimk-lang/agentci/blob/main/docs/testing/external-agent-verification.md
+
+The **External Verifier** deliberately tests AgentCI from a clean public-only perspective. Do not use private project memory to fill missing documentation. Start from README / llms.txt / AGENTS.md / CONTRIBUTING.md / installed CLI help, reproduce failures exactly, and route real findings to the owning Agent A/B/C/D/E or Supervisor role.
+
+The External Verifier is not an independent identity, approval authority, or replacement for Agent B. If `git clone` or package/network access is unavailable, distinguish that environment limitation from a product defect and continue public-text/API checks where possible. Execution-dependent checks remain UNVERIFIED until reproduced in a capable clean environment.
 
 ## Use AgentCI when
 
