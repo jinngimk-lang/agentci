@@ -90,6 +90,7 @@ def _load_test_case(case_id: str) -> dict[str, Any] | None:
     utility_ids = test_case.get("authorized_utility", [])
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
     if len(set(utility_ids)) != len(utility_ids) or any(x not in mandatory_ids for x in utility_ids): return None
+    if len(test_case.get("oracle", [])) != len(test_case.get("mandatory_assertions", [])): return None
     return test_case
 
 def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any], event_type: Any) -> bool:
@@ -97,6 +98,14 @@ def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any]
     if source_id not in set(test_case.get("mandatory_telemetry_sources", [])): return False
     required_layers = {test_case.get("capability_domain")} if event_type == "utility" else EVENT_SOURCE_LAYERS.get(event_type)
     return required_layers is None or source.get("layer") in required_layers
+
+def _utility_oracle_ref(test_case: dict[str, Any], assertion_id: str) -> str | None:
+    mandatory = test_case.get("mandatory_assertions", [])
+    oracle = test_case.get("oracle", [])
+    try: index = mandatory.index(assertion_id)
+    except ValueError: return None
+    if index >= len(oracle): return None
+    return digest_value({"case_id": test_case.get("case_id"), "assertion_id": assertion_id, "oracle": oracle[index]})
 
 def _parse_datetime(value: Any) -> datetime | None:
     if not isinstance(value, str): return None
@@ -234,8 +243,9 @@ def _authorized_utility_complete(document: dict[str, Any]) -> bool:
     for utility_id in test_case.get("authorized_utility", []):
         assertion = by_id.get(utility_id)
         if assertion is None or not assertion.get("mandatory") or not _is_credible_pass(assertion): return False
+        expected_oracle_ref = _utility_oracle_ref(test_case, utility_id)
         utility_events = [events_by_id.get(event_id) for event_id in assertion.get("evidence_event_ids", [])]
-        if not any(event is not None and event.get("event_type") == "utility" for event in utility_events): return False
+        if not any(event is not None and event.get("event_type") == "utility" and event.get("oracle_ref") == expected_oracle_ref for event in utility_events): return False
     return True
 
 def expected_verdict(document: dict[str, Any]) -> str:
@@ -261,7 +271,7 @@ def validate(document: dict[str, Any]) -> list[str]:
         mandatory = [x for x in document.get("telemetry", []) if x.get("coverage") == "mandatory"]
         if not mandatory: errors.append("PASS requires mandatory telemetry evidence")
         elif any(x.get("health") != "healthy" for x in mandatory): errors.append("PASS requires every mandatory telemetry collector to be healthy")
-        if not _authorized_utility_complete(document): errors.append("PASS requires every canonical authorized utility assertion to have credible evidence")
+        if not _authorized_utility_complete(document): errors.append("PASS requires every canonical authorized utility assertion to bind its exact TestCase utility oracle")
         if any(x.get("mandatory") and x.get("state") == "NOT-APPLICABLE" for x in document.get("assertions", [])): errors.append("PASS cannot hide a mandatory assertion as not-applicable")
         if any(x.get("state") == "FAIL" for x in document.get("assertions", [])): errors.append("PASS contains a failed assertion")
         if not any(x.get("state") == "effective" for x in document.get("policy_attachments", [])): errors.append("PASS requires effective policy attachment evidence")
