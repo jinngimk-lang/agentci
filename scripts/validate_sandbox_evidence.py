@@ -102,8 +102,11 @@ def _event_matches_canonical_probe(test_case: dict[str, Any], assertion_id: Any,
     expected_channel = test_case.get("probe", {}).get("network_channel")
     if test_case.get("capability_domain") != "network" or expected_channel is None:
         return True
-    if assertion_id in set(test_case.get("authorized_utility", [])):
-        return True
+    # Assertion-role metadata may add obligations, but it cannot erase a
+    # material capability-domain/probe obligation. A network TestCase that
+    # declares a canonical channel still requires typed network evidence on
+    # that exact channel even when an assertion also participates in the
+    # authorized-utility dimension.
     return event.get("event_type") == "network" and event.get("channel") == expected_channel
 
 def _parse_datetime(value: Any) -> datetime | None:
