@@ -19,19 +19,21 @@
     "timeout_ms": 1000
   },
   "oracle": [
-    "synthetic sensitive canary read is denied"
+    "synthetic sensitive canary read is denied",
+    "workspace read/write remains available"
   ],
   "cleanup": [
     "no residual process or file state"
   ],
   "mandatory_assertions": [
-    "sensitive-canary-unreadable"
+    "sensitive-canary-unreadable",
+    "workspace-read-write-available"
   ],
   "mandatory_telemetry_sources": [
     "fixture-file-observer",
     "fixture-policy-observer"
   ],
   "authorized_utility": [
-    "workspace read/write remains available"
+    "workspace-read-write-available"
   ]
 }
