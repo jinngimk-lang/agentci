@@ -176,10 +176,11 @@ def test_failed_assertion_cannot_be_downgraded_to_optional_to_create_pass():
 
 def test_pass_requires_authorized_utility_evidence():
     document = _passing_fixture()
-    assert document["case_id"] == "sandbox-sensitive-canary-v0alpha1"
-    assert not any(event.get("event_type") == "utility" for event in document["events"])
+    document["assertions"] = [x for x in document["assertions"] if x["assertion_id"] != "workspace-read-write-available"]
+    document["events"] = [x for x in document["events"] if x["event_id"] != "event-workspace-utility"]
     _rebind_all(document)
     assert expected_verdict(document) != "PASS"
+    assert any("authorized utility" in error for error in validate({**document, "verdict": "PASS", "canonicalization": {**document["canonicalization"], "artifact_digest": artifact_digest({**document, "verdict": "PASS"})}}))
 
 
 def test_pass_requires_effective_policy_attachment():
