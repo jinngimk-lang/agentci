@@ -120,6 +120,28 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
     return errors
 
+def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
+    """Fail closed until expansion can bind to the canonical external AuthorityBundle.
+
+    EvidenceEnvelope currently carries policy/source principal and optional
+    decision/receipt reference strings, but it does not embed or uniquely bind
+    the PrincipalAttestation -> CapabilityGrant -> Decision ->
+    EnforcementReceipt graph from the canonical authority module. Therefore an
+    expansion/lateral/unknown delta cannot be proven externally authorized from
+    envelope-local self-consistency alone. Treat it as UNVERIFIED rather than
+    manufacturing authority from a workload name or opaque IDs.
+    """
+    gated = {"expansion", "lateral", "unknown"}
+    errors = []
+    for policy in document.get("policy_history", []):
+        delta_class = policy.get("delta_class")
+        if delta_class in gated:
+            errors.append(
+                f"privilege {delta_class} requires external authenticated authority evidence; "
+                "EvidenceEnvelope source/decision/receipt references alone are insufficient"
+            )
+    return errors
+
 def _event_not_after(provenance: dict[str, Any], event: dict[str, Any]) -> bool:
     pmono, emono = provenance.get("monotonic_ns"), event.get("monotonic_ns")
     ptime, etime = _parse_datetime(provenance.get("occurred_at_utc")), _parse_datetime(event.get("occurred_at_utc"))
@@ -136,6 +158,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     if c.get("artifact_digest") != artifact_digest(document): errors.append("artifact digest mismatch")
     if document.get("policy_history_digest") != policy_history_digest(document): errors.append("policy history digest mismatch")
     if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
+    errors.extend(_authority_expansion_errors(document))
     case_id = document.get("case_id"); test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
     if test_case is None: errors.append(f"case_id {case_id} does not resolve to one canonical TestCase")
     history = document.get("policy_history", []); epochs = [x.get("policy_epoch") for x in history]; dup_epochs = _duplicates(epochs)
