@@ -120,7 +120,22 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
     if post.get("network_activity") == "residual": errors.append("residual network activity violates PASS")
     if post.get("credential_state") == "residual": errors.append("residual credential state violates PASS")
-    if post.get("lifecycle_state") == "preserved": errors.append("preserved lifecycle state requires explicit authorization and revalidation evidence before PASS")
+    lifecycle_state = post.get("lifecycle_state")
+    if lifecycle_state == "preserved":
+        errors.append("preserved lifecycle state requires explicit authorization and revalidation evidence before PASS")
+    if lifecycle_state == "revalidated":
+        continuity = document.get("lifecycle_continuity", [])
+        safe_states = {"revalidated", "revoked", "replaced"}
+        continuity_fields = ("process_state", "socket_fd_state", "credential_session_state", "policy_attachment_state")
+        if not continuity:
+            errors.append("revalidated lifecycle state requires lifecycle continuity evidence")
+        for item in continuity:
+            capture_epoch, restore_epoch = item.get("capture_epoch"), item.get("restore_epoch")
+            if not isinstance(capture_epoch, int) or not isinstance(restore_epoch, int) or restore_epoch <= capture_epoch:
+                errors.append("lifecycle continuity requires restore_epoch greater than capture_epoch")
+            for field in continuity_fields:
+                if item.get(field) not in safe_states:
+                    errors.append(f"lifecycle continuity {field} must be revalidated, revoked, or replaced before PASS")
     return errors
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
