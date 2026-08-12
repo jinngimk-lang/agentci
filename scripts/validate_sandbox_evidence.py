@@ -175,6 +175,16 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     telemetry = document.get("telemetry", []); sources = [x.get("source_id") for x in telemetry]; dup_sources = _duplicates(sources)
     for x in sorted(dup_sources): errors.append(f"duplicate telemetry source_id {x}")
     telemetry_by_source = {x.get("source_id"): x for x in telemetry if x.get("source_id") is not None and x.get("source_id") not in dup_sources}
+    if test_case is not None:
+        for source_id in test_case.get("mandatory_telemetry_sources", []):
+            if source_id in dup_sources:
+                errors.append(f"canonical mandatory telemetry source {source_id} does not resolve uniquely")
+                continue
+            source = telemetry_by_source.get(source_id)
+            if source is None:
+                errors.append(f"canonical mandatory telemetry source {source_id} is missing from EvidenceEnvelope")
+            elif source.get("coverage") != "mandatory" or source.get("health") != "healthy":
+                errors.append(f"canonical mandatory telemetry source {source_id} requires mandatory coverage and healthy status")
     events = document.get("events", []); event_values = [x.get("event_id") for x in events]; dup_events = _duplicates(event_values)
     for x in sorted(dup_events): errors.append(f"duplicate event_id {x}")
     event_ids = {x for x in event_values if x is not None}; events_by_id = {x.get("event_id"): x for x in events if x.get("event_id") is not None and x.get("event_id") not in dup_events}
