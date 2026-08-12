@@ -84,3 +84,14 @@ def test_ci_proves_growth_validation_and_generation():
     assert 'validate_growth_artifact.py' in ci
     assert 'generate_growth_pack.py' in ci
     assert '.company/research/findings/demo-benchmark' in ci
+
+
+def test_agentci_skill_routes_current_sandbox_program_without_overclaiming_release():
+    skill = read('skills/agentci/SKILL.md').lower()
+    assert 'skills/sandbox-research-certification/skill.md' in skill
+    assert 'agent sandbox certification' in skill
+    for issue in ['#24', '#25', '#26', '#27', '#28', '#29']:
+        assert issue in skill
+    assert 'no backend' in skill and 'certified' in skill
+    assert 'design-stage' in skill or 'experimental' in skill
+    assert 'observation' in skill and 'authority' in skill
