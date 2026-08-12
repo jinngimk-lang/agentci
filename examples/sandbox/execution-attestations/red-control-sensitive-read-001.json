@@ -6,7 +6,9 @@
   "attempt": 1,
   "execution_binding": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
   "source_id": "fixture-policy-observer",
-  "key_id": "fixture-runner-key-v1",
+  "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
+  "monotonic_ns": 1600,
+  "key_id": "fixture-runner-key-v2",
   "algorithm": "rsa-pkcs1v15-sha256",
-  "signature_b64": "mUX3oaoE/bXmZtz0Rhj7ojPMNhMQpeHnOTi49gmUkKlwwFnokTmoK8Rj6qLwVgftRz8OMiXxATufagKqQwCpLA24dh3rPEFQvXgASdnD1eCAjFvIlokbP4PlMsRTpbIb+TOm51iB0SLdkGgc1w6xjteuQU8uyTuU9a4ibLCrhWo6vBLH8hMOmds9JQa9plbMqM38ZhQuHb4ysTZzWqoYjBqJpIxKKRM85K4EweTXEpAWXg0lLfUTbQ61NoJ+U9VnpE/n+GPvWufx04HOuokDFN3XDb0Hq124vQubIF8sxtSVDY7lHgnWZhzue7yPQ7NV63kmO1xsZAWae2lnILbHyA=="
+  "signature_b64": "DwGb9xkOtyIZIT5eDHW0QBaEzvvresZK5ChFN3bNsgj3+U53bjmOCK7UjmNbmWqOntmu6qMT34O7AQVhbJ1yH//f0s3/jhpoYutdiFWjNIhIEznUFNikIQbsti7gZO/gP5mFDn5WD3tcrLt4Cx4ZpDxUORiKL5LP42JjinuTOdL1dmOiEm+c/Kkaa9O8+wJL1WLLwoYoY8WGCas0qZBYMyy5BMoMVKN5sFM9fo0PzTfsWvxCFWEp33tmZmJpV0B7aqErLq6N5TPhxstnLV505qS2SIGK0sm/Kg22qzjL//3hdh2oSqS3aAxK5N5eLMsKQv+54psLV/gcYK1fXw1cuw=="
 }
