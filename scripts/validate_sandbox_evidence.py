@@ -102,11 +102,17 @@ def _event_matches_canonical_probe(test_case: dict[str, Any], assertion_id: Any,
     expected_channel = test_case.get("probe", {}).get("network_channel")
     if test_case.get("capability_domain") != "network" or expected_channel is None:
         return True
-    # Assertion-role metadata may add obligations, but it cannot erase a
-    # material capability-domain/probe obligation. A network TestCase that
-    # declares a canonical channel still requires typed network evidence on
-    # that exact channel even when an assertion also participates in the
-    # authorized-utility dimension.
+    mandatory_ids = set(test_case.get("mandatory_assertions", []))
+    utility_ids = set(test_case.get("authorized_utility", []))
+    dedicated_probe_ids = mandatory_ids - utility_ids
+    # A distinct authorized-utility assertion proves useful work, not the
+    # network transport itself, when the canonical TestCase also retains at
+    # least one dedicated mandatory assertion to carry the probe obligation.
+    # If role metadata would classify every mandatory assertion as utility,
+    # fail closed and keep requiring exact typed network/channel evidence so a
+    # security assertion cannot erase the probe obligation by relabeling.
+    if assertion_id in utility_ids and dedicated_probe_ids:
+        return True
     return event.get("event_type") == "network" and event.get("channel") == expected_channel
 
 def _parse_datetime(value: Any) -> datetime | None:
