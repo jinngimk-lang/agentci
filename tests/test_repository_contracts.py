@@ -141,8 +141,8 @@ def test_agents_route_closed_loop_delivery_and_rotating_separation_of_duties():
 
 def test_agents_route_category_reframing_strategy_skill():
     agents = read('AGENTS.md').lower()
-    skill_path = 'skills/category-reframing-constraint-deletion/skill.md'
-    assert skill_path in agents
+    skill_path = 'skills/category-reframing-constraint-deletion/SKILL.md'
+    assert skill_path.lower() in agents
     assert (ROOT / skill_path).exists()
     skill = read(skill_path).lower()
     for term in [
