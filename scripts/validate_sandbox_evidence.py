@@ -70,7 +70,7 @@ def execution_binding_id(document: dict[str, Any], test_case: dict[str, Any], ev
     """Deterministic identity for one canonical probe execution context.
 
     This is deliberately distinct from authority Decision/EnforcementReceipt IDs.
-    A healthy mandatory process observer must emit the matching execution event;
+    A healthy canonical mandatory observer must emit the matching execution event;
     assertion evidence then lives in that execution namespace.
     """
     return digest_value({
@@ -168,6 +168,7 @@ def _execution_binding_errors(document: dict[str, Any], test_case: dict[str, Any
     errors: list[str] = []
     if test_case is None or not assertion.get("mandatory") or assertion.get("state") not in {"PASS", "FAIL"}:
         return errors
+    canonical_sources = set(test_case.get("mandatory_telemetry_sources", []))
     for event_id in assertion.get("evidence_event_ids", []):
         if event_id in duplicate_events or event_id not in events_by_id:
             continue
@@ -183,8 +184,8 @@ def _execution_binding_errors(document: dict[str, Any], test_case: dict[str, Any
         source = telemetry_by_source.get(execution_event.get("source_id"))
         if execution_event.get("event_type") != "process":
             errors.append(f"execution provenance event {binding_id} must be a process observation")
-        elif source is None or source.get("coverage") != "mandatory" or source.get("health") != "healthy" or source.get("layer") != "process":
-            errors.append(f"execution provenance event {binding_id} requires a healthy mandatory process observer")
+        elif source is None or source.get("source_id") not in canonical_sources or source.get("coverage") != "mandatory" or source.get("health") != "healthy":
+            errors.append(f"execution provenance event {binding_id} requires a healthy canonical mandatory observer")
         elif execution_event.get("workload_identity") != event.get("workload_identity") or execution_event.get("policy_epoch") != event.get("policy_epoch") or execution_event.get("authority_epoch") != event.get("authority_epoch"):
             errors.append(f"execution provenance event {binding_id} does not match assertion evidence execution context")
         elif not _event_not_after(execution_event, event):
