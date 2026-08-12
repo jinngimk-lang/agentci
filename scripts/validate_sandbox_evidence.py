@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import FormatError
+try:
+    from scripts.execution_attestation import execution_attestation_valid
+except ModuleNotFoundError:  # direct script execution from repository root
+    from execution_attestation import execution_attestation_valid
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
@@ -186,6 +190,8 @@ def _execution_binding_errors(document: dict[str, Any], test_case: dict[str, Any
             errors.append(f"execution provenance event {binding_id} must be a process observation")
         elif source is None or source.get("source_id") not in canonical_sources or source.get("coverage") != "mandatory" or source.get("health") != "healthy":
             errors.append(f"execution provenance event {binding_id} requires a healthy canonical mandatory observer")
+        elif not execution_attestation_valid(document, binding_id, execution_event.get("source_id")):
+            errors.append(f"execution provenance event {binding_id} lacks valid external execution attestation")
         elif execution_event.get("workload_identity") != event.get("workload_identity") or execution_event.get("policy_epoch") != event.get("policy_epoch") or execution_event.get("authority_epoch") != event.get("authority_epoch"):
             errors.append(f"execution provenance event {binding_id} does not match assertion evidence execution context")
         elif not _event_not_after(execution_event, event):
