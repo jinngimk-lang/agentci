@@ -57,19 +57,19 @@ def test_pass_rejects_expansion_without_decision_and_receipt_binding():
     assert any("expansion" in error.lower() and "authority" in error.lower() for error in errors)
 
 
-def test_pass_accepts_minimally_bound_external_expansion_authority():
+def test_pass_rejects_string_only_decision_and_receipt_as_external_authority_proof():
     document = _passing_fixture()
     policy = document["policy_history"][0]
     policy["delta_class"] = "expansion"
     policy["source_principal_id"] = "external-authority-fixture"
-    # Envelope-local minimum causal binding: the effective policy epoch is
-    # externally sourced and an event for the benefiting workload binds both
-    # an authorization decision and enforcement receipt to the same authority
-    # epoch. Full AuthorityBundle trust remains a separate S0 contract layer.
+    # Decision/receipt IDs inside behavioral evidence are references, not a
+    # separately authenticated AuthorityBundle. They must not manufacture
+    # authority by being internally self-consistent strings.
     event = next(x for x in document["events"] if x["event_id"] == "event-policy-attachment-baseline")
     event["decision_id"] = "decision-external-expansion-1"
     event["receipt_id"] = "receipt-external-expansion-1"
     _rebind_all(document)
 
-    assert expected_verdict(document) == "PASS"
-    assert validate(document) == []
+    assert expected_verdict(document) != "PASS"
+    errors = validate(document)
+    assert any("expansion" in error.lower() and "authority" in error.lower() for error in errors)
