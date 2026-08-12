@@ -1,11 +1,13 @@
-"""S0 stand-in for runtime/environment provenance outside EvidenceEnvelope.
+"""S0 stand-in for authenticated runtime/environment provenance.
 
-This deliberately models only one fixture trust boundary. The pinned digest and
-scope are validator-side trust configuration, not provider-native attestation or
-a backend security verdict.
+The EvidenceEnvelope is not the trust root. A signed sidecar is loaded from a
+separate fixture channel and checked against a validator-pinned public key and
+explicit backend/environment scope. This models only the S0 authenticity and
+scope property; it is not provider-native attestation or a backend verdict.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -13,23 +15,24 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 ATTESTATION_DIR = ROOT / "examples" / "sandbox" / "runtime-environment-attestations"
+ALGORITHM = "rsa-pkcs1v15-sha256"
 
 TRUSTED_ATTESTERS = {
     "fixture-runtime-observer": {
         "trust_epoch": 1,
-        "attestation_digest": "sha256:4114f627c04bdf12b7914c6e3c2fdfd521ba78184bd52e0aea6d1a292f94f420",
+        "key_id": "fixture-runtime-key-v1",
+        "modulus_hex": "ce44cac24b34ab221d36e7fac2c7a419b65c5174e5092c7c036558147d3a4ef339df1b071af8a0310c3d3201e3749bef97a241ce3d67b0a02b6080200c18e909400d6b434c7d6be827cd5e8de99848de67c1c8eade3308a6292f42ca473f23b7434e1daaa6363e6cb76f50dfa564d59f3c7d5641d2dea9a0333fd1498b47f0055c0f92b365761f016f3275c8db2313995e3e62651b8154dde5a7f167c92ace2a1927b00a7b1e97f138b9d63bdcf1899f6bf1af6a293a9a1e70cb331dd9c785d643203df7fe697e3e43b949b649fe3a9b8692e344a67f4653fd639eff75be85df79820d3e9f1c5750fb3da7395b67207b4b451314835d46d3e4541027154ca569",
+        "exponent": 65537,
         "backend_instance": "red-control-1",
         "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
     }
 }
 
+_SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
 
 def _canonical_bytes(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
-
-
-def _digest(value: Any) -> str:
-    return "sha256:" + hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
 def _safe_token(value: Any) -> str | None:
@@ -38,8 +41,29 @@ def _safe_token(value: Any) -> str | None:
     return value
 
 
+def _rsa_pkcs1v15_sha256_verify(message: bytes, signature_b64: Any, trust: dict[str, Any]) -> bool:
+    if not isinstance(signature_b64, str):
+        return False
+    try:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(trust["modulus_hex"], 16)
+        exponent = int(trust["exponent"])
+    except (ValueError, TypeError, KeyError):
+        return False
+    size = (modulus.bit_length() + 7) // 8
+    if len(signature) != size:
+        return False
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(size, "big")
+    digest_info = _SHA256_DIGEST_INFO_PREFIX + hashlib.sha256(message).digest()
+    padding_len = size - len(digest_info) - 3
+    if padding_len < 8:
+        return False
+    expected = b"\x00\x01" + (b"\xff" * padding_len) + b"\x00" + digest_info
+    return encoded == expected
+
+
 def runtime_environment_attestation_valid(document: dict[str, Any]) -> bool:
-    """Bind one run to exact backend/environment through a pinned fixture trust root."""
+    """Verify exact run/backend/environment against scoped provenance outside the envelope."""
     run_id = _safe_token(document.get("run_id"))
     case_id = _safe_token(document.get("case_id"))
     if run_id is None or case_id is None:
@@ -59,28 +83,35 @@ def runtime_environment_attestation_valid(document: dict[str, Any]) -> bool:
     trust = TRUSTED_ATTESTERS.get(attester_id)
     if trust is None or attestation.get("trust_epoch") != trust.get("trust_epoch"):
         return False
-    if _digest(attestation) != trust.get("attestation_digest"):
+    if attestation.get("key_id") != trust.get("key_id") or attestation.get("algorithm") != ALGORITHM:
         return False
 
     backend = document.get("backend")
-    if not isinstance(backend, dict) or attestation.get("backend") != {
+    if not isinstance(backend, dict):
+        return False
+    backend_binding = {
         "provider": backend.get("provider"),
         "isolation_class": backend.get("isolation_class"),
         "version": backend.get("version"),
         "build_or_image_digest": backend.get("build_or_image_digest"),
         "effective_backend_instance": backend.get("effective_backend_instance"),
-    }:
-        return False
-
+    }
     environment_fingerprint = document.get("environment_fingerprint")
-    expected = {
+    payload = {
+        "attestation_id": attestation.get("attestation_id"),
+        "attester_id": attester_id,
+        "trust_epoch": attestation.get("trust_epoch"),
         "run_id": run_id,
         "case_id": case_id,
         "attempt": document.get("attempt"),
+        "backend": backend_binding,
         "environment_fingerprint": environment_fingerprint,
+        "scope": attestation.get("scope"),
+        "key_id": attestation.get("key_id"),
+        "algorithm": attestation.get("algorithm"),
     }
-    for field, value in expected.items():
-        if attestation.get(field) != value:
+    for field, expected in payload.items():
+        if attestation.get(field) != expected:
             return False
 
     scope = attestation.get("scope")
@@ -94,4 +125,5 @@ def runtime_environment_attestation_valid(document: dict[str, Any]) -> bool:
         return False
     if scope.get("environment_fingerprint") != trust.get("environment_fingerprint"):
         return False
-    return True
+
+    return _rsa_pkcs1v15_sha256_verify(_canonical_bytes(payload), attestation.get("signature_b64"), trust)
