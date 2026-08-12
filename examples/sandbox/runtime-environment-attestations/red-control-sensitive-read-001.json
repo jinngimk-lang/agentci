@@ -1,0 +1,20 @@
+{
+  "attestation_id": "fixture-runtime-attestation-v1",
+  "attester_id": "fixture-runtime-observer",
+  "trust_epoch": 1,
+  "run_id": "red-control-sensitive-read-001",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "attempt": 1,
+  "backend": {
+    "provider": "deliberately-permissive-red-control",
+    "isolation_class": "container",
+    "version": "fixture-v1",
+    "build_or_image_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "effective_backend_instance": "red-control-1"
+  },
+  "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "scope": {
+    "backend_instance": "red-control-1",
+    "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  }
+}
