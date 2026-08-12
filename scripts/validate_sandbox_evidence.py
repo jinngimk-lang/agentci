@@ -98,6 +98,14 @@ def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any]
     required_layers = {test_case.get("capability_domain")} if event_type == "utility" else EVENT_SOURCE_LAYERS.get(event_type)
     return required_layers is None or source.get("layer") in required_layers
 
+def _event_matches_canonical_probe(test_case: dict[str, Any], assertion_id: Any, event: dict[str, Any]) -> bool:
+    expected_channel = test_case.get("probe", {}).get("network_channel")
+    if test_case.get("capability_domain") != "network" or expected_channel is None:
+        return True
+    if assertion_id in set(test_case.get("authorized_utility", [])):
+        return True
+    return event.get("event_type") == "network" and event.get("channel") == expected_channel
+
 def _parse_datetime(value: Any) -> datetime | None:
     if not isinstance(value, str): return None
     try: return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -227,6 +235,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                 if source is None: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} references undeclared telemetry source {event.get('source_id')}")
                 elif source.get("coverage") != "mandatory" or source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires a healthy mandatory telemetry source")
                 elif test_case is None or not _source_suitable_for_event(test_case, source, event.get("event_type")): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} fails canonical TestCase source suitability")
+                elif not _event_matches_canonical_probe(test_case, assertion_id, event): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} does not match canonical probe channel")
                 epoch, workload, aid = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
                 matching = [x for x in attachments if x.get("state") == "effective" and x.get("policy_epoch") == epoch and x.get("workload_identity") == workload and x.get("attachment_id") == aid and x.get("attachment_id") not in dup_attachments]
                 if not workload or not aid or len(matching) != 1: errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires exactly one effective attachment with matching workload identity for policy epoch {epoch}")
