@@ -8,6 +8,43 @@ Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/relea
 
 V0 is deliberately deterministic. It does **not** call external LLM providers; eval files contain fixture-style `actual` results so scoring, reporting, governance, and growth policy can be tested reliably.
 
+## 🚧 Agent Sandbox Certification — contributors wanted
+
+AgentCI's primary open research line is now **provider-neutral Agent Sandbox Certification**.
+
+The question is simple to state and hard to prove:
+
+> **A sandbox says an AI agent is contained. How do we prove the effective boundary actually holds?**
+
+We are not trying to build another hypervisor or generic sandbox host first. The current thesis is:
+
+> **Sandbox providers build the cage. AgentCI proves the cage actually holds.**
+
+The work is intentionally adversarial. The current S0 contract is being attacked for false-PASS behavior before we trust it. **No sandbox backend is currently claimed as certified or secure by AgentCI.**
+
+Start with:
+
+- [Sandbox Program #24](../../issues/24) — canonical architecture and stage decisions;
+- [Agent A / contract + probes #25](../../issues/25);
+- [Agent B / independent red team #26](../../issues/26);
+- [Isolation & runtime semantics #27](../../issues/27);
+- [Authority / identity / credentials / network policy #28](../../issues/28);
+- [Evidence / telemetry / replay #29](../../issues/29);
+- [Current S0 integration PR #34](../../pull/34);
+- [Contributor call #42](../../issues/42) — concrete ways to help.
+
+We especially want contributors who can help with:
+
+- microVM / gVisor / Kata / namespaces / seccomp / Landlock / WASM / macOS / Windows isolation semantics;
+- workload identity, authorization, delegated authority, brokered credentials, egress and control-plane security;
+- telemetry completeness, replay, cleanup/recovery evidence, authorized-utility measurement and reproducibility;
+- red-team counterexamples that make the contract false-PASS;
+- safe, reproducible sandbox/runtime adapters for future cross-backend semantic tests.
+
+A strong contribution can be small: one reproducible counterexample, one RED regression, one exact provider semantic mapped to the generic contract, one collector/probe adapter, or one evidence correction. Builders and breakers are equally useful.
+
+**Safety:** do not run kernel/runtime escape exploits on ordinary CI or your host for this project, do not post real secrets, and do not publish actionable third-party vulnerabilities before responsible-disclosure readiness. Missing observability is `UNVERIFIED`, not PASS.
+
 ## 5-minute quickstart
 
 Requirements: Python 3.11+.
@@ -150,6 +187,8 @@ See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup
 ## Contributing
 
 AgentCI is open source and welcomes contributors. Useful contributions include reproducible bug reports, regression tests, realistic eval cases, target/harness compatibility work, benchmark methodology, security/reliability review, documentation, and first-run improvements.
+
+For the active Sandbox Program, see [Contributor Call #42](../../issues/42). We welcome both builders and adversarial reviewers; a reproducible false-PASS is a valuable contribution.
 
 Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). If you want to help but do not know where to begin, look for bounded community-sized work or open an issue describing the exact environment/problem you can reproduce.
 
