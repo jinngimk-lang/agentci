@@ -84,3 +84,21 @@ def test_ci_proves_growth_validation_and_generation():
     assert 'validate_growth_artifact.py' in ci
     assert 'generate_growth_pack.py' in ci
     assert '.company/research/findings/demo-benchmark' in ci
+
+
+def test_public_agent_surfaces_route_current_sandbox_roles_and_external_verifier():
+    readme = read('README.md').lower()
+    agents = read('AGENTS.md').lower()
+    llms = read('llms.txt').lower()
+
+    assert 'the two-agent operating loop' not in readme
+    for role in ['agent c', 'agent d', 'agent e']:
+        assert role in readme
+        assert role in agents
+
+    verifier_path = 'docs/testing/external-agent-verification.md'
+    assert (ROOT / verifier_path).exists()
+    assert verifier_path.lower() in agents
+    assert verifier_path.lower() in llms
+    assert 'external verifier' in agents
+    assert 'external verifier' in llms
