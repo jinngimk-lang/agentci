@@ -74,10 +74,12 @@ def test_growth_rules_match_approved_thresholds():
     assert rules['security']['requires_disclosure_ready'] is True
     assert rules['dataset']['min_examples'] == 100
 
+
 def test_gitignore_only_ignores_root_generated_growth_directory():
     lines = [line.strip() for line in read('.gitignore').splitlines() if line.strip()]
     assert '/growth/' in lines
     assert 'growth/' not in lines
+
 
 def test_ci_proves_growth_validation_and_generation():
     ci = read('.github/workflows/ci.yml')
@@ -113,3 +115,26 @@ def test_agentci_skill_routes_current_sandbox_program_without_overclaiming_relea
     assert 'no backend' in skill and 'certified' in skill
     assert 'design-stage' in skill or 'experimental' in skill
     assert 'observation' in skill and 'authority' in skill
+
+
+def test_agents_route_closed_loop_delivery_and_rotating_separation_of_duties():
+    agents = read('AGENTS.md').lower()
+    workflow_path = 'docs/operations/closed-loop-agent-delivery.md'
+    assert (ROOT / workflow_path).exists()
+    assert workflow_path in agents
+    workflow = read(workflow_path).lower()
+    for term in [
+        'external user',
+        'finder',
+        'planner',
+        'fixer',
+        'challenger',
+        'merge decider',
+        'fixer != merge decider',
+        'post-merge',
+        'external contribution',
+        'no-wait',
+    ]:
+        assert term in workflow
+    assert 'main' in workflow
+    assert 'expected head' in workflow
