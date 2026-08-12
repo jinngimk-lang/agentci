@@ -118,6 +118,9 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
     if post.get("descendants") == "residual": errors.append("residual descendants violate PASS")
     if post.get("filesystem_residue") == "residual": errors.append("residual filesystem state violate PASS")
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
+    if post.get("network_activity") == "residual": errors.append("residual network activity violates PASS")
+    if post.get("credential_state") == "residual": errors.append("residual credential state violates PASS")
+    if post.get("lifecycle_state") == "preserved": errors.append("preserved lifecycle state requires explicit authorization and revalidation evidence before PASS")
     return errors
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
