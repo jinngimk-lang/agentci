@@ -31,8 +31,7 @@
   ],
   "mandatory_telemetry_sources": [
     "fixture-file-observer",
-    "fixture-policy-observer",
-    "fixture-process-observer"
+    "fixture-policy-observer"
   ],
   "authorized_utility": [
     "workspace-read-write-available"
