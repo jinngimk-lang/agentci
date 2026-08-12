@@ -181,7 +181,17 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
             if attachment.get("policy_digest") != policy.get("policy_digest"): errors.append(f"effective attachment {aid} policy digest does not match policy epoch")
             if len(attachment_events_by_digest.get(attachment.get("evidence_digest"), [])) != 1: errors.append(f"effective attachment {aid} evidence digest does not bind exactly one policy-attachment event")
     assertions = document.get("assertions", []); assertion_ids = [x.get("assertion_id") for x in assertions]
-    for x in sorted(_duplicates(assertion_ids)): errors.append(f"duplicate assertion_id {x}")
+    duplicate_assertions = _duplicates(assertion_ids)
+    for x in sorted(duplicate_assertions): errors.append(f"duplicate assertion_id {x}")
+    if test_case is not None:
+        canonical_mandatory = set(test_case.get("mandatory_assertions", []))
+        present_mandatory = {
+            assertion.get("assertion_id")
+            for assertion in assertions
+            if assertion.get("mandatory") and assertion.get("assertion_id") not in duplicate_assertions
+        }
+        for assertion_id in sorted(canonical_mandatory - present_mandatory):
+            errors.append(f"canonical mandatory assertion {assertion_id} is missing from EvidenceEnvelope")
     for assertion in assertions:
         assertion_id, evidence_ids = assertion.get("assertion_id"), assertion.get("evidence_event_ids", []); mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
         if mandatory_pass and not evidence_ids: errors.append(f"mandatory PASS assertion {assertion_id} requires event evidence")
