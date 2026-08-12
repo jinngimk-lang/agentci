@@ -207,6 +207,15 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
         if event.get("event_type") == "policy-attachment" and event.get("semantic_digest") == event_semantic_digest(event): attachment_events_by_digest.setdefault(event.get("semantic_digest"), []).append(event)
     attachments = document.get("policy_attachments", []); attachment_ids = [x.get("attachment_id") for x in attachments]; dup_attachments = _duplicates(attachment_ids)
     for x in sorted(dup_attachments): errors.append(f"duplicate attachment_id {x}")
+    effective_bindings = [
+        (attachment.get("workload_identity"), attachment.get("policy_epoch"))
+        for attachment in attachments
+        if attachment.get("state") == "effective"
+    ]
+    for workload_identity, policy_epoch in sorted(_duplicates(effective_bindings), key=lambda value: (str(value[0]), str(value[1]))):
+        errors.append(
+            f"multiple effective policy attachments for workload {workload_identity} and policy epoch {policy_epoch} are ambiguous"
+        )
     for attachment in attachments:
         aid, policy = attachment.get("attachment_id"), history_by_epoch.get(attachment.get("policy_epoch"))
         if policy is None: errors.append(f"attachment {aid} references unknown policy epoch"); continue
