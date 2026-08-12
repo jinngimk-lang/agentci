@@ -90,6 +90,10 @@ def _load_test_case(case_id: str) -> dict[str, Any] | None:
     utility_ids = test_case.get("authorized_utility", [])
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
     if len(set(utility_ids)) != len(utility_ids) or any(x not in mandatory_ids for x in utility_ids): return None
+    probe = test_case.get("probe", {})
+    probe_assertion_ids = probe.get("assertion_ids", [])
+    if len(set(probe_assertion_ids)) != len(probe_assertion_ids) or any(x not in mandatory_ids for x in probe_assertion_ids): return None
+    if test_case.get("capability_domain") == "network" and probe.get("network_channel") is not None and not probe_assertion_ids: return None
     return test_case
 
 def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any], event_type: Any) -> bool:
@@ -99,19 +103,23 @@ def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any]
     return required_layers is None or source.get("layer") in required_layers
 
 def _event_matches_canonical_probe(test_case: dict[str, Any], assertion_id: Any, event: dict[str, Any]) -> bool:
-    expected_channel = test_case.get("probe", {}).get("network_channel")
+    probe = test_case.get("probe", {})
+    expected_channel = probe.get("network_channel")
     if test_case.get("capability_domain") != "network" or expected_channel is None:
         return True
+    probe_assertion_ids = probe.get("assertion_ids")
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
-    utility_ids = set(test_case.get("authorized_utility", []))
-    dedicated_probe_ids = mandatory_ids - utility_ids
-    # A distinct authorized-utility assertion proves useful work, not the
-    # network transport itself, when the canonical TestCase also retains at
-    # least one dedicated mandatory assertion to carry the probe obligation.
-    # If role metadata would classify every mandatory assertion as utility,
-    # fail closed and keep requiring exact typed network/channel evidence so a
-    # security assertion cannot erase the probe obligation by relabeling.
-    if assertion_id in utility_ids and dedicated_probe_ids:
+    if (
+        not isinstance(probe_assertion_ids, list)
+        or not probe_assertion_ids
+        or len(set(probe_assertion_ids)) != len(probe_assertion_ids)
+        or any(x not in mandatory_ids for x in probe_assertion_ids)
+    ):
+        # A material network probe without explicit canonical assertion binding
+        # is ambiguous. Fail closed instead of inferring ownership from utility
+        # roles or whichever evidence event happens to look network-like.
+        return False
+    if assertion_id not in set(probe_assertion_ids):
         return True
     return event.get("event_type") == "network" and event.get("channel") == expected_channel
 
