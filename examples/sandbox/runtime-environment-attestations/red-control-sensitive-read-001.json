@@ -1,5 +1,5 @@
 {
-  "attestation_id": "fixture-runtime-attestation-v1",
+  "attestation_id": "fixture-runtime-attestation-v2",
   "attester_id": "fixture-runtime-observer",
   "trust_epoch": 1,
   "run_id": "red-control-sensitive-read-001",
@@ -16,5 +16,8 @@
   "scope": {
     "backend_instance": "red-control-1",
     "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
-  }
+  },
+  "key_id": "fixture-runtime-key-v1",
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "signature_b64": "U9/jPJFKWH5MoU3NRTUlty3OIeWbSt5qQj4kj7WyfZL3puoOAGezSlXB9T6drNgSW1gY4MNvl7boZeUQOsEeiVxps+khwlHunnHM+U1YShykAFLe1l++zvxNyeWwVWrGv1C+GXzqwRUF0Lb/2mSE1lvopp3MElSgMIcVlv6pL6t8smVkGXECMgRQ5NyrfNUYeC+b9mtHXytoG9ySjmI+VG0n6YCKS2UXQHM7oPxuGUph5sZc5TK7xrf/Dm7v/ObuQWM8tuAfJmueQybrq6pEU7uyO/PHTKlQFeOUIVWFTXG/mnUJ4YKRg0T4H4yzAbkoZZJlAYdulx4kZ+X/qMzKLw=="
 }
