@@ -8,6 +8,7 @@ def test_authorized_utility_event_is_not_forced_to_impersonate_network_probe_evi
             "network_channel": "https",
             "assertion_ids": ["network-boundary-enforced"],
         },
+        "oracle": ["probe-assertion:network-boundary-enforced"],
         "mandatory_assertions": [
             "network-boundary-enforced",
             "workspace-read-write-available",
