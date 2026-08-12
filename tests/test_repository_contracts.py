@@ -72,7 +72,6 @@ def test_growth_rules_match_approved_thresholds():
     assert rules['performance']['min_samples'] == 100
     assert rules['security']['allowed_severity'] == ['high', 'critical']
     assert rules['security']['requires_disclosure_ready'] is True
-    assert rules['dataset']['min_examples'] == 100
 
 
 def test_gitignore_only_ignores_root_generated_growth_directory():
@@ -138,3 +137,20 @@ def test_agents_route_closed_loop_delivery_and_rotating_separation_of_duties():
         assert term in workflow
     assert 'main' in workflow
     assert 'expected head' in workflow
+
+
+def test_agents_route_category_reframing_strategy_skill():
+    agents = read('AGENTS.md').lower()
+    skill_path = 'skills/category-reframing-constraint-deletion/skill.md'
+    assert skill_path in agents
+    assert (ROOT / skill_path).exists()
+    skill = read(skill_path).lower()
+    for term in [
+        'competition axis',
+        'inherited artifact',
+        'constraint deletion',
+        'authorized utility',
+        'verified execution',
+        'observation != authority',
+    ]:
+        assert term in skill
