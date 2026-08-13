@@ -25,7 +25,15 @@ TRUSTED_ATTESTERS = {
         "exponent": 65537,
         "backend_instance": "red-control-1",
         "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
-    }
+    },
+    "fixture-runtime-observer-pass": {
+        "trust_epoch": 1,
+        "key_id": "fixture-runtime-key-pass-v1",
+        "modulus_hex": "e1dafb00b43013fbd5cad12d281da71eb0926569ae95390a192c300ff38c0072b262924fa84200ae263f74b462da907ae6676d81e1548e4e524a198502d6888b0dc65830dfce7b3d46367a4ea343c5182004c9e62d93900f009e27ab8d215d32c581f41da4f63f2233cf8e29f27129a4ebbd0a75abb1920770c0f0bb7c0f545ee82efa7c5240394b3285b7533fed47eb5a1378330dc6e0249a2cc95f61ddea4a1b70dacd84742ac7e2da663183cf4f51a6289f5771e29a97bab01ed02521fc41ee700635913c3a8402231519afdc0814192a8fa0cc186746f05146aee441457034f16eb090ad84dcc3d6bb8deb6c81f377dfb69ddc4c25aaff95ed692e1b001d",
+        "exponent": 65537,
+        "backend_instance": "pass-control-1",
+        "environment_fingerprint": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    },
 }
 
 _SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
