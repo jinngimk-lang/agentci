@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentci-v0"
-version = "0.1.0"
-description = "Deterministic reliability checks for AI agent workflows"
+version = "0.2.0"
+description = "Evidence-first reliability checks and sandbox evidence verification for AI agent workflows"
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0", "jsonschema[format]>=4.23"]
 
@@ -15,6 +15,16 @@ research = ["crawl4ai==0.9.2"]
 
 [project.scripts]
 agentci = "agentci.cli:main"
+
+[tool.setuptools]
+packages = ["agentci", "agentci.sandbox", "scripts"]
+package-dir = {"" = "src", "scripts" = "scripts"}
+
+[tool.setuptools.data-files]
+"share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
+"share/agentci/sandbox/testcases" = ["examples/sandbox/testcases/*.json"]
+"share/agentci/sandbox/execution-attestations" = ["examples/sandbox/execution-attestations/*.json"]
+"share/agentci/sandbox/runtime-environment-attestations" = ["examples/sandbox/runtime-environment-attestations/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
