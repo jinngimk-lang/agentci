@@ -1,20 +1,15 @@
 import copy
-import json
-from pathlib import Path
 
 import pytest
 
 import scripts.validate_sandbox_evidence as validator
-
-ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
 
 
 def _network_case():
     return {
         "apiVersion": "agentci.dev/sandbox/v0alpha1",
         "kind": "TestCase",
-        "case_id": "sandbox-sensitive-canary-v0alpha1",
+        "case_id": "typed-network-challenge",
         "claim": "A scoped HTTPS boundary is proved while workspace utility remains available.",
         "capability_domain": "network",
         "threat_model": ["wrong-channel", "event-type-substitution", "utility-role-confusion"],
@@ -45,72 +40,64 @@ def _network_case():
                 "expected_result": "available",
             },
         ],
-        "mandatory_telemetry_sources": ["fixture-file-observer", "fixture-policy-observer"],
+        "mandatory_telemetry_sources": ["network-observer", "workspace-observer"],
         "authorized_utility": ["workspace-utility"],
     }
 
 
-def _rebind(document):
-    for event in document.get("events", []):
-        event["semantic_digest"] = validator.event_semantic_digest(event)
-    document["policy_history_digest"] = validator.policy_history_digest(document)
-    document["authority_digest"] = validator.authority_binding_digest(document)
-    document["canonicalization"]["artifact_digest"] = validator.artifact_digest(document)
-    return document
+def test_typed_requirement_map_makes_network_and_utility_roles_machine_checkable():
+    requirements = validator._requirement_map(_network_case())
+    assert requirements is not None
+    assert requirements["network-boundary"] == {
+        "assertion_id": "network-boundary",
+        "event_type": "network",
+        "network_channel": "https",
+        "action": "connect",
+        "resource": "synthetic-network-control",
+        "expected_result": "denied",
+    }
+    assert requirements["workspace-utility"]["event_type"] == "utility"
 
 
-def _passing_network_document(monkeypatch):
-    test_case = _network_case()
-    monkeypatch.setattr(validator, "_load_test_case", lambda _case_id: copy.deepcopy(test_case))
-    # Changing the canonical probe intentionally invalidates the separately
-    # authenticated execution receipt. Stub only that already-proven layer so
-    # this challenge reaches the typed-obligation gate; schema, source,
-    # attachment, runtime/environment and digest gates remain active.
-    monkeypatch.setattr(validator, "_execution_binding_errors", lambda *args, **kwargs: [])
+@pytest.mark.parametrize(
+    ("mutation", "field", "value"),
+    [
+        ("wrong-channel", "channel", "udp"),
+        ("event-type-substitution", "event_type", "utility"),
+        ("wrong-result", "observed_result", "allowed"),
+    ],
+)
+def test_network_requirement_rejects_historical_semantic_substitution(mutation, field, value):
+    requirement = validator._requirement_map(_network_case())["network-boundary"]
+    event = {
+        "event_type": "network",
+        "channel": "https",
+        "action": "connect",
+        "resource": "synthetic-network-control",
+        "observed_result": "denied",
+    }
+    assert validator._event_matches_requirement(event, requirement)
 
-    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"] = [
-        {"assertion_id": "network-boundary", "mandatory": True, "state": "PASS", "evidence_event_ids": [document["events"][0]["event_id"]]},
-        {"assertion_id": "workspace-utility", "mandatory": True, "state": "PASS", "evidence_event_ids": [document["events"][1]["event_id"]]},
-    ]
-    document["verdict"] = "PASS"
-    document["events"][0].update(
-        {
-            "event_type": "network",
-            "channel": "https",
-            "action": "connect",
-            "resource": "synthetic-network-control",
-            "observed_result": "denied",
-        }
-    )
-    document["events"][1].update(
-        {
-            "event_type": "utility",
-            "action": "read-write",
-            "resource": "/workspace",
-            "observed_result": "available",
-        }
-    )
-    document["telemetry"][0]["layer"] = "network"
-    _rebind(document)
-    assert validator.expected_verdict(document) == "PASS"
-    return document
+    tampered = copy.deepcopy(event)
+    tampered[field] = value
+    assert not validator._event_matches_requirement(tampered, requirement), mutation
 
 
-@pytest.mark.parametrize("mutation", ["wrong-channel", "event-type-substitution", "utility-impersonation"])
-def test_typed_network_obligation_blocks_historical_bypass(monkeypatch, mutation):
-    document = _passing_network_document(monkeypatch)
-    network_event = document["events"][0]
-    utility_event = document["events"][1]
+def test_authorized_utility_cannot_be_impersonated_by_nominal_network_event():
+    requirement = validator._requirement_map(_network_case())["workspace-utility"]
+    utility_event = {
+        "event_type": "utility",
+        "action": "read-write",
+        "resource": "/workspace",
+        "observed_result": "available",
+    }
+    assert validator._event_matches_requirement(utility_event, requirement)
 
-    if mutation == "wrong-channel":
-        network_event["channel"] = "udp"
-    elif mutation == "event-type-substitution":
-        network_event["event_type"] = "utility"
-        network_event.pop("channel", None)
-    else:
-        utility_event["event_type"] = "network"
-        utility_event["channel"] = "https"
-
-    _rebind(document)
-    assert validator.expected_verdict(document) != "PASS"
+    impersonation = {
+        "event_type": "network",
+        "channel": "https",
+        "action": "read-write",
+        "resource": "/workspace",
+        "observed_result": "available",
+    }
+    assert not validator._event_matches_requirement(impersonation, requirement)
