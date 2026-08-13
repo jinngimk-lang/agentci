@@ -1,16 +1,16 @@
-# AgentCI
+# AgentCI 0.2 Developer Preview
 
 AgentCI is an evidence-first CI, reliability, and security-verification project for AI agents and agent-facing execution environments.
 
-The current primary product line is **Agent Sandbox Alpha**: a provider-neutral foundation for discovering sandbox readiness, expressing sandbox evidence, rejecting false-PASS claims, and building toward independently reproducible cross-backend verification.
+The current primary product line is **Agent Sandbox Alpha**: a provider-neutral foundation for discovering sandbox readiness, validating sandbox evidence, rejecting false-PASS claims, and building toward independently reproducible cross-backend verification.
 
 > **Sandbox providers build the cage. AgentCI verifies what can actually be proved about the cage.**
 
-AgentCI is open source and intentionally adversarial: builders, runtime experts, security reviewers, and external agents are welcome to contribute reproducible counterexamples and corrections.
+**AgentCI 0.2 is a pre-alpha Developer Preview / not a security certification.** No sandbox backend is currently claimed as certified or secure by AgentCI.
 
 ## Current delivered Alpha
 
-The current `main` delivers two distinct layers.
+The installed product exposes three distinct surfaces.
 
 ### 1. Deterministic agent evals
 
@@ -37,24 +37,45 @@ Its truth boundary is deliberate:
 - an installed binary or successful version/status probe does not by itself make a backend `ready`;
 - unknown configuration or probe failures remain explicit rather than being promoted to success.
 
-No sandbox backend is currently claimed as certified or secure by AgentCI.
+### 3. Canonical sandbox evidence verification
+
+```bash
+agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --json --print-digest
+```
+
+`verify` uses the same canonical S0 validator that backs the repository's adversarial sandbox regressions. It validates whether an EvidenceEnvelope faithfully satisfies the contract, including its recorded verdict.
+
+A **valid evidence** result is not the same thing as PASS and is **not a security certification**. The repository's deliberately permissive red control is intentionally valid evidence with:
+
+```text
+valid=true
+recorded_verdict=FAIL
+expected_verdict=FAIL
+certification_claim=false
+```
+
+Sandbox verify exit semantics:
+
+- `0` — the EvidenceEnvelope is valid; inspect `recorded_verdict` separately;
+- `1` — the evidence is invalid, inconsistent, tampered, or cannot satisfy the canonical contract;
+- `2` — usage or I/O error.
+
+Missing or materially unavailable evidence remains `UNVERIFIED`/non-PASS rather than being inferred away.
 
 ## Sandbox evidence core on `main`
 
-AgentCI now also carries the design-stage S0 evidence core used to harden future sandbox verification:
+AgentCI carries the S0 evidence core used to harden sandbox verification:
 
 - `schemas/sandbox-certification-v0alpha1.schema.json`;
 - `schemas/sandbox-authority-v0alpha1.schema.json`;
 - `scripts/validate_sandbox_evidence.py`;
 - execution/runtime-environment attestation helpers;
-- canonical sandbox TestCase and synthetic red-control fixtures;
-- regression tests for policy epochs, effective attachments, authority/evidence binding, cleanup state, execution causality, backend/environment provenance, and false-PASS mutations.
+- canonical sandbox TestCases and synthetic red-control fixtures;
+- regression tests for policy epochs, effective attachments, authority/evidence binding, cleanup state, execution causality, backend/environment provenance, network-channel semantics, telemetry completeness, authorized utility, and false-PASS mutations.
 
-The canonical integration description is:
+The canonical integration description is [`docs/architecture/sandbox-s0-v0alpha1-integration.md`](docs/architecture/sandbox-s0-v0alpha1-integration.md).
 
-- [`docs/architecture/sandbox-s0-v0alpha1-integration.md`](docs/architecture/sandbox-s0-v0alpha1-integration.md)
-
-This S0 evidence core is **not** a released `agentci sandbox certify` command and is **not** proof that a real provider sandbox is secure. Provider-native execution/certification remains a later evidence gate.
+The installed verifier packages the same canonical validator code and repository-owned schema/TestCase/fixture-attestation files. It does not maintain a second sandbox IR.
 
 ## Why AgentCI exists
 
@@ -81,7 +102,8 @@ The program keeps these invariants:
 - restore != clean restart;
 - execution status != backend verdict;
 - deny-everything != useful containment unless authorized utility still succeeds;
-- untested material capabilities cannot hide inside PASS.
+- untested material capabilities cannot hide inside PASS;
+- behavioral outcome evidence is not automatically Decision→enforcement causation evidence.
 
 ## Product direction: Verified Execution
 
@@ -103,7 +125,7 @@ adversarial verification
 proof-bearing execution receipt
 ```
 
-This is a strategic direction, not released behavior. The project deliberately keeps deterministic enforcement and external authority even if future UX removes provider-specific configuration burden.
+This remains a strategic direction, not a claim that 0.2 executes or certifies arbitrary real providers. The project deliberately keeps deterministic enforcement and external authority even if future UX removes provider-specific configuration burden.
 
 See [`skills/category-reframing-constraint-deletion/SKILL.md`](skills/category-reframing-constraint-deletion/SKILL.md).
 
@@ -116,6 +138,7 @@ python -m pip install -e '.[dev]'
 agentci --help
 agentci test examples/evals.yaml
 agentci sandbox doctor --json
+agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --json --print-digest
 ```
 
 For deterministic evals, default evidence is:
@@ -131,7 +154,13 @@ Eval exit semantics:
 - `1` — suite evaluated and contains a regression/failure;
 - `2` — invalid input, configuration, usage, or execution error outside a normal eval assertion.
 
-Sandbox doctor exits successfully when it can produce a readiness report; the report itself carries `ready`, `not-ready`, `unverified`, missing, broken, timeout/error, and per-candidate facts. Do not reinterpret a successful doctor process exit as a sandbox security PASS.
+A successful doctor process exit means it produced a readiness report, not that a sandbox security claim passed. A successful verify process exit means the EvidenceEnvelope is valid, not that its recorded verdict is PASS.
+
+## Clean-wheel product gate
+
+CI builds a wheel, installs it into a fresh virtual environment, switches to a working directory outside the repository, and runs both doctor and verify. This permanently checks that installed behavior does not accidentally depend on an editable checkout or the current working directory.
+
+See [`docs/releases/0.2.0-developer-preview.md`](docs/releases/0.2.0-developer-preview.md) for the exact release boundary.
 
 ## For AI agents
 
@@ -142,20 +171,14 @@ llms.txt
 AGENTS.md
 skills/agentci/SKILL.md
 agentci --help
-agentci test --help
+agentci sandbox --help
 agentci sandbox doctor --help
+agentci sandbox verify --help
 ```
 
-An unfamiliar agent should be able to determine:
+An unfamiliar agent should be able to determine what is actually released, what remains experimental, how to install and make the first useful call, where canonical evidence lives, which claims remain `UNVERIFIED`, and how to contribute a counterexample or fix.
 
-- what is actually released;
-- what is still experimental/design-stage;
-- how to install and make the first useful call;
-- where canonical evidence lives;
-- which claims remain `UNVERIFIED`;
-- how to contribute a counterexample or fix.
-
-Do not guess commands from architecture documents. If the installed CLI does not expose a command, treat it as unreleased.
+Do not guess commands from architecture documents. Installed CLI help is authoritative.
 
 ## Active Sandbox Program
 
@@ -169,64 +192,41 @@ Canonical coordination:
 - [Agent E — evidence/telemetry/replay #29](../../issues/29)
 - [Contributor call #42](../../issues/42)
 
-The former long-running S0 integration work has been reconciled onto `main`; historical PRs remain evidence/history rather than the current product entry point.
+Historical S0 PRs are evidence/history. Current product truth comes from `main`, installed CLI help, canonical docs, tests, and exact accepted evidence.
 
 ## Multi-agent delivery loop
 
 A–E keep specialist homes but rotate per change through:
 
 ```text
-External User
-→ Finder
-→ Planner
-→ Fixer
-→ Challenger
-→ Merge Decider
-→ main
-→ post-merge verification
+External User → Finder → Planner → Fixer → Challenger → Merge Decider → main → post-merge verification
 ```
 
-Hard rule: **Fixer != Merge Decider**. Security-critical changes prefer an independent Challenger as a third role.
+Hard rule: **Fixer != Merge Decider**. Security/release-critical changes prefer a separate Challenger. Same-account role separation is useful technical evidence but is not represented as formal verified-principal independence.
 
 See [`docs/operations/closed-loop-agent-delivery.md`](docs/operations/closed-loop-agent-delivery.md).
 
 ## External Verifier
 
-[`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) defines the clean-perspective lane: use only public surfaces, do not fill gaps from private project memory, separate environment limitations from project defects, and turn reproducible problems into evidence-backed fixes.
+[`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) defines the clean-perspective lane: use only public surfaces, do not fill gaps from private project memory, separate environment limitations from project defects, and verify installed doctor + verify behavior from outside the source tree where possible.
 
 The External Verifier is a perspective, not an approval authority.
 
 ## Contributing
 
-Useful contributions include:
-
-- one reproducible false-PASS;
-- one RED regression;
-- one primary-source-backed runtime semantic correction;
-- one safe probe/collector adapter;
-- one authority-confusion case;
-- one telemetry/cleanup/replay oracle;
-- one real cross-backend semantic mismatch;
-- one first-run or agent-discoverability improvement.
+Useful contributions include one reproducible false-PASS, one RED regression, one primary-source-backed runtime semantic correction, one safe probe/collector adapter, one authority-confusion case, one telemetry/cleanup/replay oracle, one real cross-backend semantic mismatch, or one first-run/agent-discoverability improvement.
 
 Builders and breakers are equally useful. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [Contributor call #42](../../issues/42).
 
 ## Safety boundary
 
-Do not:
-
-- run kernel/runtime escape exploits on ordinary CI or a developer host;
-- commit or publish real credentials/secrets;
-- treat provider marketing/configuration as verification;
-- publish actionable third-party vulnerabilities before responsible-disclosure readiness;
-- weaken tests or evidence gates to obtain green CI;
-- claim a backend is certified before real execution evidence and independent review support it.
+Do not run kernel/runtime escape exploits on ordinary CI or a developer host, commit or publish real credentials/secrets, treat provider marketing/configuration as verification, publish actionable third-party vulnerabilities before responsible-disclosure readiness, weaken tests/evidence gates to obtain green CI, or claim a backend is certified before real execution evidence and independent review support it.
 
 Destructive sandbox-escape work belongs only in explicitly nested, disposable, bounded environments.
 
-## Growth Pack and publishing boundary
+## Growth Pack and public claims
 
-AgentCI still preserves the V0 evidence-to-distribution loop. Canonical research/Growth Artifacts live under:
+AgentCI preserves the evidence-to-distribution loop. Canonical research/Growth Artifacts live under:
 
 ```text
 .company/research/findings/<artifact-id>/
@@ -235,31 +235,21 @@ AgentCI still preserves the V0 evidence-to-distribution loop. Canonical research
   sources.json
 ```
 
-Validate one with `scripts/validate_growth_artifact.py`, then generate a draft **Growth Pack** with `scripts/generate_growth_pack.py` only when the evidence rules pass.
-
-The repository has **no built-in external social-posting API**. Publishing authorization and human/agent distribution boundaries remain documented in [`.company/growth/publishing-authorization.md`](.company/growth/publishing-authorization.md). Public numeric, performance, adoption, and security claims must remain traceable to canonical evidence.
-
-## GitHub governance
-
-Repository **branch protection** is authoritative. The rotating A–E workflow may decide and merge eligible exact heads under Owner authorization, but it must preserve separation of duties, passing CI, expected-head checks, and post-merge verification. Repository administration and secrets remain outside ordinary change-level authority.
+Open-source recruitment can happen early. Public numeric, performance, adoption, provider-security, and certification claims must remain traceable to canonical evidence and the corresponding gates.
 
 ## Repository architecture
 
 ```text
-src/agentci/                 installed CLI + deterministic evals + sandbox doctor
-schemas/                     sandbox certification/authority design contracts
-scripts/                     evidence validators/attestation + growth tooling
+src/agentci/                 installed CLI + deterministic evals + sandbox doctor/verify
+schemas/                     sandbox certification/authority contracts
+scripts/                     canonical evidence validator/attestation + growth tooling
 examples/sandbox/            canonical TestCases and synthetic evidence controls
 skills/                      reusable agent-facing operating/product skills
 docs/architecture/           sandbox/harness architecture contracts
 docs/operations/             closed-loop delivery and governance
 .company/                    research, strategy, evidence and growth policy
 .github/                     CI, issue and PR contracts
-tests/                       regression, adversarial and repository-contract tests
+tests/                       regression, adversarial and installed-E2E tests
 llms.txt                     compact public agent discovery entry point
 AGENTS.md                    project-wide agent/skill router
 ```
-
-## Evidence and public claims
-
-Canonical public technical claims must trace to reproducible evidence. Recruitment and open research can begin early. Security/certification claims come late, after the corresponding evidence actually exists.
