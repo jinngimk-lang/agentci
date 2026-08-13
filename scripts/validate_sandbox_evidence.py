@@ -13,9 +13,11 @@ from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import FormatError
 try:
     from scripts.execution_attestation import execution_attestation_valid
+    from scripts.lifecycle_attestation import lifecycle_attestation_valid
     from scripts.runtime_environment_attestation import runtime_environment_attestation_valid
 except ModuleNotFoundError:  # direct script execution from repository root
     from execution_attestation import execution_attestation_valid
+    from lifecycle_attestation import lifecycle_attestation_valid
     from runtime_environment_attestation import runtime_environment_attestation_valid
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
@@ -141,6 +143,78 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
     if post.get("descendants") == "residual": errors.append("residual descendants violate PASS")
     if post.get("filesystem_residue") == "residual": errors.append("residual filesystem state violate PASS")
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
+    if post.get("network_activity") == "residual": errors.append("residual network activity violates PASS")
+    if post.get("credential_state") == "residual": errors.append("residual credential state violates PASS")
+    if post.get("lifecycle_state") == "preserved": errors.append("preserved lifecycle state is not accepted by the current v0alpha1 claim")
+    return errors
+
+def _lifecycle_evidence_errors(document: dict[str, Any]) -> list[str]:
+    """Validate evidence needed to call a lifecycle post-condition revalidated.
+
+    Missing or invalid provenance is an evidence problem, not proof that the
+    backend violated containment; callers therefore map these errors to
+    UNVERIFIED rather than FAIL.
+    """
+    if document.get("post_conditions", {}).get("lifecycle_state") != "revalidated":
+        return []
+
+    errors: list[str] = []
+    continuity = document.get("lifecycle_continuity", [])
+    safe_states = {"revalidated", "revoked", "replaced"}
+    continuity_fields = ("process_state", "socket_fd_state", "credential_session_state", "policy_attachment_state")
+    if not continuity:
+        return ["revalidated lifecycle state requires lifecycle continuity evidence"]
+
+    telemetry = document.get("telemetry", [])
+    source_ids = [source.get("source_id") for source in telemetry]
+    duplicate_sources = _duplicates(source_ids)
+    telemetry_by_source = {
+        source.get("source_id"): source
+        for source in telemetry
+        if source.get("source_id") is not None and source.get("source_id") not in duplicate_sources
+    }
+    attachments = document.get("policy_attachments", [])
+    attachment_ids = [attachment.get("attachment_id") for attachment in attachments]
+    duplicate_attachments = _duplicates(attachment_ids)
+    events = document.get("events", [])
+
+    for item in continuity:
+        capture_epoch, restore_epoch = item.get("capture_epoch"), item.get("restore_epoch")
+        if not isinstance(capture_epoch, int) or not isinstance(restore_epoch, int) or restore_epoch <= capture_epoch:
+            errors.append("lifecycle continuity requires restore_epoch greater than capture_epoch")
+        for field in continuity_fields:
+            if item.get(field) not in safe_states:
+                errors.append(f"lifecycle continuity {field} must be revalidated, revoked, or replaced before PASS")
+
+        matching_events: list[dict[str, Any]] = []
+        for event in events:
+            if event.get("event_type") != "lifecycle" or event.get("restore_epoch") != restore_epoch:
+                continue
+            source = telemetry_by_source.get(event.get("source_id"))
+            if source is None or source.get("coverage") != "mandatory" or source.get("health") != "healthy" or source.get("layer") != "lifecycle":
+                continue
+            epoch, workload, attachment_id = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
+            effective_attachments = [
+                attachment
+                for attachment in attachments
+                if attachment.get("state") == "effective"
+                and attachment.get("policy_epoch") == epoch
+                and attachment.get("workload_identity") == workload
+                and attachment.get("attachment_id") == attachment_id
+                and attachment.get("attachment_id") not in duplicate_attachments
+            ]
+            if workload and attachment_id and len(effective_attachments) == 1:
+                matching_events.append(event)
+
+        if len(matching_events) != 1:
+            errors.append(
+                "lifecycle continuity requires exactly one observed lifecycle event from healthy mandatory lifecycle telemetry "
+                "with matching restore epoch and effective policy attachment context"
+            )
+            continue
+        if not lifecycle_attestation_valid(document, item, matching_events[0]):
+            errors.append("lifecycle continuity lacks valid external snapshot/restore attestation")
+
     return errors
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
@@ -213,6 +287,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
     errors.extend(_authority_expansion_errors(document))
     if not runtime_environment_attestation_valid(document): errors.append("runtime/environment provenance is not independently bound to this execution")
+    errors.extend(_lifecycle_evidence_errors(document))
     case_id = document.get("case_id"); test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
     if test_case is None: errors.append(f"case_id {case_id} does not resolve to one canonical TestCase")
     history = document.get("policy_history", []); epochs = [x.get("policy_epoch") for x in history]; dup_epochs = _duplicates(epochs)
