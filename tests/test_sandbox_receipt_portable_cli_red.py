@@ -14,6 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PASS_EVIDENCE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 FAIL_EVIDENCE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
 CANONICAL_BUNDLES = ROOT / "examples" / "sandbox" / "receipt-bundles"
+BUNDLE_FILES = {
+    "observer-fixture-file-observer.json",
+    "observer-fixture-policy-observer.json",
+    "cleanup.json",
+}
 
 
 def run_cli(*args: str, cwd: Path = ROOT):
@@ -31,8 +36,45 @@ def run_cli(*args: str, cwd: Path = ROOT):
 def _copy_bundle(run_id: str, target: Path) -> Path:
     source = CANONICAL_BUNDLES / run_id
     assert source.is_dir(), "GREEN must package canonical signed observer/cleanup bundle resources"
+    assert {entry.name for entry in source.iterdir()} == BUNDLE_FILES
+    assert all(entry.is_file() for entry in source.iterdir()), "bundle discovery must not recurse"
     shutil.copytree(source, target)
     return target
+
+
+@pytest.mark.parametrize(
+    ("mutation", "code"),
+    [
+        ("missing", "E_RECEIPT_BUNDLE_REQUIRED_FILE_MISSING"),
+        ("unexpected", "E_RECEIPT_BUNDLE_UNEXPECTED_ENTRY"),
+        ("nested", "E_RECEIPT_BUNDLE_UNEXPECTED_ENTRY"),
+    ],
+)
+def test_bundle_loader_requires_exact_non_recursive_safe_file_set(
+    tmp_path: Path,
+    mutation: str,
+    code: str,
+):
+    from agentci.sandbox.receipt import ReceiptBundleError, load_receipt_bundle
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    for filename in BUNDLE_FILES:
+        (bundle / filename).write_text("{}", encoding="utf-8")
+    if mutation == "missing":
+        (bundle / "cleanup.json").unlink()
+    elif mutation == "unexpected":
+        (bundle / "attacker-controlled.json").write_text("{}", encoding="utf-8")
+    else:
+        (bundle / "nested").mkdir()
+
+    with pytest.raises(ReceiptBundleError) as caught:
+        load_receipt_bundle(
+            bundle,
+            mandatory_sources=("fixture-file-observer", "fixture-policy-observer"),
+        )
+
+    assert caught.value.code == code
 
 
 @pytest.mark.parametrize(
