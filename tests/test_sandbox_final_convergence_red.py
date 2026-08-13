@@ -33,13 +33,55 @@ def _typed_case():
     return json.loads(CASE.read_text(encoding="utf-8"))
 
 
+def _add_lifecycle_revalidation(document, *, continuity_snapshot="snapshot-A", observed_snapshot="snapshot-A"):
+    document["post_conditions"]["lifecycle_state"] = "revalidated"
+    document["lifecycle_continuity"] = [
+        {
+            "snapshot_id": continuity_snapshot,
+            "capture_epoch": 0,
+            "restore_epoch": 1,
+            "process_state": "revalidated",
+            "socket_fd_state": "revalidated",
+            "credential_session_state": "revalidated",
+            "policy_attachment_state": "revalidated",
+            "evidence_event_ids": ["event-restore-observation"],
+        }
+    ]
+    document["telemetry"].append(
+        {
+            "source_id": "fixture-lifecycle-observer",
+            "layer": "lifecycle",
+            "version": "v1",
+            "health": "healthy",
+            "coverage": "mandatory",
+        }
+    )
+    document["events"].append(
+        {
+            "event_id": "event-restore-observation",
+            "event_type": "lifecycle",
+            "occurred_at_utc": "2026-08-11T03:00:02Z",
+            "monotonic_ns": 3000,
+            "policy_epoch": 0,
+            "authority_epoch": 0,
+            "restore_epoch": 1,
+            "snapshot_id": observed_snapshot,
+            "source_id": "fixture-lifecycle-observer",
+            "semantic_digest": "sha256:" + "0" * 64,
+            "workload_identity": "fixture-workload",
+            "attachment_id": "attach-1",
+        }
+    )
+    return _rebind(document)
+
+
 def test_typed_assertion_requirement_rejects_event_class_substitution(monkeypatch):
     document = _document()
     test_case = _typed_case()
     monkeypatch.setattr(sandbox_validator, "_load_test_case", lambda _case_id: test_case)
 
     # Preserve event id/source/timing, so the signed causal observation set is
-    # unchanged.  Only the event semantics are laundered from file -> utility.
+    # unchanged. Only event semantics are laundered from file -> utility.
     sensitive_event = next(event for event in document["events"] if event.get("resource") == "/synthetic-sensitive-canary")
     sensitive_event["event_type"] = "utility"
     sensitive_event["action"] = "read-write"
@@ -89,44 +131,12 @@ def test_lifecycle_revalidated_requires_observed_continuity():
 
 def test_lifecycle_revalidation_must_bind_snapshot_identity():
     document = _document()
-    document["post_conditions"]["lifecycle_state"] = "revalidated"
-    document["lifecycle_continuity"] = [
-        {
-            "snapshot_id": "snapshot-A",
-            "capture_epoch": 0,
-            "restore_epoch": 1,
-            "process_state": "revalidated",
-            "socket_fd_state": "revalidated",
-            "credential_session_state": "revalidated",
-            "policy_attachment_state": "revalidated",
-            "evidence_event_ids": ["event-restore-observation"],
-        }
-    ]
-    document["telemetry"].append(
-        {
-            "source_id": "fixture-lifecycle-observer",
-            "layer": "lifecycle",
-            "version": "v1",
-            "health": "healthy",
-            "coverage": "mandatory",
-        }
-    )
-    document["events"].append(
-        {
-            "event_id": "event-restore-observation",
-            "event_type": "lifecycle",
-            "occurred_at_utc": "2026-08-11T03:00:02Z",
-            "monotonic_ns": 3000,
-            "policy_epoch": 0,
-            "authority_epoch": 0,
-            "restore_epoch": 1,
-            "snapshot_id": "snapshot-B",
-            "source_id": "fixture-lifecycle-observer",
-            "semantic_digest": "sha256:" + "0" * 64,
-            "workload_identity": "fixture-workload",
-            "attachment_id": "attach-1",
-        }
-    )
-    _rebind(document)
-
+    _add_lifecycle_revalidation(document, continuity_snapshot="snapshot-A", observed_snapshot="snapshot-B")
     assert sandbox_validator.expected_verdict(document) != "PASS"
+
+
+def test_correctly_bound_lifecycle_revalidation_can_still_pass():
+    document = _document()
+    _add_lifecycle_revalidation(document, continuity_snapshot="snapshot-A", observed_snapshot="snapshot-A")
+    assert sandbox_validator.expected_verdict(document) == "PASS"
+    assert sandbox_validator.validate(document) == []
