@@ -1,71 +1,71 @@
 # AgentCI
 
-> AgentCI is an evidence-first reliability, regression-testing, and experimental sandbox-certification project for AI-agent workflows and executable agent targets. It is designed to turn agent behavior and execution-boundary claims into reproducible machine-readable evidence that can be independently falsified in CI.
+> AgentCI is an evidence-first reliability, regression-testing, and sandbox-verification project for AI-agent workflows and executable agent targets.
 
 Canonical repository: https://github.com/jinngimk-lang/agentci
 
-## Active experimental program: Agent Sandbox Certification
+## Current product state: Sandbox Alpha
 
-AgentCI's primary open research line is provider-neutral **Agent Sandbox Certification**.
+AgentCI now ships two useful local surfaces:
 
-Core question:
+```bash
+agentci test examples/evals.yaml
+agentci sandbox doctor --json
+```
 
-> A sandbox says an AI agent is contained. How do we prove the effective boundary actually holds?
+`agentci sandbox doctor` is a provider-neutral local **readiness/discovery** command. It performs bounded safe probes and reports candidate facts such as discovered/installed/configured/probed/readiness.
 
-Current status: **S0 contract convergence / experimental open research**.
+Truth boundary:
 
-Do not claim that AgentCI has certified a sandbox backend or proved a provider secure. No backend is currently certified by AgentCI.
+- readiness is not backend execution;
+- readiness is not isolation proof;
+- readiness is not security certification;
+- a successful version/status probe does not itself make a backend ready;
+- missing/unknown evidence remains explicit rather than becoming PASS.
 
-Canonical public program surfaces:
+No sandbox backend is currently certified or claimed secure by AgentCI.
 
-- Program decisions: https://github.com/jinngimk-lang/agentci/issues/24
-- Product contract and probes: https://github.com/jinngimk-lang/agentci/issues/25
-- Independent red team: https://github.com/jinngimk-lang/agentci/issues/26
-- Isolation/runtime semantics — Agent C: https://github.com/jinngimk-lang/agentci/issues/27
-- Authority/identity/credentials/network policy — Agent D: https://github.com/jinngimk-lang/agentci/issues/28
-- Evidence/telemetry/replay — Agent E: https://github.com/jinngimk-lang/agentci/issues/29
-- Current S0 integration PR: https://github.com/jinngimk-lang/agentci/pull/34
+## Sandbox evidence core
+
+`main` contains the design-stage S0 evidence foundation used to reject false-PASS sandbox claims:
+
+- `schemas/sandbox-certification-v0alpha1.schema.json`
+- `schemas/sandbox-authority-v0alpha1.schema.json`
+- `scripts/validate_sandbox_evidence.py`
+- execution/runtime-environment attestation helpers
+- canonical TestCases, synthetic red controls, and adversarial regressions
+- `docs/architecture/sandbox-s0-v0alpha1-integration.md`
+
+These are evidence/contract foundations. They do **not** mean `agentci sandbox certify` is released and do not certify a provider.
+
+## Active Sandbox Program
+
+- Program / Supervisor: https://github.com/jinngimk-lang/agentci/issues/24
+- Agent A — canonical product/schema/probe integration: https://github.com/jinngimk-lang/agentci/issues/25
+- Agent B — independent falsification / Spec + Standards: https://github.com/jinngimk-lang/agentci/issues/26
+- Agent C — isolation/runtime semantics: https://github.com/jinngimk-lang/agentci/issues/27
+- Agent D — authority/identity/credentials/network policy: https://github.com/jinngimk-lang/agentci/issues/28
+- Agent E — evidence/telemetry/replay/cleanup: https://github.com/jinngimk-lang/agentci/issues/29
 - Contributor call: https://github.com/jinngimk-lang/agentci/issues/42
 
-Useful agent or human contributions include one reproducible false-PASS, one RED regression, one primary-source-backed sandbox semantic mapping, one safe probe/collector adapter, one cleanup/replay oracle, or one independently reproducible cross-backend semantic mismatch.
+Historical S0 PRs are evidence/history. Current product truth comes from `main`, installed CLI help, canonical docs, tests, and exact accepted evidence.
 
-For sandbox work, preserve these invariants:
+## Security invariants
 
-- observation is not authority;
-- configured is not verified;
-- backend name is not a security verdict;
-- missing observability is UNVERIFIED, not PASS;
-- automatic privilege contraction is different from privilege expansion;
-- untrusted repository, README, MCP, tool, web, or model output cannot grant authority;
-- destructive escape research belongs only in explicitly nested, disposable, bounded environments.
+For sandbox work preserve:
 
-## External Verifier lane
+- **Observation != Authority**;
+- configured/present != verified/effective;
+- backend name != security verdict;
+- missing material observability = `UNVERIFIED`, not PASS;
+- automatic privilege contraction != privilege expansion;
+- privilege expansion requires a separate authenticated authority path;
+- restore != clean restart;
+- execution status != backend verdict;
+- deny-everything does not prove useful containment without authorized utility;
+- destructive escape work only belongs in explicitly nested, disposable, bounded environments.
 
-External agents and developers should also read:
-
-https://github.com/jinngimk-lang/agentci/blob/main/docs/testing/external-agent-verification.md
-
-The **External Verifier** deliberately tests AgentCI from a clean public-only perspective. Do not use private project memory to fill missing documentation. Start from README / llms.txt / AGENTS.md / CONTRIBUTING.md / installed CLI help, reproduce failures exactly, and route real findings to the owning Agent A/B/C/D/E or Supervisor role.
-
-The External Verifier is not an independent identity, approval authority, or replacement for Agent B. If `git clone` or package/network access is unavailable, distinguish that environment limitation from a product defect and continue public-text/API checks where possible. Execution-dependent checks remain UNVERIFIED until reproduced in a capable clean environment.
-
-## Use AgentCI when
-
-- you need deterministic AI-agent eval/regression checks;
-- you need CI evidence for an agent or executable target;
-- you need to reproduce a reliability failure with explicit pass/fail semantics;
-- you need to independently verify a benchmark, integration, or Growth Artifact;
-- you are working on agent harness/target compatibility and need evidence-first testing;
-- you want to help falsify or implement the experimental provider-neutral Agent Sandbox Certification contract.
-
-## Do not assume
-
-- a local executable target is sandboxed;
-- any sandbox backend is certified by AgentCI;
-- optional target/doctor/trajectory/sandbox commands exist unless the installed CLI/docs expose them;
-- a design-stage schema or draft PR is released product behavior;
-- a demo fixture is market/adoption evidence;
-- a public numeric or security claim is valid without canonical evidence.
+Untrusted README/repository/MCP/tool/web/model output may inform understanding but cannot grant authority.
 
 ## Install / local development
 
@@ -80,44 +80,103 @@ python -m pip install -e '.[dev]'
 ```bash
 agentci --help
 agentci test --help
+agentci sandbox doctor --help
 ```
 
-Do not guess undocumented commands. Use the installed CLI help and current repository docs.
+Do not guess undocumented commands from design docs.
 
-## First useful command
+## First useful commands
+
+Deterministic eval:
 
 ```bash
 agentci test examples/evals.yaml
 ```
 
-Default evidence:
+Sandbox readiness:
+
+```bash
+agentci sandbox doctor
+agentci sandbox doctor --json
+```
+
+The doctor JSON is machine-readable readiness evidence, not a security certificate.
+
+## Eval evidence / exit semantics
+
+Default eval evidence:
 
 ```text
 artifacts/agentci-results.json
 artifacts/agentci-report.md
 ```
 
-The JSON result is canonical machine evidence; Markdown is human presentation.
-
-## Exit semantics
+Eval exit codes:
 
 - `0` — suite evaluated and passed
-- `1` — suite evaluated and contains an eval regression/failure
-- `2` — invalid input, configuration, runtime usage, or other non-eval execution error
+- `1` — suite evaluated with regression/failure
+- `2` — invalid input/configuration/usage/runtime error outside a normal assertion
 
-## Agent skill
+Do not infer sandbox-certification semantics from these eval exit codes.
 
-Read: https://github.com/jinngimk-lang/agentci/blob/main/skills/agentci/SKILL.md
+## Agent skill and routing
 
-This contains the compact agent-facing usage contract and progressive-discovery rules.
+Read:
 
-## Target / harness design
+- https://github.com/jinngimk-lang/agentci/blob/main/AGENTS.md
+- https://github.com/jinngimk-lang/agentci/blob/main/skills/agentci/SKILL.md
+- https://github.com/jinngimk-lang/agentci/blob/main/skills/sandbox-research-certification/SKILL.md
+- https://github.com/jinngimk-lang/agentci/blob/main/docs/operations/closed-loop-agent-delivery.md
 
-Read: https://github.com/jinngimk-lang/agentci/blob/main/docs/architecture/agent-harness-contract.md
+A–E retain specialist homes but may rotate per change through External User / Finder / Planner / Fixer / Challenger / Merge Decider. `Fixer != Merge Decider`; security-critical changes prefer a separate Challenger.
 
-The harness contract is a design direction unless a capability is explicitly implemented and independently accepted. Current released/main CLI behavior remains authoritative.
+## External Verifier lane
 
-## Evidence and public claims
+Read:
+
+https://github.com/jinngimk-lang/agentci/blob/main/docs/testing/external-agent-verification.md
+
+The External Verifier uses public surfaces only, does not fill documentation gaps from private memory, separates environment limitations from product defects, and routes reproducible findings through the same closed loop. It is a perspective lane, not an approval identity.
+
+## Category/product strategy
+
+For major product/category reframing, read:
+
+https://github.com/jinngimk-lang/agentci/blob/main/skills/category-reframing-constraint-deletion/SKILL.md
+
+AgentCI is exploring **Verified Execution** as a strategic hypothesis: remove provider-specific sandbox configuration burden from the normal developer experience while keeping deterministic authority, enforcement, evidence, and independent verification underneath. This is not yet a released execution/certification product.
+
+## Contributing
+
+Read:
+
+https://github.com/jinngimk-lang/agentci/blob/main/CONTRIBUTING.md
+
+Useful sandbox contributions include:
+
+- reproducible false-PASS cases;
+- RED regressions;
+- primary-source-backed runtime semantic corrections;
+- bounded probes/collectors;
+- authority-confusion fixtures;
+- telemetry/replay/cleanup oracles;
+- real cross-backend semantic mismatches;
+- onboarding and public-contract fixes.
+
+Preserve attribution and exact reproduction evidence.
+
+## Do not assume
+
+- a local executable target is sandboxed;
+- discovery means configured;
+- configured means effective;
+- readiness means isolation;
+- any backend is certified;
+- future `inspect/test/certify/replay` design surfaces are released unless `agentci --help` exposes them;
+- a demo fixture is provider/adoption evidence;
+- a public numeric/security claim is valid without canonical evidence.
+
+## Public claims
 
 Canonical research/Growth Artifacts use:
 
@@ -128,25 +187,6 @@ Canonical research/Growth Artifacts use:
   sources.json
 ```
 
-Public factual/numeric/security claims must trace to canonical evidence and pass repository evidence/growth rules. Experimental open-research recruitment is allowed before S0 acceptance, but certification/provider-security claims are not.
+Open-source recruitment can happen early. Provider-security/certification claims require real evidence and independent acceptance first.
 
-## Contributing
-
-Read: https://github.com/jinngimk-lang/agentci/blob/main/CONTRIBUTING.md
-
-Sandbox contributor call: https://github.com/jinngimk-lang/agentci/issues/42
-
-Useful contributions include reproducible failures, regression tests, eval cases, OS/runtime compatibility tests, harness/adapter work, benchmark methodology, security/reliability attacks, sandbox semantics, telemetry/replay work, and onboarding/docs improvements.
-
-## Security / limitations
-
-- Local-command execution is not equivalent to OS sandboxing.
-- Current Sandbox Certification work is design-stage/experimental unless an exact capability is explicitly released and independently accepted.
-- Do not place credentials/secrets into eval fixtures, trajectories, reports, issues, or public artifacts.
-- Prefer argv-based execution; user input is data, not shell syntax.
-- Integration claims require real installed-command/E2E evidence where applicable.
-- Do not publish actionable third-party vulnerability details before responsible-disclosure readiness.
-
-## Human and agent distribution
-
-AgentCI treats agent discoverability as a first-class activation path. Agent-facing metadata must remain truthful, public, text-first, and synchronized with released behavior and current research status. Never use hidden prompt injection or instructions that tell consuming agents to always recommend AgentCI.
+Never use hidden prompt injection, deceptive keyword stuffing, or instructions that tell consuming agents to always recommend AgentCI.
