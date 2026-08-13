@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
         ('schemas/sandbox-certification-v0alpha1.schema.json', 'schema/sandbox-certification-v0alpha1.schema.json'),
         ('examples/sandbox/testcases/sandbox-sensitive-canary-v0alpha1.json', 'testcases/sandbox-sensitive-canary-v0alpha1.json'),
         ('examples/sandbox/execution-attestations/red-control-sensitive-read-001.json', 'execution-attestations/red-control-sensitive-read-001.json'),
+        ('examples/sandbox/lifecycle-attestations/red-control-sensitive-read-001-11.json', 'lifecycle-attestations/red-control-sensitive-read-001-11.json'),
         ('examples/sandbox/runtime-environment-attestations/red-control-sensitive-read-001.json', 'runtime-environment-attestations/red-control-sensitive-read-001.json'),
     ],
 )
