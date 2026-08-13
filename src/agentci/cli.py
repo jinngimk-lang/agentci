@@ -8,6 +8,7 @@ import sys
 from .config import ConfigError
 from .runner import run_suite
 from .sandbox import collect_readiness_report
+from .sandbox.verification import verify_evidence_file
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -16,10 +17,14 @@ def build_parser() -> argparse.ArgumentParser:
     test_parser = subparsers.add_parser('test', help='run a deterministic eval suite')
     test_parser.add_argument('path', type=Path)
     test_parser.add_argument('--output-dir', type=Path, default=Path('artifacts'))
-    sandbox_parser = subparsers.add_parser('sandbox', help='inspect local sandbox backend readiness')
+    sandbox_parser = subparsers.add_parser('sandbox', help='inspect and verify sandbox evidence')
     sandbox_subparsers = sandbox_parser.add_subparsers(dest='sandbox_command', required=True)
     doctor_parser = sandbox_subparsers.add_parser('doctor', help='run safe local sandbox readiness probes')
     doctor_parser.add_argument('--json', action='store_true', help='emit a machine-readable readiness report')
+    verify_parser = sandbox_subparsers.add_parser('verify', help='validate one canonical sandbox EvidenceEnvelope')
+    verify_parser.add_argument('path', type=Path)
+    verify_parser.add_argument('--json', action='store_true', help='emit a machine-readable verification result')
+    verify_parser.add_argument('--print-digest', action='store_true', help='include the canonical artifact digest')
     return parser
 
 
@@ -42,6 +47,13 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _print_sandbox_doctor(report)
             return 0
+        if args.command == 'sandbox' and args.sandbox_command == 'verify':
+            result = verify_evidence_file(args.path, include_digest=args.print_digest)
+            if args.json:
+                print(json.dumps(result.to_dict(), sort_keys=True))
+            else:
+                _print_sandbox_verification(result)
+            return 0 if result.valid else 1
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2
@@ -58,6 +70,18 @@ def _print_sandbox_doctor(report) -> None:
         reason = f' ({candidate.reason})' if candidate.reason else ''
         print(f'- {candidate.id}: {candidate.state}{reason}')
     print('Truth boundary: readiness is not backend execution, isolation proof, or security certification.')
+
+
+def _print_sandbox_verification(result) -> None:
+    print(f'Evidence envelope: {"valid" if result.valid else "invalid"}')
+    print(f'Run: {result.run_id or "unknown"}')
+    print(f'Recorded verdict: {result.recorded_verdict or "unknown"}')
+    print(f'Expected verdict: {result.expected_verdict}')
+    if result.artifact_digest:
+        print(f'Artifact digest: {result.artifact_digest}')
+    for error in result.errors:
+        print(f'- ERROR: {error}')
+    print('Truth boundary: valid evidence is not a security certification; inspect the recorded verdict and limitations.')
 
 
 if __name__ == '__main__':
