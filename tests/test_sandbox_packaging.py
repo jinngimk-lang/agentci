@@ -17,8 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
         ('schemas/sandbox-authority-v0alpha1.schema.json', 'authority-schema/sandbox-authority-v0alpha1.schema.json'),
         ('examples/sandbox/testcases/sandbox-sensitive-canary-v0alpha1.json', 'testcases/sandbox-sensitive-canary-v0alpha1.json'),
         ('examples/sandbox/execution-attestations/red-control-sensitive-read-001.json', 'execution-attestations/red-control-sensitive-read-001.json'),
+        ('examples/sandbox/execution-attestations/pass-sensitive-read-denied-001.json', 'execution-attestations/pass-sensitive-read-denied-001.json'),
         ('examples/sandbox/lifecycle-attestations/red-control-sensitive-read-001-11.json', 'lifecycle-attestations/red-control-sensitive-read-001-11.json'),
         ('examples/sandbox/runtime-environment-attestations/red-control-sensitive-read-001.json', 'runtime-environment-attestations/red-control-sensitive-read-001.json'),
+        ('examples/sandbox/runtime-environment-attestations/pass-sensitive-read-denied-001.json', 'runtime-environment-attestations/pass-sensitive-read-denied-001.json'),
     ],
 )
 def test_canonical_resource_loader_preserves_exact_bytes_on_installed_fallback(

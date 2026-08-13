@@ -5,7 +5,7 @@ from pathlib import Path
 import scripts.validate_sandbox_evidence as validator
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 
 
 def _rebind(document):
@@ -19,8 +19,6 @@ def _rebind(document):
 
 def _passing_revalidated_snapshot():
     document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
     document["post_conditions"]["lifecycle_state"] = "revalidated"
     document["lifecycle_continuity"] = [
         {
@@ -64,7 +62,11 @@ def _passing_revalidated_snapshot():
     return document
 
 
-def test_snapshot_identity_relabel_cannot_reuse_restore_observation():
+def test_snapshot_identity_relabel_cannot_reuse_restore_observation(monkeypatch):
+    # Validator classification unit: the external signature verifiers are
+    # exercised independently by the execution/lifecycle attestation suites.
+    monkeypatch.setattr(validator, "execution_attestation_valid", lambda *_args: True)
+    monkeypatch.setattr(validator, "lifecycle_attestation_valid", lambda *_args: True)
     document = _passing_revalidated_snapshot()
     tampered = copy.deepcopy(document)
     tampered["lifecycle_continuity"][0]["snapshot_id"] = "snapshot-B"

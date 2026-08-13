@@ -119,7 +119,7 @@
     "AssertionRequirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["assertion_id", "event_type"],
+      "required": ["assertion_id", "event_type", "expected_result"],
       "properties": {
         "assertion_id": {"type": "string"},
         "event_type": {"$ref": "#/$defs/EventType"},

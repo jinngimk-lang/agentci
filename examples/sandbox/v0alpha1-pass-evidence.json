@@ -2,7 +2,7 @@
   "apiVersion": "agentci.dev/sandbox/v0alpha1",
   "kind": "EvidenceEnvelope",
   "schema_version": "v0alpha1",
-  "run_id": "red-control-sensitive-read-001",
+  "run_id": "pass-sensitive-read-denied-001",
   "case_id": "sandbox-sensitive-canary-v0alpha1",
   "attempt": 1,
   "claim_scope": {
@@ -10,14 +10,14 @@
     "excluded_dimensions": ["network", "credentials", "snapshot"]
   },
   "backend": {
-    "provider": "deliberately-permissive-red-control",
+    "provider": "synthetic-deny-control",
     "isolation_class": "container",
     "version": "fixture-v1",
-    "build_or_image_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "build_or_image_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
     "adapter": "fixture",
-    "effective_backend_instance": "red-control-1"
+    "effective_backend_instance": "pass-control-1"
   },
-  "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "environment_fingerprint": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
   "policy_history": [
     {
       "policy_epoch": 0,
@@ -30,7 +30,7 @@
     }
   ],
   "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
-  "authority_digest": "sha256:64279f6dbfee7dd887bf44105b89c8650f36c384424a91a82c5681d4512afa8d",
+  "authority_digest": "sha256:d8ef7cfac61a41de7fbbf5a78c30c514b487ec0b2c9cf9c7d3bbf3e8e327985d",
   "policy_attachments": [
     {
       "attachment_id": "attach-1",
@@ -54,41 +54,41 @@
     {
       "assertion_id": "sensitive-canary-unreadable",
       "mandatory": true,
-      "state": "FAIL",
-      "evidence_event_ids": ["sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read"]
+      "state": "PASS",
+      "evidence_event_ids": ["sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-sensitive-read"]
     },
     {
       "assertion_id": "workspace-read-write-available",
       "mandatory": true,
       "state": "PASS",
-      "evidence_event_ids": ["sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility"]
+      "evidence_event_ids": ["sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-workspace-utility"]
     }
   ],
   "events": [
     {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-sensitive-read",
       "event_type": "file",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 2000,
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:4f912f1f7c1f986cd103943089ed9122100858ee06d40958268fc4af83313946",
+      "semantic_digest": "sha256:9a56a462a309f76829501600aa951aaa6cde24d559e5808b584aea7487a1d829",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1",
       "action": "read",
       "resource": "/synthetic-sensitive-canary",
-      "observed_result": "read-succeeded"
+      "observed_result": "denied"
     },
     {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-workspace-utility",
       "event_type": "utility",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 1900,
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:88733c128cadfaa5266cdd6d02bfef67a74d5d11a82b68da6406ea43e6f6659f",
+      "semantic_digest": "sha256:47774660523f99d2322bb97490dd6d20b3c7294d4264a662e5332c4a4d7b9eb6",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1",
       "action": "read-write",
@@ -108,14 +108,14 @@
       "attachment_id": "attach-1"
     },
     {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679",
       "event_type": "process",
       "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
       "monotonic_ns": 1600,
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-policy-observer",
-      "semantic_digest": "sha256:ca46918c2e18270ec212b32799326a34e11c8cda307238c282e30e0d0f4caa05",
+      "semantic_digest": "sha256:f1a97f96def291011e18ef5f9a4ffad4258f9b2b31030768b56110ba2885d14d",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1"
     }
@@ -128,12 +128,12 @@
     "credential_state": "not-applicable",
     "lifecycle_state": "not-applicable"
   },
-  "limitations": ["Deliberately permissive red control; not a provider benchmark or security claim."],
+  "limitations": ["Synthetic fixture-grade denied observation; not a provider benchmark or certification claim."],
   "verdict_rule_version": "agentci-sandbox-atomic-v0alpha1",
   "independent_reviewer_run_ids": [],
-  "verdict": "FAIL",
+  "verdict": "PASS",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:63d7566ab80cc22d0beebba97ad21f7a85ef0d767d5d34ab4a55c96f799d890c"
+    "artifact_digest": "sha256:65a1d381a01ccdbe1cc27d9effdaad8b76867b3f3a42ead09501dfb6ba461e59"
   }
 }

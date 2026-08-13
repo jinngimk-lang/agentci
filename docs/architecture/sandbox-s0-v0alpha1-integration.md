@@ -46,13 +46,15 @@ Every canonical mandatory assertion has exactly one `assertion_requirements[]` e
 - optional exact `network_channel`;
 - optional `action`;
 - optional `resource`;
-- optional `expected_result`.
+- required exact `expected_result`.
 
 The requirement-ID set must exactly equal `mandatory_assertions`. Duplicate, missing or ambiguous requirements make the TestCase invalid for certification.
 
 For a material capability probe, exactly one non-utility typed requirement must carry the capability-domain proof obligation. For network TestCases, that requirement must bind the exact canonical `probe.network_channel`. This replaces the rejected approaches based on set subtraction, role labels, duplicated owner strings, or mutually agreeing metadata. Those mechanisms can describe intent but cannot manufacture semantic ownership.
 
-An assertion in `PASS` must reference evidence that actually matches its typed requirement. A healthy collector, correct attachment, or valid digest cannot turn the wrong event class/action/resource/result into proof of another claim.
+An assertion in `PASS` must reference evidence that actually matches its typed requirement. A healthy collector, correct attachment, or valid digest cannot turn the wrong event class/action/resource/result into proof of another claim. For the canonical sensitive-canary assertion, that exact result is `denied`; a successful read is therefore never PASS evidence.
+
+Execution provenance externally authenticates a canonical projection of every causal assertion observation: event identity/type, source and ordering fields, typed channel/endpoint/action/resource/result, workload/attachment/policy context, and lifecycle identity when present. It deliberately excludes `decision_id` and `receipt_id`; those references remain in the separate authority binding and execution authenticity does not upgrade them into authority proof.
 
 ## Authorized utility is a separate proof dimension
 

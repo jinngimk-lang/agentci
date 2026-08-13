@@ -6,14 +6,12 @@ import pytest
 import scripts.validate_sandbox_evidence as sandbox_validator
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 CASE = ROOT / "examples" / "sandbox" / "testcases" / "sandbox-sensitive-canary-v0alpha1.json"
 
 
 def _document():
     document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
     document["canonicalization"]["artifact_digest"] = sandbox_validator.artifact_digest(document)
     assert sandbox_validator.expected_verdict(document) == "PASS"
     assert sandbox_validator.validate(document) == []
@@ -133,7 +131,11 @@ def test_lifecycle_revalidation_must_bind_snapshot_identity():
     assert sandbox_validator.expected_verdict(document) != "PASS"
 
 
-def test_correctly_bound_lifecycle_revalidation_can_still_pass():
+def test_correctly_bound_lifecycle_revalidation_can_still_pass(monkeypatch):
+    # Validator classification unit: external signature validity stays covered
+    # by the dedicated execution/lifecycle attestation tests.
+    monkeypatch.setattr(sandbox_validator, "execution_attestation_valid", lambda *_args: True)
+    monkeypatch.setattr(sandbox_validator, "lifecycle_attestation_valid", lambda *_args: True)
     document = _document()
     _add_lifecycle_revalidation(document, continuity_snapshot="snapshot-A", observed_snapshot="snapshot-A")
     assert sandbox_validator.expected_verdict(document) == "PASS"

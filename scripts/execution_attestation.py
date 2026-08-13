@@ -28,6 +28,10 @@ TRUSTED_RSA_KEYS = {
         "modulus_hex": "ad1c7ce3739cf370e0b685742e68e296df726923211678b2e1abed997f671cb27028d01c2a0fd818038c816ac51c3bfbec229e45b4c98d1d5bea029bdf3946a3340e66e98fe065fb7970e16ba15caf670cc343f9faa8eaaf7b3f0dd388a564ba0bf3d674e99bc85138c734205e00cda39b07bb47ad5f4f1a5dffbf226177bd87a7aa42c639baa1397c40ee7279c0913c12ab1d640c2a3d76654e45ed48254a37547e01b75845d5873bd1f22ba3f23c5e4f37743e287710062991b3c9519b7f8abb257c953ac5e0ad87a82e4d1cb87a72f0765aa3c6324933f6059ab7499cd1d4eb1de377eafe636e84307c609edd13aabacca83c9d9065589c3538039011f2ef",
         "exponent": 65537,
     },
+    "fixture-runner-key-v4": {
+        "modulus_hex": "ccc378bf4ad4d4ee409cb57813333f73b23a4f84789f81318c1253377a41c3142f9113805192815da01965af4407950c7090671cb63ef495be41b47974f6e50ce35195ecbdf7a2d825d63e76204d584d6065119a28ce96ecb7733bf62dd2309d7bf60cc4231fd49d2611891ab0526a382d8f980501448c5c9bbd7d7b228a96ef7069af9712713e3e821094618b2fb2c3727aed74eb64b4cb72d38f82dd52b52d6522e61aa2af9c284c6db8c6f3a8084d82736ff3da031646566c8c1dd247f36e20c4dd097f9df59dea8d723fc0b805a9da6a4df34341ef37d2545f76fcaa00352d638b904c2ca5879abe72f206a18af47ba293bd2edc560a9c3070d865335785",
+        "exponent": 65537,
+    },
 }
 
 _SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
@@ -86,6 +90,33 @@ def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _assertion_observation(event: dict[str, Any]) -> dict[str, Any] | None:
+    """Project externally authenticated assertion semantics without authority refs.
+
+    Decision and enforcement-receipt identifiers remain exclusively in the
+    authority binding.  The execution attestation covers only the typed event
+    semantics the evidence validator consumes.
+    """
+    ordering = _ordering_observation(event)
+    if ordering is None:
+        return None
+    return {
+        **ordering,
+        "event_type": event.get("event_type"),
+        "channel": event.get("channel"),
+        "endpoint": event.get("endpoint"),
+        "action": event.get("action"),
+        "resource": event.get("resource"),
+        "observed_result": event.get("observed_result"),
+        "workload_identity": event.get("workload_identity"),
+        "attachment_id": event.get("attachment_id"),
+        "policy_epoch": event.get("policy_epoch"),
+        "authority_epoch": event.get("authority_epoch"),
+        "restore_epoch": event.get("restore_epoch"),
+        "snapshot_id": event.get("snapshot_id"),
+    }
+
+
 def _causal_assertion_observations(document: dict[str, Any], binding_id: str) -> list[dict[str, Any]] | None:
     """Return assertion observations whose timing participates in PASS causality."""
     events_by_id = {
@@ -104,7 +135,7 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
             event = events_by_id.get(event_id)
             if not isinstance(event, dict):
                 return None
-            projection = _ordering_observation(event)
+            projection = _assertion_observation(event)
             if projection is None:
                 return None
             observations.append(projection)

@@ -7,9 +7,7 @@ import scripts.validate_sandbox_evidence as sandbox_validator
 def test_pass_evidence_is_bound_to_immutable_testcase_content(tmp_path, monkeypatch):
     """Changing canonical TestCase semantics under the same case_id must invalidate old evidence."""
     root = sandbox_validator.ROOT
-    fixture = json.loads((root / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json").read_text(encoding="utf-8"))
-    fixture["assertions"][0]["state"] = "PASS"
-    fixture["verdict"] = "PASS"
+    fixture = json.loads((root / "examples" / "sandbox" / "v0alpha1-pass-evidence.json").read_text(encoding="utf-8"))
     fixture["canonicalization"]["artifact_digest"] = sandbox_validator.artifact_digest(fixture)
     assert sandbox_validator.expected_verdict(fixture) == "PASS"
 

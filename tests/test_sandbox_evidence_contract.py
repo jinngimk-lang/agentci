@@ -16,6 +16,7 @@ from scripts.validate_sandbox_evidence import (
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+PASS_FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 SCHEMA = ROOT / "schemas" / "sandbox-certification-v0alpha1.schema.json"
 
 
@@ -38,9 +39,7 @@ def _rebind_all(document):
 
 
 def _passing_fixture():
-    document = _fixture()
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
+    document = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
     _rehash(document)
     assert expected_verdict(document) == "PASS"
     assert validate(document) == []

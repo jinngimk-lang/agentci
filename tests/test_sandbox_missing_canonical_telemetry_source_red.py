@@ -4,7 +4,7 @@ from pathlib import Path
 import scripts.validate_sandbox_evidence as validator
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 TESTCASE = ROOT / "examples" / "sandbox" / "testcases" / "sandbox-sensitive-canary-v0alpha1.json"
 
 
@@ -29,8 +29,6 @@ def test_pass_requires_every_canonical_mandatory_telemetry_source(monkeypatch, t
 
     try:
         document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        document["assertions"][0]["state"] = "PASS"
-        document["verdict"] = "PASS"
         # Deliberately omit the newly canonical mandatory source from the envelope.
         assert {source["source_id"] for source in document["telemetry"]} == {
             "fixture-file-observer",
@@ -39,6 +37,8 @@ def test_pass_requires_every_canonical_mandatory_telemetry_source(monkeypatch, t
         _rebind_all(document)
 
         # A canonical mandatory collector is absent, so PASS must be impossible.
-        assert validator.expected_verdict(document) != "PASS"
+        errors = validator.validate(document)
+        assert validator.expected_verdict(document) == "UNVERIFIED"
+        assert "canonical mandatory telemetry source fixture-process-observer is missing from EvidenceEnvelope" in errors
     finally:
         validator._load_test_case.cache_clear()
