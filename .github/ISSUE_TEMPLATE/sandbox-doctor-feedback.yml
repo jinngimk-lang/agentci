@@ -122,7 +122,8 @@ body:
   - type: dropdown
     id: retention
     attributes:
-      label: May AgentCI retain this report as public project evidence?
+      label: May AgentCI reuse this report as downstream public project evidence?
+      description: This GitHub issue submission is public regardless of this choice. Choose whether AgentCI may additionally reuse this report in downstream public project evidence such as research summaries or reproducibility records.
       options: ["yes", "no"]
     validations:
       required: true
