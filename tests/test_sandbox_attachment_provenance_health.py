@@ -2,24 +2,14 @@ import copy
 import json
 from pathlib import Path
 
-from scripts.validate_sandbox_evidence import (
-    artifact_digest,
-    authority_binding_digest,
-    event_semantic_digest,
-    expected_verdict,
-    policy_history_digest,
-    validate,
-)
+from scripts.validate_sandbox_evidence import artifact_digest, authority_binding_digest, event_semantic_digest, expected_verdict, policy_history_digest, validate
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-control-evidence.json"
 
 
 def _passing_fixture():
     document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
-    document["canonicalization"]["artifact_digest"] = artifact_digest(document)
     assert expected_verdict(document) == "PASS"
     assert validate(document) == []
     return document
@@ -45,6 +35,5 @@ def test_pass_attachment_provenance_requires_healthy_mandatory_source():
     provenance["semantic_digest"] = event_semantic_digest(provenance)
     document["policy_attachments"][0]["evidence_digest"] = provenance["semantic_digest"]
     _rebind_all(document)
-
     assert expected_verdict(document) != "PASS"
     assert any("attachment effectiveness provenance" in error and "healthy mandatory telemetry source" in error for error in validate(document))
