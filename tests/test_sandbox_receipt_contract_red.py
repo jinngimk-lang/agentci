@@ -12,12 +12,15 @@ from typing import Any, Callable
 import pytest
 
 from scripts import validate_sandbox_evidence as evidence_validator
+from scripts import execution_attestation as execution_attestation_module
+from scripts import runtime_environment_attestation as runtime_attestation_module
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PASS_EVIDENCE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 FAIL_EVIDENCE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
 TEST_CASE = ROOT / "examples" / "sandbox" / "testcases" / "sandbox-sensitive-canary-v0alpha1.json"
+SCHEMA = ROOT / "schemas" / "sandbox-certification-v0alpha1.schema.json"
 RUNTIME_DIR = ROOT / "examples" / "sandbox" / "runtime-environment-attestations"
 EXECUTION_DIR = ROOT / "examples" / "sandbox" / "execution-attestations"
 ALGORITHM = "rsa-pkcs1v15-sha256"
@@ -30,6 +33,12 @@ def _canonical_bytes(value: Any) -> bytes:
 
 def _digest(value: Any) -> str:
     return "sha256:" + hashlib.sha256(_canonical_bytes(value)).hexdigest()
+
+
+def _manifest_digest(manifest: dict[str, Any]) -> str:
+    candidate = copy.deepcopy(manifest)
+    candidate.pop("manifest_digest", None)
+    return _digest(candidate)
 
 
 def _probable_prime(candidate: int) -> bool:
@@ -238,22 +247,13 @@ def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any
     cleanup = _sign(_cleanup_projection(document, test_case), cleanup_private)
     runtime = json.loads((RUNTIME_DIR / f"{document['run_id']}.json").read_text(encoding="utf-8"))
     execution = json.loads((EXECUTION_DIR / f"{document['run_id']}.json").read_text(encoding="utf-8"))
-    inventory = [
-        _inventory_item("evidence", document),
-        _inventory_item("test_case", test_case),
-        _inventory_item("runtime", runtime),
-        _inventory_item("execution", execution),
-        *[
-            _inventory_item(f"observer:{observer['telemetry_source']['source_id']}", observer)
-            for observer in observers
-        ],
-        _inventory_item("cleanup", cleanup),
-    ]
     bundle = {
         "test_case": test_case,
+        "schema_document": json.loads(SCHEMA.read_text(encoding="utf-8")),
+        "runtime_attestation": runtime,
+        "execution_attestation": execution,
         "observer_attestations": observers,
         "cleanup_attestation": cleanup,
-        "artifact_inventory": inventory,
         "trusted_observers": {
             "fixture-observer-attester": {
                 **observer_public,
@@ -276,6 +276,25 @@ def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any
     return document, bundle
 
 
+def _embedded_artifacts(document: dict[str, Any], bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    contents = [
+        ("evidence", document),
+        ("test_case", bundle["test_case"]),
+        ("schema", bundle["schema_document"]),
+        ("runtime", bundle["runtime_attestation"]),
+        ("execution", bundle["execution_attestation"]),
+        *[
+            (f"observer:{observer['telemetry_source']['source_id']}", observer)
+            for observer in bundle["observer_attestations"]
+        ],
+        ("cleanup", bundle["cleanup_attestation"]),
+    ]
+    return [
+        {**_inventory_item(role, content), "content": copy.deepcopy(content)}
+        for role, content in contents
+    ]
+
+
 def _assemble(
     document: dict[str, Any],
     bundle: dict[str, Any],
@@ -287,14 +306,28 @@ def _assemble(
     return assemble_receipt(
         document,
         test_case=bundle["test_case"],
+        schema_document=bundle["schema_document"],
+        runtime_attestation=bundle["runtime_attestation"],
+        execution_attestation=bundle["execution_attestation"],
         observer_attestations=bundle["observer_attestations"],
         cleanup_attestation=bundle["cleanup_attestation"],
-        artifact_inventory=bundle["artifact_inventory"],
         trusted_observers=bundle["trusted_observers"],
         trusted_cleanup_attesters=bundle["trusted_cleanup_attesters"],
         # Private test-only dependency injection. No CLI or receipt artifact may
         # select disabled checks.
         _disabled_check=_disabled_check,
+    )
+
+
+def _replay(manifest: dict[str, Any], bundle: dict[str, Any]):
+    from agentci.sandbox.receipt import validate_receipt_manifest
+
+    return validate_receipt_manifest(
+        manifest,
+        _trusted_observers=bundle["trusted_observers"],
+        _trusted_cleanup=bundle["trusted_cleanup_attesters"],
+        _runtime_keys=runtime_attestation_module.TRUSTED_RSA_KEYS,
+        _execution_keys=execution_attestation_module.TRUSTED_RSA_KEYS,
     )
 
 
@@ -310,8 +343,15 @@ def _success(document: dict[str, Any], bundle: dict[str, Any]):
     assert result.manifest["recorded_verdict"] == document["verdict"]
     assert result.manifest["expected_verdict"] == evidence_validator.expected_verdict(document)
     assert result.manifest["certification_claim"] is False
-    assert result.manifest["artifact_inventory"] == bundle["artifact_inventory"]
+    assert result.manifest["metadata"] == {}
+    expected_artifacts = _embedded_artifacts(document, bundle)
+    assert result.manifest["artifacts"] == expected_artifacts
+    assert result.manifest["artifact_inventory"] == [
+        {key: value for key, value in artifact.items() if key != "content"}
+        for artifact in expected_artifacts
+    ]
     assert result.manifest["manifest_digest"].startswith("sha256:")
+    assert _replay(result.manifest, bundle).valid is True
     return result
 
 
@@ -576,28 +616,106 @@ def test_cleanup_scope_cross_binding_is_rejected(field: str, value: Any, code: s
     ],
 )
 def test_artifact_inventory_is_complete_unique_and_content_addressed(mutation: str, code: str):
-    def mutate(_document, bundle):
-        if mutation == "missing":
-            bundle["artifact_inventory"] = [
-                item for item in bundle["artifact_inventory"] if item["role"] != "cleanup"
-            ]
-        elif mutation == "duplicate":
-            evidence_item = next(item for item in bundle["artifact_inventory"] if item["role"] == "evidence")
-            bundle["artifact_inventory"].append(copy.deepcopy(evidence_item))
-        else:
-            bundle["artifact_inventory"][0]["content_digest"] = "sha256:" + "0" * 64
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    manifest = copy.deepcopy(_success(document, bundle).manifest)
+    if mutation == "missing":
+        manifest["artifact_inventory"] = [
+            item for item in manifest["artifact_inventory"] if item["role"] != "cleanup"
+        ]
+    elif mutation == "duplicate":
+        evidence_item = next(item for item in manifest["artifact_inventory"] if item["role"] == "evidence")
+        manifest["artifact_inventory"].append(copy.deepcopy(evidence_item))
+    else:
+        manifest["artifact_inventory"][0]["content_digest"] = "sha256:" + "0" * 64
+    manifest["manifest_digest"] = _manifest_digest(manifest)
+    replay = _replay(manifest, bundle)
+    assert replay.valid is False
+    assert replay.error_codes == (code,)
 
-    _attack(code, mutate)
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        "evidence",
+        "test_case",
+        "schema",
+        "runtime",
+        "execution",
+        "observer:fixture-file-observer",
+        "observer:fixture-policy-observer",
+        "cleanup",
+    ],
+)
+def test_replay_rejects_each_missing_embedded_artifact_role(role: str):
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    manifest = copy.deepcopy(_success(document, bundle).manifest)
+    manifest["artifacts"] = [item for item in manifest["artifacts"] if item["role"] != role]
+    manifest["artifact_inventory"] = [
+        item for item in manifest["artifact_inventory"] if item["role"] != role
+    ]
+    manifest["manifest_digest"] = _manifest_digest(manifest)
+    replay = _replay(manifest, bundle)
+    assert replay.valid is False
+    assert replay.error_codes == ("E_RECEIPT_ARTIFACT_ROLE_MISSING",)
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        "evidence",
+        "test_case",
+        "schema",
+        "runtime",
+        "execution",
+        "observer:fixture-file-observer",
+        "observer:fixture-policy-observer",
+        "cleanup",
+    ],
+)
+def test_replay_rejects_content_tamper_for_each_embedded_artifact_role(role: str):
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    manifest = copy.deepcopy(_success(document, bundle).manifest)
+    artifact = next(item for item in manifest["artifacts"] if item["role"] == role)
+    artifact["content"]["_tampered"] = True
+    manifest["manifest_digest"] = _manifest_digest(manifest)
+    replay = _replay(manifest, bundle)
+    assert replay.valid is False
+    assert replay.error_codes == ("E_RECEIPT_ARTIFACT_CONTENT_DIGEST_MISMATCH",)
 
 
 def test_public_replay_revalidates_manifest_digest_and_inventory():
-    from agentci.sandbox.receipt import validate_receipt_manifest
-
     document, bundle = _complete_bundle(PASS_EVIDENCE)
     manifest = _success(document, bundle).manifest
-    assert validate_receipt_manifest(manifest).valid is True
+    assert _replay(manifest, bundle).valid is True
     tampered = copy.deepcopy(manifest)
     tampered["artifact_inventory"][0]["payload_digest"] = "sha256:" + "0" * 64
-    replay = validate_receipt_manifest(tampered)
+    replay = _replay(tampered, bundle)
     assert replay.valid is False
     assert replay.error_codes == ("E_RECEIPT_INVENTORY_DIGEST_MISMATCH",)
+
+
+def test_embedded_attacker_key_cannot_replace_external_trust_policy():
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    manifest = copy.deepcopy(_success(document, bundle).manifest)
+    attacker_public, attacker_private = _keypair()
+    observer_artifact = next(
+        item for item in manifest["artifacts"] if item["role"].startswith("observer:")
+    )
+    attacker_payload = copy.deepcopy(observer_artifact["content"])
+    attacker_payload.pop("signature_b64")
+    attacker_payload["attester_id"] = "attacker-controlled-observer"
+    attacker_payload["key_id"] = "attacker-controlled-key"
+    observer_artifact["content"] = _sign(attacker_payload, attacker_private)
+    replacement = _inventory_item(observer_artifact["role"], observer_artifact["content"])
+    observer_artifact.update(replacement)
+    inventory_item = next(
+        item for item in manifest["artifact_inventory"] if item["role"] == observer_artifact["role"]
+    )
+    inventory_item.update(replacement)
+    # The receipt can carry attacker-supplied metadata, but replay trust comes
+    # only from the external verifier policy passed to _replay.
+    manifest["metadata"]["presented_keys"] = [attacker_public]
+    manifest["manifest_digest"] = _manifest_digest(manifest)
+    replay = _replay(manifest, bundle)
+    assert replay.valid is False
+    assert replay.error_codes == ("E_RECEIPT_UNTRUSTED_ATTESTER",)
