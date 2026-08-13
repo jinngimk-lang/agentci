@@ -1,4 +1,3 @@
-import copy
 import json
 from pathlib import Path
 
@@ -31,24 +30,7 @@ def _rebind(document):
 
 
 def _typed_case():
-    test_case = json.loads(CASE.read_text(encoding="utf-8"))
-    test_case["assertion_requirements"] = [
-        {
-            "assertion_id": "sensitive-canary-unreadable",
-            "event_type": "file",
-            "action": "read",
-            "resource": "/synthetic-sensitive-canary",
-            "expected_result": "denied",
-        },
-        {
-            "assertion_id": "workspace-read-write-available",
-            "event_type": "utility",
-            "action": "read-write",
-            "resource": "/workspace",
-            "expected_result": "available",
-        },
-    ]
-    return test_case
+    return json.loads(CASE.read_text(encoding="utf-8"))
 
 
 def test_typed_assertion_requirement_rejects_event_class_substitution(monkeypatch):
@@ -56,9 +38,13 @@ def test_typed_assertion_requirement_rejects_event_class_substitution(monkeypatc
     test_case = _typed_case()
     monkeypatch.setattr(sandbox_validator, "_load_test_case", lambda _case_id: test_case)
 
-    sensitive = next(a for a in document["assertions"] if a["assertion_id"] == "sensitive-canary-unreadable")
-    utility = next(a for a in document["assertions"] if a["assertion_id"] == "workspace-read-write-available")
-    sensitive["evidence_event_ids"] = list(utility["evidence_event_ids"])
+    # Preserve event id/source/timing, so the signed causal observation set is
+    # unchanged.  Only the event semantics are laundered from file -> utility.
+    sensitive_event = next(event for event in document["events"] if event.get("resource") == "/synthetic-sensitive-canary")
+    sensitive_event["event_type"] = "utility"
+    sensitive_event["action"] = "read-write"
+    sensitive_event["resource"] = "/workspace"
+    sensitive_event["observed_result"] = "available"
     _rebind(document)
 
     assert sandbox_validator.expected_verdict(document) != "PASS"
@@ -68,10 +54,13 @@ def test_authorized_utility_requires_typed_action_resource_and_result(monkeypatc
     document = _document()
     test_case = _typed_case()
     monkeypatch.setattr(sandbox_validator, "_load_test_case", lambda _case_id: test_case)
+
+    utility_event = next(event for event in document["events"] if event["event_type"] == "utility")
+    utility_event.pop("action", None)
+    utility_event.pop("resource", None)
+    utility_event.pop("observed_result", None)
     _rebind(document)
 
-    # The current fixture has only event_type=utility.  It has no typed
-    # action/resource/result evidence and therefore must not certify useful work.
     assert sandbox_validator.expected_verdict(document) != "PASS"
 
 
@@ -110,6 +99,7 @@ def test_lifecycle_revalidation_must_bind_snapshot_identity():
             "socket_fd_state": "revalidated",
             "credential_session_state": "revalidated",
             "policy_attachment_state": "revalidated",
+            "evidence_event_ids": ["event-restore-observation"],
         }
     ]
     document["telemetry"].append(
@@ -123,13 +113,14 @@ def test_lifecycle_revalidation_must_bind_snapshot_identity():
     )
     document["events"].append(
         {
-            "event_id": "event-restore-observation-without-snapshot-binding",
+            "event_id": "event-restore-observation",
             "event_type": "lifecycle",
             "occurred_at_utc": "2026-08-11T03:00:02Z",
             "monotonic_ns": 3000,
             "policy_epoch": 0,
             "authority_epoch": 0,
             "restore_epoch": 1,
+            "snapshot_id": "snapshot-B",
             "source_id": "fixture-lifecycle-observer",
             "semantic_digest": "sha256:" + "0" * 64,
             "workload_identity": "fixture-workload",
@@ -138,6 +129,4 @@ def test_lifecycle_revalidation_must_bind_snapshot_identity():
     )
     _rebind(document)
 
-    # A restore observation in the right epoch/context is not proof that it
-    # corresponds to the continuity record's exact snapshot identity.
     assert sandbox_validator.expected_verdict(document) != "PASS"
