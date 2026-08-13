@@ -5,7 +5,7 @@ from pathlib import Path
 import scripts.validate_sandbox_evidence as validator
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 
 
 def _rebind_all(document):
@@ -26,11 +26,8 @@ def test_fabricated_process_provenance_cannot_make_unexecuted_probe_pass(monkeyp
     changed_case["probe"]["argv"] = ["synthetic-probe-that-did-not-run", "--safe"]
     monkeypatch.setattr(validator, "_load_test_case", lambda case_id: copy.deepcopy(changed_case))
 
-    # Turn the red-control security assertion nominally green, then forge a fresh
-    # execution namespace entirely from producer-controlled envelope fields.
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
-
+    # Forge a fresh execution namespace entirely from producer-controlled
+    # envelope fields while retaining otherwise genuine PASS semantics.
     assertion_events = []
     for assertion in document["assertions"]:
         for event_id in assertion["evidence_event_ids"]:
@@ -60,4 +57,6 @@ def test_fabricated_process_provenance_cannot_make_unexecuted_probe_pass(monkeyp
     # A malicious producer can calculate the same deterministic binding and
     # manufacture the process event without executing the changed probe. That is
     # self-consistency, not machine-verifiable execution provenance.
-    assert validator.expected_verdict(document) != "PASS"
+    errors = validator.validate(document)
+    assert validator.expected_verdict(document) == "UNVERIFIED"
+    assert f"execution provenance event {fresh_binding} lacks valid external execution attestation" in errors
