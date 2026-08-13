@@ -1,50 +1,111 @@
-# AgentCI V0
+# AgentCI
 
-AgentCI V0 is a GitHub-first prototype for testing AI-agent behavior and turning **verified engineering evidence** into responsible growth/distribution assets. It proves a narrow loop:
+AgentCI is an evidence-first CI, reliability, and security-verification project for AI agents and agent-facing execution environments.
 
-```text
-Issue → Agent A → PR → Agent B review → CI/evidence gate → merge/release → Growth Artifact → evidence-gated distribution
+The current primary product line is **Agent Sandbox Alpha**: a provider-neutral foundation for discovering sandbox readiness, expressing sandbox evidence, rejecting false-PASS claims, and building toward independently reproducible cross-backend verification.
+
+> **Sandbox providers build the cage. AgentCI verifies what can actually be proved about the cage.**
+
+AgentCI is open source and intentionally adversarial: builders, runtime experts, security reviewers, and external agents are welcome to contribute reproducible counterexamples and corrections.
+
+## Current delivered Alpha
+
+The current `main` delivers two distinct layers.
+
+### 1. Deterministic agent evals
+
+```bash
+agentci test examples/evals.yaml
 ```
 
-V0 is deliberately deterministic. It does **not** call external LLM providers; eval files contain fixture-style `actual` results so scoring, reporting, governance, and growth policy can be tested reliably.
+This writes canonical JSON plus a human-readable report under `artifacts/`.
 
-## 🚧 Agent Sandbox Certification — contributors wanted
+### 2. Truth-bounded sandbox readiness discovery
 
-AgentCI's primary open research line is now **provider-neutral Agent Sandbox Certification**.
+```bash
+agentci sandbox doctor
+agentci sandbox doctor --json
+```
 
-The question is simple to state and hard to prove:
+`doctor` performs safe, bounded local discovery/readiness probes for supported candidate classes such as Docker, Podman, bubblewrap, WSL, and Windows Sandbox where relevant to the host.
 
-> **A sandbox says an AI agent is contained. How do we prove the effective boundary actually holds?**
+Its truth boundary is deliberate:
 
-We are not trying to build another hypervisor or generic sandbox host first. The current thesis is:
+- **readiness is not backend execution**;
+- **readiness is not isolation proof**;
+- **readiness is not security certification**;
+- an installed binary or successful version/status probe does not by itself make a backend `ready`;
+- unknown configuration or probe failures remain explicit rather than being promoted to success.
 
-> **Sandbox providers build the cage. AgentCI proves the cage actually holds.**
+No sandbox backend is currently claimed as certified or secure by AgentCI.
 
-The work is intentionally adversarial. The current S0 contract is being attacked for false-PASS behavior before we trust it. **No sandbox backend is currently claimed as certified or secure by AgentCI.**
+## Sandbox evidence core on `main`
 
-Start with:
+AgentCI now also carries the design-stage S0 evidence core used to harden future sandbox verification:
 
-- [Sandbox Program #24](../../issues/24) — canonical architecture and stage decisions;
-- [Agent A / contract + probes #25](../../issues/25);
-- [Agent B / independent red team #26](../../issues/26);
-- [Agent C / isolation & runtime semantics #27](../../issues/27);
-- [Agent D / authority / identity / credentials / network policy #28](../../issues/28);
-- [Agent E / evidence / telemetry / replay #29](../../issues/29);
-- [Current S0 integration PR #34](../../pull/34);
-- [Contributor call #42](../../issues/42) — concrete ways to help;
-- [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) — clean external-developer/agent verification protocol.
+- `schemas/sandbox-certification-v0alpha1.schema.json`;
+- `schemas/sandbox-authority-v0alpha1.schema.json`;
+- `scripts/validate_sandbox_evidence.py`;
+- execution/runtime-environment attestation helpers;
+- canonical sandbox TestCase and synthetic red-control fixtures;
+- regression tests for policy epochs, effective attachments, authority/evidence binding, cleanup state, execution causality, backend/environment provenance, and false-PASS mutations.
 
-We especially want contributors who can help with:
+The canonical integration description is:
 
-- microVM / gVisor / Kata / namespaces / seccomp / Landlock / WASM / macOS / Windows isolation semantics;
-- workload identity, authorization, delegated authority, brokered credentials, egress and control-plane security;
-- telemetry completeness, replay, cleanup/recovery evidence, authorized-utility measurement and reproducibility;
-- red-team counterexamples that make the contract false-PASS;
-- safe, reproducible sandbox/runtime adapters for future cross-backend semantic tests.
+- [`docs/architecture/sandbox-s0-v0alpha1-integration.md`](docs/architecture/sandbox-s0-v0alpha1-integration.md)
 
-A strong contribution can be small: one reproducible counterexample, one RED regression, one exact provider semantic mapped to the generic contract, one collector/probe adapter, or one evidence correction. Builders and breakers are equally useful.
+This S0 evidence core is **not** a released `agentci sandbox certify` command and is **not** proof that a real provider sandbox is secure. Provider-native execution/certification remains a later evidence gate.
 
-**Safety:** do not run kernel/runtime escape exploits on ordinary CI or your host for this project, do not post real secrets, and do not publish actionable third-party vulnerabilities before responsible-disclosure readiness. Missing observability is `UNVERIFIED`, not PASS.
+## Why AgentCI exists
+
+Sandbox security is often described through configuration:
+
+```text
+runtime class
+policy file
+network allowlist
+credential settings
+provider name
+```
+
+AgentCI treats those as declarations, not proof.
+
+The program keeps these invariants:
+
+- **Observation != Authority**;
+- configured/present != selected/attached/effective/verified;
+- backend name != security verdict;
+- missing material observability = `UNVERIFIED`, not PASS;
+- privilege contraction != privilege expansion;
+- privilege expansion requires a separate authenticated authority path;
+- restore != clean restart;
+- execution status != backend verdict;
+- deny-everything != useful containment unless authorized utility still succeeds;
+- untested material capabilities cannot hide inside PASS.
+
+## Product direction: Verified Execution
+
+AgentCI is exploring a category-level product hypothesis: developers should eventually express an **authorized task outcome and constraints**, rather than manually understand every provider-specific sandbox mechanism.
+
+Conceptually:
+
+```text
+intent + authorized utility + forbidden capabilities + limits
+        ↓
+provider-neutral execution contract
+        ↓
+deterministic authority validation
+        ↓
+backend mapping / execution
+        ↓
+adversarial verification
+        ↓
+proof-bearing execution receipt
+```
+
+This is a strategic direction, not released behavior. The project deliberately keeps deterministic enforcement and external authority even if future UX removes provider-specific configuration burden.
+
+See [`skills/category-reframing-constraint-deletion/SKILL.md`](skills/category-reframing-constraint-deletion/SKILL.md).
 
 ## 5-minute quickstart
 
@@ -52,200 +113,153 @@ Requirements: Python 3.11+.
 
 ```bash
 python -m pip install -e '.[dev]'
+agentci --help
 agentci test examples/evals.yaml
+agentci sandbox doctor --json
 ```
 
-The command writes:
+For deterministic evals, default evidence is:
 
 ```text
 artifacts/agentci-results.json
 artifacts/agentci-report.md
 ```
 
-A passing suite exits `0`; an eval regression exits `1`; malformed input/usage exits `2`.
+Eval exit semantics:
 
-Try the intentionally failing fixture:
+- `0` — suite evaluated and passed;
+- `1` — suite evaluated and contains a regression/failure;
+- `2` — invalid input, configuration, usage, or execution error outside a normal eval assertion.
 
-```bash
-agentci test examples/evals-failing.yaml
-```
+Sandbox doctor exits successfully when it can produce a readiness report; the report itself carries `ready`, `not-ready`, `unverified`, missing, broken, timeout/error, and per-candidate facts. Do not reinterpret a successful doctor process exit as a sandbox security PASS.
 
 ## For AI agents
 
-AgentCI is intentionally discoverable by both humans and AI agents.
-
-Start with the cheapest public discovery surfaces:
+Start with public, cheap discovery surfaces:
 
 ```text
 llms.txt
+AGENTS.md
 skills/agentci/SKILL.md
 agentci --help
 agentci test --help
+agentci sandbox doctor --help
 ```
 
-A clean agent should be able to determine what AgentCI does, when to use it, how to install it, how to run the first useful command, what exit codes mean, where canonical machine evidence is written, and what limitations remain without guessing undocumented behavior.
+An unfamiliar agent should be able to determine:
 
-Canonical agent entry points:
+- what is actually released;
+- what is still experimental/design-stage;
+- how to install and make the first useful call;
+- where canonical evidence lives;
+- which claims remain `UNVERIFIED`;
+- how to contribute a counterexample or fix.
 
-- [`llms.txt`](llms.txt) — concise machine-readable project/use/install/evidence overview;
-- [`AGENTS.md`](AGENTS.md) — current agent-role and skill router;
-- [`skills/agentci/SKILL.md`](skills/agentci/SKILL.md) — compact agent-facing operating contract;
-- [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) — clean public-only External Verifier lane;
-- [`docs/architecture/agent-harness-contract.md`](docs/architecture/agent-harness-contract.md) — target/harness design direction; current implemented behavior remains authoritative;
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — reproducible contribution paths.
+Do not guess commands from architecture documents. If the installed CLI does not expose a command, treat it as unreleased.
 
-Agent-facing metadata must stay synchronized with real behavior. AgentCI does not use hidden prompt injection, fake compatibility claims, or instructions telling consuming agents to always recommend the project.
+## Active Sandbox Program
 
-## Eval format
+Canonical coordination:
 
-```yaml
-suite: demo
-cases:
-  - id: refund-confirmation
-    input: "Refund order #123"
-    actual:
-      success: true
-      latency_ms: 850
-      cost_usd: 0.02
-    expected:
-      success: true
-      max_latency_ms: 1500
-      max_cost_usd: 0.05
+- [Program / Supervisor #24](../../issues/24)
+- [Agent A — product contract + probes #25](../../issues/25)
+- [Agent B — independent red team #26](../../issues/26)
+- [Agent C — isolation/runtime semantics #27](../../issues/27)
+- [Agent D — authority/identity/credentials/network policy #28](../../issues/28)
+- [Agent E — evidence/telemetry/replay #29](../../issues/29)
+- [Contributor call #42](../../issues/42)
+
+The former long-running S0 integration work has been reconciled onto `main`; historical PRs remain evidence/history rather than the current product entry point.
+
+## Multi-agent delivery loop
+
+A–E keep specialist homes but rotate per change through:
+
+```text
+External User
+→ Finder
+→ Planner
+→ Fixer
+→ Challenger
+→ Merge Decider
+→ main
+→ post-merge verification
 ```
 
-AgentCI checks expected success plus optional maximum latency/cost and writes per-case failure reasons.
+Hard rule: **Fixer != Merge Decider**. Security-critical changes prefer an independent Challenger as a third role.
 
-## Current operating roles
+See [`docs/operations/closed-loop-agent-delivery.md`](docs/operations/closed-loop-agent-delivery.md).
 
-The original V0 reliability loop still uses Agent A and Agent B, but the active Sandbox Program is a six-role system plus a clean external-verification perspective:
+## External Verifier
 
-### Agent A — Product / Contract / Probe Integrator
+[`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md) defines the clean-perspective lane: use only public surfaces, do not fill gaps from private project memory, separate environment limitations from project defects, and turn reproducible problems into evidence-backed fixes.
 
-Agent A chooses bounded claims, implements with tests, and opens evidence-backed PRs. It **must not merge** its own PR, change branch protection/secrets, or publish unsupported marketing claims. Its full contract is in [`AGENT_A.md`](AGENT_A.md) and [`.agents/builder.system.md`](.agents/builder.system.md).
+The External Verifier is a perspective, not an approval authority.
 
-### Agent B — Independent Critic / Red Team
+## Contributing
 
-Agent B independently verifies Agent A's claims, tries adversarial/boundary cases, and produces separate Spec + Standards verdicts. It **must not directly push** feature code to protected main and it does not get to bypass technical/growth evidence gates. See [`AGENT_B.md`](AGENT_B.md) and [`.agents/critic-growth.system.md`](.agents/critic-growth.system.md).
+Useful contributions include:
 
-### Agent C — Isolation / Runtime Semantics
+- one reproducible false-PASS;
+- one RED regression;
+- one primary-source-backed runtime semantic correction;
+- one safe probe/collector adapter;
+- one authority-confusion case;
+- one telemetry/cleanup/replay oracle;
+- one real cross-backend semantic mismatch;
+- one first-run or agent-discoverability improvement.
 
-Agent C owns the actual enforcement meaning and portability limits of microVM/container/OS-native/WASM/runtime primitives. Current coordination surface: [#27](../../issues/27).
+Builders and breakers are equally useful. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [Contributor call #42](../../issues/42).
 
-### Agent D — Authority / Identity / Credentials / Network Policy
+## Safety boundary
 
-Agent D owns who may grant capability, how workload identity and credentials are established, and how network/control-plane authority is represented. Current coordination surface: [#28](../../issues/28).
+Do not:
 
-### Agent E — Evidence / Telemetry / Replay
+- run kernel/runtime escape exploits on ordinary CI or a developer host;
+- commit or publish real credentials/secrets;
+- treat provider marketing/configuration as verification;
+- publish actionable third-party vulnerabilities before responsible-disclosure readiness;
+- weaken tests or evidence gates to obtain green CI;
+- claim a backend is certified before real execution evidence and independent review support it.
 
-Agent E owns what evidence is required to prove containment, cleanup, recovery, authorized utility, replay, and observability coverage. Current coordination surface: [#29](../../issues/29).
+Destructive sandbox-escape work belongs only in explicitly nested, disposable, bounded environments.
 
-### Supervisor — Gate / WIP / Program Decisions
+## Growth Pack and publishing boundary
 
-Supervisor resolves scope and stage transitions, coordinates A/B/C/D/E, and cannot substitute its own confidence for a valid B counterexample.
-
-### External Verifier — Clean-perspective testing lane
-
-The External Verifier behaves like an unknown external developer or agent using only public repository surfaces. It finds onboarding, discoverability, reproducibility, documentation-contract, and public-evidence defects, then routes findings to the owning role. It is **not** a seventh approval authority and does not replace Agent B. See [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md).
-
-## Growth Pack: evidence first
-
-Canonical research artifacts live under:
+AgentCI still preserves the V0 evidence-to-distribution loop. Canonical research/Growth Artifacts live under:
 
 ```text
 .company/research/findings/<artifact-id>/
-├── facts.json
-├── evidence.md
-└── sources.json
+  facts.json
+  evidence.md
+  sources.json
 ```
 
-Validate one:
+Validate one with `scripts/validate_growth_artifact.py`, then generate a draft **Growth Pack** with `scripts/generate_growth_pack.py` only when the evidence rules pass.
 
-```bash
-python scripts/validate_growth_artifact.py .company/research/findings/demo-benchmark
-```
+The repository has **no built-in external social-posting API**. Publishing authorization and human/agent distribution boundaries remain documented in [`.company/growth/publishing-authorization.md`](.company/growth/publishing-authorization.md). Public numeric, performance, adoption, and security claims must remain traceable to canonical evidence.
 
-Generate a draft pack:
+## GitHub governance
 
-```bash
-python scripts/generate_growth_pack.py \
-  .company/research/findings/demo-benchmark \
-  --output-root growth
-```
-
-The Growth Pack contains `x.md`, `reddit.md`, `hackernews.md`, `blog.md`, copied facts/evidence, and a publish checklist. Numeric claims in public drafts must match structured numeric facts. Threshold failures, unsupported claims, and non-disclosure-ready security findings are rejected.
-
-The V0 codebase does not contain a built-in external social-posting API. Repository governance separately authorizes the Supervisor/growth operator to publish a verified campaign directly through an actually connected publishing tool after the Growth Artifact and growth gates pass. See [`.company/growth/publishing-authorization.md`](.company/growth/publishing-authorization.md).
-
-## Growth thresholds
-
-Owner-editable defaults in [`.company/growth/rules.yaml`](.company/growth/rules.yaml):
-
-- benchmark: at least 300 reproducible runs;
-- performance: at least 20% improvement with at least 100 samples;
-- security: high/critical, reproducible, disclosure-ready;
-- integration: demo + tests + docs;
-- release: at least three meaningful changes or one major capability;
-- dataset: at least 100 examples plus reproducible notes.
-
-These are operating-policy defaults, not claims about market truth.
+Repository **branch protection** is authoritative. The rotating A–E workflow may decide and merge eligible exact heads under Owner authorization, but it must preserve separation of duties, passing CI, expected-head checks, and post-merge verification. Repository administration and secrets remain outside ordinary change-level authority.
 
 ## Repository architecture
 
 ```text
-src/agentci/                 deterministic eval CLI
-scripts/                     growth validation/generation
-skills/                      agent-facing discovery/operating skills
+src/agentci/                 installed CLI + deterministic evals + sandbox doctor
+schemas/                     sandbox certification/authority design contracts
+scripts/                     evidence validators/attestation + growth tooling
+examples/sandbox/            canonical TestCases and synthetic evidence controls
+skills/                      reusable agent-facing operating/product skills
+docs/architecture/           sandbox/harness architecture contracts
+docs/operations/             closed-loop delivery and governance
+.company/                    research, strategy, evidence and growth policy
+.github/                     CI, issue and PR contracts
+tests/                       regression, adversarial and repository-contract tests
 llms.txt                     compact public agent discovery entry point
-AGENTS.md                    current multi-agent routing entry point
-.agents/                     legacy A/B system contracts used by the V0 loop
-.company/                    strategy, metrics, decisions, evidence, growth policy
-.github/                     issue/PR contracts and CI
-examples/                    passing + failing eval suites
-tests/                       unit, policy, repository-contract, and E2E tests
+AGENTS.md                    project-wide agent/skill router
 ```
 
-## GitHub safety boundary
+## Evidence and public claims
 
-GitHub **branch protection** is authoritative. Use separate least-privilege identities for Agent A and Agent B, require passing CI plus independent review, and keep repository administration and production secrets controlled by repository policy.
-
-See [`docs/operations/github-agent-setup.md`](docs/operations/github-agent-setup.md) for the setup checklist and [`docs/operations/labels.md`](docs/operations/labels.md) for the issue state machine.
-
-## Contributing
-
-AgentCI is open source and welcomes contributors. Useful contributions include reproducible bug reports, regression tests, realistic eval cases, target/harness compatibility work, benchmark methodology, security/reliability review, documentation, and first-run improvements.
-
-For the active Sandbox Program, see [Contributor Call #42](../../issues/42). We welcome both builders and adversarial reviewers; a reproducible false-PASS is a valuable contribution.
-
-If you want to test the project as a clean outsider, use [`docs/testing/external-agent-verification.md`](docs/testing/external-agent-verification.md). Do not use private project memory to paper over missing public instructions.
-
-Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). If you want to help but do not know where to begin, look for bounded community-sized work or open an issue describing the exact environment/problem you can reproduce.
-
-The long-term community loop is documented in [`docs/community-growth.md`](docs/community-growth.md): verified results should attract real users and contributors, whose issues, benchmarks, and PRs then become product evidence for the next Agent A/B cycle.
-
-## Open-source distribution
-
-When a real Growth Artifact exists, AgentCI uses **dual distribution**:
-
-```text
-human-facing campaign
-+
-agent-facing discovery pack
-```
-
-GitHub is the first distribution surface—README, Releases, Discussions when enabled, reproducible benchmark/research artifacts, agent discovery files, and concrete contribution invitations—then the campaign expands to audience-fit developer/professional channels when connected.
-
-Human material optimizes for a strong verified technical story. Agent material optimizes for correct discovery, installation, invocation, machine-readable evidence, limitations, and contribution paths. The policy lives in [`skills/agent-native-distribution/SKILL.md`](skills/agent-native-distribution/SKILL.md).
-
-We optimize for three funnels:
-
-```text
-human: repo visit → install → first success → repeat use → team/paid adoption
-contributor: repo visit → issue/question → first PR → verified/merged → repeat contributor
-agent: discovery → correct use-case match → install → first invocation → evidence → repeat/recommend/contribute
-```
-
-Stars, impressions, search visibility, and agent mentions help discovery, but none is treated as proof of adoption.
-
-## What V0 intentionally does not do
-
-No real provider adapters, no hosted dashboard, no MCP firewall, no production secrets, no billing, no automated community replies, and no built-in external social-posting API. Those are V1 candidates only after adoption evidence justifies them.
+Canonical public technical claims must trace to reproducible evidence. Recruitment and open research can begin early. Security/certification claims come late, after the corresponding evidence actually exists.
