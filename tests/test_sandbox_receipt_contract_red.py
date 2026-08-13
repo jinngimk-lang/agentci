@@ -217,7 +217,8 @@ def _inventory_item(role: str, artifact: dict[str, Any], *, content: bytes | Non
         "role": role,
         "content_digest": "sha256:" + hashlib.sha256(content_bytes).hexdigest(),
         "payload_digest": _digest(payload),
-        "signature_verified": role in {"runtime", "execution", "observer", "cleanup"},
+        "signature_verified": role in {"runtime", "execution", "cleanup"}
+        or role.startswith("observer:"),
     }
 
 
@@ -225,6 +226,7 @@ def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any
     document = json.loads(evidence_path.read_text(encoding="utf-8"))
     test_case = _typed_test_case()
     _add_cleanup_events(document, test_case)
+    document["authority_digest"] = evidence_validator.authority_binding_digest(document)
     document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
     observer_public, observer_private = _keypair()
     cleanup_public, cleanup_private = _keypair()
@@ -318,8 +320,7 @@ def _attack(
     result = _assemble(attacked_document, attacked_bundle)
     assert result.evidence_valid is True
     assert result.receipt_valid is False
-    assert result.error_codes[0] == code
-    assert "E_RECEIPT_MISSING_OBSERVER_BINDING" not in result.error_codes
+    assert result.error_codes == (code,)
     assert result.manifest is None
     _success(document, bundle)
 
