@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -123,6 +124,30 @@ def test_bundle_loader_rejects_windows_reparse_point_classification(
         )
 
     assert caught.value.code == "E_RECEIPT_BUNDLE_UNSAFE_ENTRY"
+
+
+@pytest.mark.parametrize(
+    ("file_attributes", "expected"),
+    [
+        (0, True),
+        (getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400), False),
+    ],
+)
+def test_regular_file_classifier_rejects_windows_reparse_attribute(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    file_attributes: int,
+    expected: bool,
+):
+    from agentci.sandbox import receipt as receipt_module
+
+    class LstatResult:
+        st_mode = stat.S_IFREG | 0o600
+        st_file_attributes = file_attributes
+
+    monkeypatch.setattr(receipt_module.os, "lstat", lambda _path: LstatResult())
+
+    assert receipt_module._lstat_regular_file(tmp_path / "artifact.json") is expected
 
 
 @pytest.mark.parametrize(
