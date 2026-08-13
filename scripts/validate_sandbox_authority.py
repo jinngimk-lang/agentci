@@ -8,6 +8,7 @@ rejected rather than inferred.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 from pathlib import Path
 import sys
@@ -58,6 +59,24 @@ def _unique_index(items: list[dict[str, Any]], field: str, errors: list[str], la
     }
 
 
+def _instant(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _validate_interval_within(
+    item: dict[str, Any],
+    container: dict[str, Any],
+    *,
+    item_label: str,
+    container_label: str,
+    errors: list[str],
+) -> None:
+    if _instant(item["not_before"]) < _instant(container["not_before"]):
+        errors.append(f"{item_label} starts before {container_label}")
+    if _instant(item["expires_at"]) > _instant(container["expires_at"]):
+        errors.append(f"{item_label} expires after {container_label}")
+
+
 def _validate_delegation_subset(grant: dict[str, Any], parent: dict[str, Any], errors: list[str]) -> None:
     """Require a delegated child to be provably non-expanding.
 
@@ -70,10 +89,13 @@ def _validate_delegation_subset(grant: dict[str, Any], parent: dict[str, Any], e
     for field in ("action", "resource", "context_digest", "audience", "pep", "policy_digest", "authority_epoch"):
         if grant.get(field) != parent.get(field):
             errors.append(f"grant {grant_id} expands or changes parent {parent_id} {field}")
-    if grant.get("not_before") < parent.get("not_before"):
-        errors.append(f"grant {grant_id} starts before delegated parent {parent_id}")
-    if grant.get("expires_at") > parent.get("expires_at"):
-        errors.append(f"grant {grant_id} expires after delegated parent {parent_id}")
+    _validate_interval_within(
+        grant,
+        parent,
+        item_label=f"grant {grant_id}",
+        container_label=f"delegated parent {parent_id}",
+        errors=errors,
+    )
     if grant.get("revocation_epoch") < parent.get("revocation_epoch"):
         errors.append(f"grant {grant_id} weakens delegated parent {parent_id} revocation epoch")
 
@@ -84,11 +106,7 @@ def _validate_delegation_chain_to_root(
     root_identities: set[str],
     errors: list[str],
 ) -> None:
-    """Reject cyclic or rootless delegation provenance.
-
-    Local parent consistency is insufficient: two attested principals must not
-    be able to bootstrap authority by mutually naming each other's grants.
-    """
+    """Reject cyclic or rootless delegation provenance."""
     origin_id = grant.get("grant_id")
     current = grant
     seen: set[str] = set()
@@ -123,6 +141,7 @@ def validate(document: dict[str, Any]) -> list[str]:
     receipts = document.get("enforcement_receipts", [])
 
     roots_by_id = _unique_index(roots, "trust_root_id", errors, "trust_root_id")
+    roots_by_identity = _unique_index(roots, "root_identity", errors, "root_identity")
     attestations_by_id = _unique_index(attestations, "attestation_id", errors, "attestation_id")
     grants_by_id = _unique_index(grants, "grant_id", errors, "grant_id")
     decisions_by_id = _unique_index(decisions, "decision_id", errors, "decision_id")
@@ -138,13 +157,13 @@ def validate(document: dict[str, Any]) -> list[str]:
         if isinstance(item.get("principal_id"), str) and item.get("principal_id") not in duplicate_principals
     }
 
-    root_identities = {item.get("root_identity") for item in roots if isinstance(item.get("root_identity"), str)}
+    root_identities = set(roots_by_identity)
     root_tenants = {item.get("tenant_id") for item in roots}
 
     for attestation in attestations:
         if attestation.get("tenant_id") not in root_tenants:
             errors.append(f"attestation {attestation.get('attestation_id')} has no tenant TrustRoot")
-        if attestation.get("not_before") >= attestation.get("expires_at"):
+        if _instant(attestation["not_before"]) >= _instant(attestation["expires_at"]):
             errors.append(f"attestation {attestation.get('attestation_id')} validity interval is invalid")
 
     for grant in grants:
@@ -152,13 +171,41 @@ def validate(document: dict[str, Any]) -> list[str]:
         issuer = grant.get("issuer_principal_id")
         subject = grant.get("subject_principal_id")
         parent_id = grant.get("parent_grant_id")
+        issuer_root = roots_by_identity.get(issuer)
+        issuer_attestation = attestations_by_principal.get(issuer)
+        subject_attestation = attestations_by_principal.get(subject)
 
-        if issuer not in root_identities and issuer not in attestations_by_principal:
-            errors.append(f"grant {grant_id} issuer {issuer} is not a trusted root or uniquely attested principal")
-        if subject not in attestations_by_principal:
+        if issuer_root is None and issuer_attestation is None:
+            errors.append(f"grant {grant_id} issuer {issuer} is not a uniquely trusted root or uniquely attested principal")
+        if subject_attestation is None:
             errors.append(f"grant {grant_id} subject {subject} does not resolve to one PrincipalAttestation")
-        if grant.get("not_before") >= grant.get("expires_at"):
+        if _instant(grant["not_before"]) >= _instant(grant["expires_at"]):
             errors.append(f"grant {grant_id} validity interval is invalid")
+
+        if subject_attestation is not None:
+            _validate_interval_within(
+                grant,
+                subject_attestation,
+                item_label=f"grant {grant_id}",
+                container_label=f"subject attestation {subject_attestation.get('attestation_id')}",
+                errors=errors,
+            )
+
+        if issuer_root is not None:
+            if subject_attestation is not None and issuer_root.get("tenant_id") != subject_attestation.get("tenant_id"):
+                errors.append(f"grant {grant_id} root issuer tenant does not match subject tenant")
+            if grant.get("authority_epoch") != issuer_root.get("authority_epoch"):
+                errors.append(f"grant {grant_id} authority_epoch does not match issuing TrustRoot")
+        elif issuer_attestation is not None:
+            if subject_attestation is not None and issuer_attestation.get("tenant_id") != subject_attestation.get("tenant_id"):
+                errors.append(f"grant {grant_id} delegated issuer tenant does not match subject tenant")
+            _validate_interval_within(
+                grant,
+                issuer_attestation,
+                item_label=f"grant {grant_id}",
+                container_label=f"issuer attestation {issuer_attestation.get('attestation_id')}",
+                errors=errors,
+            )
 
         if parent_id is not None:
             parent = grants_by_id.get(parent_id)
@@ -174,7 +221,7 @@ def validate(document: dict[str, Any]) -> list[str]:
         # PrincipalAttestation proves identity only. It does not authorize that
         # principal to mint a CapabilityGrant. Non-root issuers must trace to an
         # explicit parent grant that delegates a non-expanding authority slice.
-        if issuer not in root_identities:
+        if issuer_root is None and issuer_attestation is not None:
             if parent_id is None:
                 errors.append(f"grant {grant_id} non-root issuer {issuer} requires delegated parent authority")
             else:
