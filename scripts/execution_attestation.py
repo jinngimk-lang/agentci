@@ -28,6 +28,10 @@ TRUSTED_RSA_KEYS = {
         "modulus_hex": "ad1c7ce3739cf370e0b685742e68e296df726923211678b2e1abed997f671cb27028d01c2a0fd818038c816ac51c3bfbec229e45b4c98d1d5bea029bdf3946a3340e66e98fe065fb7970e16ba15caf670cc343f9faa8eaaf7b3f0dd388a564ba0bf3d674e99bc85138c734205e00cda39b07bb47ad5f4f1a5dffbf226177bd87a7aa42c639baa1397c40ee7279c0913c12ab1d640c2a3d76654e45ed48254a37547e01b75845d5873bd1f22ba3f23c5e4f37743e287710062991b3c9519b7f8abb257c953ac5e0ad87a82e4d1cb87a72f0765aa3c6324933f6059ab7499cd1d4eb1de377eafe636e84307c609edd13aabacca83c9d9065589c3538039011f2ef",
         "exponent": 65537,
     },
+    "fixture-runner-key-v4": {
+        "modulus_hex": "b68d547e87097227d355eb856efa930b7b1d97d5ad44e99ff4e5206def22d1ec5ba55424a90b69fbd4b32fc7631e36a60861dd8386e834377ef8498156b282361b84d409fe9b9ca0ad5610a03c32093168f1c49be1662ece957006f28591a353e9a4f8579c5a70f22b11d69fff28e98a2879bdca6fa140c3ba2f10ca0e9753d01284e9be3f380b81e3015aaae0543891c20d99d30ee80035e63b560629655ae849e6fb2960ad83c786e8c1ce68a3184edd4834e3bb9c99be3e86f394a5aae45657d989c4060aceabd7cd1af7ae835081ef1b181a22dafa5bcd3ec9929cfe06777ce56df0407c92ed3ea917c472915b468da3cd6e472e5b3c870d84824b159df7",
+        "exponent": 65537,
+    },
 }
 
 _SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
@@ -65,11 +69,7 @@ def _rsa_pkcs1v15_sha256_verify(message: bytes, signature_b64: Any, key: dict[st
 
 
 def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
-    """Project only fields actually used to establish causal ordering.
-
-    Deliberately excludes Decision/EnforcementReceipt and other event payload
-    fields so execution provenance remains distinct from authority semantics.
-    """
+    """Project only fields used to establish causal ordering."""
     event_id = event.get("event_id")
     source_id = event.get("source_id")
     occurred_at_utc = event.get("occurred_at_utc")
@@ -86,8 +86,24 @@ def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _assertion_observation(event: dict[str, Any]) -> dict[str, Any] | None:
+    """Authenticate the assertion event identity, order, and typed semantics.
+
+    The semantic digest is the canonical typed event projection already checked
+    by the EvidenceEnvelope validator. Signing it prevents the envelope producer
+    from rewriting action/resource/result semantics and locally rehashing them
+    while retaining a valid external execution receipt. Authority Decision and
+    EnforcementReceipt fields remain outside this projection's trust claim.
+    """
+    projection = _ordering_observation(event)
+    semantic_digest = event.get("semantic_digest")
+    if projection is None or not isinstance(semantic_digest, str) or not semantic_digest:
+        return None
+    return {**projection, "semantic_digest": semantic_digest}
+
+
 def _causal_assertion_observations(document: dict[str, Any], binding_id: str) -> list[dict[str, Any]] | None:
-    """Return assertion observations whose timing participates in PASS causality."""
+    """Return signed assertion observations used by PASS/FAIL evidence."""
     events_by_id = {
         event.get("event_id"): event
         for event in document.get("events", [])
@@ -104,7 +120,7 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
             event = events_by_id.get(event_id)
             if not isinstance(event, dict):
                 return None
-            projection = _ordering_observation(event)
+            projection = _assertion_observation(event)
             if projection is None:
                 return None
             observations.append(projection)
@@ -114,13 +130,14 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
 
 
 def execution_attestation_valid(document: dict[str, Any], binding_id: str, source_id: Any) -> bool:
-    """Verify one execution binding and all causal timing inputs externally.
+    """Verify one execution binding and its assertion observations externally.
 
     The signed fixture sidecar authenticates the execution/process ordering
-    observation and every assertion-side ordering observation used by the
-    validator. A signed common clock-domain label makes comparability explicit.
-    This is an S0 authenticity stand-in, not provider-native runtime causation,
-    authority proof, anti-replay, or production key custody.
+    observation plus each mandatory PASS/FAIL assertion observation's identity,
+    timing, and semantic digest. A signed common clock-domain label keeps temporal
+    comparability explicit. This is an S0 authenticity stand-in, not provider-
+    native runtime causation, authority proof, anti-replay, or production key
+    custody.
     """
     run_id = _safe_token(document.get("run_id"))
     case_id = _safe_token(document.get("case_id"))
