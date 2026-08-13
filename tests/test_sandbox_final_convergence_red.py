@@ -38,13 +38,13 @@ def _add_lifecycle_revalidation(document, *, continuity_snapshot="snapshot-A", o
     document["lifecycle_continuity"] = [
         {
             "snapshot_id": continuity_snapshot,
-            "capture_epoch": 0,
-            "restore_epoch": 1,
+            "capture_epoch": 10,
+            "restore_epoch": 11,
             "process_state": "revalidated",
             "socket_fd_state": "revalidated",
             "credential_session_state": "revalidated",
             "policy_attachment_state": "revalidated",
-            "evidence_event_ids": ["event-restore-observation"],
+            "evidence_event_ids": ["event-lifecycle-restore-11"],
         }
     ]
     document["telemetry"].append(
@@ -58,13 +58,13 @@ def _add_lifecycle_revalidation(document, *, continuity_snapshot="snapshot-A", o
     )
     document["events"].append(
         {
-            "event_id": "event-restore-observation",
+            "event_id": "event-lifecycle-restore-11",
             "event_type": "lifecycle",
-            "occurred_at_utc": "2026-08-11T03:00:02Z",
-            "monotonic_ns": 3000,
+            "occurred_at_utc": "2026-08-11T03:00:01.500000Z",
+            "monotonic_ns": 2100,
             "policy_epoch": 0,
             "authority_epoch": 0,
-            "restore_epoch": 1,
+            "restore_epoch": 11,
             "snapshot_id": observed_snapshot,
             "source_id": "fixture-lifecycle-observer",
             "semantic_digest": "sha256:" + "0" * 64,
@@ -80,8 +80,6 @@ def test_typed_assertion_requirement_rejects_event_class_substitution(monkeypatc
     test_case = _typed_case()
     monkeypatch.setattr(sandbox_validator, "_load_test_case", lambda _case_id: test_case)
 
-    # Preserve event id/source/timing, so the signed causal observation set is
-    # unchanged. Only event semantics are laundered from file -> utility.
     sensitive_event = next(event for event in document["events"] if event.get("resource") == "/synthetic-sensitive-canary")
     sensitive_event["event_type"] = "utility"
     sensitive_event["action"] = "read-write"
