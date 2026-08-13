@@ -230,6 +230,12 @@ def test_grant_validity_must_fit_subject_attestation(tmp_path):
     assert _run(tmp_path, bundle).returncode != 0
 
 
+def test_enforcement_receipt_must_fall_within_permit_grant_validity(tmp_path):
+    bundle = _bundle()
+    bundle["grants"][0]["expires_at"] = "2026-08-13T00:00:01Z"
+    assert _run(tmp_path, bundle).returncode != 0
+
+
 def test_duplicate_typed_ids_are_rejected(tmp_path):
     bundle = _bundle()
     duplicate = dict(bundle["decisions"][0])
