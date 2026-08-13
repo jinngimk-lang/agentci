@@ -27,9 +27,17 @@ class VerificationResult:
     errors: tuple[str, ...]
     artifact_digest: str | None
     certification_claim: bool = False
+    receipt_written: bool | None = None
+    receipt_path: str | None = None
+    receipt_errors: tuple[str, ...] | None = None
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        payload = asdict(self)
+        if self.receipt_written is None:
+            payload.pop('receipt_written')
+            payload.pop('receipt_path')
+            payload.pop('receipt_errors')
+        return payload
 
 
 def _configure_canonical_resources() -> None:
@@ -48,7 +56,25 @@ def _configure_canonical_resources() -> None:
     validator._load_test_case.cache_clear()
 
 
-def verify_evidence_file(path: Path, *, include_digest: bool = False) -> VerificationResult:
+def _unavailable_receipt_binding_errors(document: dict[str, object]) -> tuple[str, ...]:
+    """Describe the strict receipt bindings that Stage A cannot yet verify."""
+    telemetry = document.get('telemetry')
+    errors = []
+    if isinstance(telemetry, list):
+        for source in telemetry:
+            if isinstance(source, dict) and source.get('coverage') == 'mandatory':
+                source_id = source.get('source_id')
+                errors.append(f'signed observer binding unavailable for mandatory telemetry source {source_id}')
+    errors.append('signed cleanup binding unavailable for typed post-conditions')
+    return tuple(errors)
+
+
+def verify_evidence_file(
+    path: Path,
+    *,
+    include_digest: bool = False,
+    receipt_path: Path | None = None,
+) -> VerificationResult:
     """Validate one EvidenceEnvelope without treating verdict FAIL as tool failure.
 
     ``valid`` means the envelope faithfully satisfies the canonical contract,
@@ -78,4 +104,7 @@ def verify_evidence_file(path: Path, *, include_digest: bool = False) -> Verific
         expected_verdict=expected,
         errors=errors,
         artifact_digest=validator.artifact_digest(document) if include_digest else None,
+        receipt_written=False if receipt_path is not None else None,
+        receipt_path=str(receipt_path) if receipt_path is not None else None,
+        receipt_errors=_unavailable_receipt_binding_errors(document) if receipt_path is not None else None,
     )

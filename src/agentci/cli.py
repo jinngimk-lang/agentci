@@ -24,6 +24,11 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument('path', type=Path)
     verify_parser.add_argument('--json', action='store_true', help='emit a machine-readable verification result')
     verify_parser.add_argument('--print-digest', action='store_true', help='include the canonical artifact digest')
+    verify_parser.add_argument(
+        '--receipt',
+        type=Path,
+        help='write an opt-in proof-bearing verification receipt when strict bindings are complete',
+    )
     return parser
 
 
@@ -51,12 +56,16 @@ def main(argv: list[str] | None = None) -> int:
             # readiness paths until the wheel-safe resource gate is satisfied.
             from .sandbox.verification import verify_evidence_file
 
-            result = verify_evidence_file(args.path, include_digest=args.print_digest)
+            result = verify_evidence_file(
+                args.path,
+                include_digest=args.print_digest,
+                receipt_path=args.receipt,
+            )
             if args.json:
                 print(json.dumps(result.to_dict(), sort_keys=True))
             else:
                 _print_sandbox_verification(result)
-            return 0 if result.valid else 1
+            return 0 if result.valid and (args.receipt is None or result.receipt_written) else 1
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2
