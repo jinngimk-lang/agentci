@@ -31,6 +31,7 @@ def _passing_revalidated_snapshot():
             "socket_fd_state": "revalidated",
             "credential_session_state": "revalidated",
             "policy_attachment_state": "revalidated",
+            "evidence_event_ids": ["event-lifecycle-restore-11"],
         }
     ]
     document["telemetry"].append(
@@ -51,6 +52,7 @@ def _passing_revalidated_snapshot():
             "policy_epoch": 0,
             "authority_epoch": 0,
             "restore_epoch": 11,
+            "snapshot_id": "snapshot-A",
             "source_id": "fixture-lifecycle-observer",
             "semantic_digest": "sha256:" + "0" * 64,
             "workload_identity": "fixture-workload",
