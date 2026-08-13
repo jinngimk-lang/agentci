@@ -10,12 +10,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / "schemas" / "sandbox-authority-v0alpha1.schema.json"
+SOURCE_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = SOURCE_ROOT / "schemas" / "sandbox-authority-v0alpha1.schema.json"
+if not SCHEMA_PATH.is_file():
+    SCHEMA_PATH = Path(sys.prefix) / "share" / "agentci" / "sandbox" / "authority-schema" / "sandbox-authority-v0alpha1.schema.json"
 
 
 def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -150,7 +153,7 @@ def validate(document: dict[str, Any]) -> list[str]:
         )
         prior_effect = decision_keys.get(key)
         if prior_effect is not None and prior_effect != decision.get("effect"):
-            errors.append(f"conflicting PERMIT/DENY decisions for one principal/action/resource/context authority state")
+            errors.append("conflicting PERMIT/DENY decisions for one principal/action/resource/context authority state")
         decision_keys[key] = decision.get("effect")
 
     for receipt in receipts:
@@ -170,8 +173,6 @@ def validate(document: dict[str, Any]) -> list[str]:
         if eligible and (delta.get("classification") != "contraction" or not delta.get("obligations_not_weaker")):
             errors.append("automatic privilege application is allowed only for proven contraction with non-weaker obligations")
 
-    # Explicitly use the indexes so schema-only duplicate arrays cannot masquerade
-    # as a resolvable authority graph even if no downstream reference happens to touch them.
     if len(roots_by_id) != len(roots):
         pass
     if len(attestations_by_id) != len(attestations):
