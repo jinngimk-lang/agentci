@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+import inspect
 import json
 import math
 from pathlib import Path
@@ -295,12 +296,7 @@ def _embedded_artifacts(document: dict[str, Any], bundle: dict[str, Any]) -> lis
     ]
 
 
-def _assemble(
-    document: dict[str, Any],
-    bundle: dict[str, Any],
-    *,
-    _disabled_check: str | None = None,
-):
+def _assemble(document: dict[str, Any], bundle: dict[str, Any]):
     from agentci.sandbox.receipt import assemble_receipt
 
     return assemble_receipt(
@@ -313,9 +309,6 @@ def _assemble(
         cleanup_attestation=bundle["cleanup_attestation"],
         trusted_observers=bundle["trusted_observers"],
         trusted_cleanup_attesters=bundle["trusted_cleanup_attesters"],
-        # Private test-only dependency injection. No CLI or receipt artifact may
-        # select disabled checks.
-        _disabled_check=_disabled_check,
     )
 
 
@@ -370,19 +363,27 @@ def _attack(
     assert result.receipt_valid is False
     assert result.error_codes == (code,)
     assert result.manifest is None
-    counterfactual = _assemble(
-        attacked_document,
-        attacked_bundle,
-        _disabled_check=code,
-    )
-    assert counterfactual.evidence_valid is True
-    assert counterfactual.receipt_valid is True
-    assert counterfactual.error_codes == ()
+    from agentci.sandbox import receipt as receipt_module
+
+    # Negative control on the identical mutation. This private registry is a
+    # test seam only: assemble_receipt, CLI flags, and artifacts expose no bypass.
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setitem(receipt_module._CHECKS, code, lambda *_args, **_kwargs: ())
+        counterfactual = _assemble(attacked_document, attacked_bundle)
+        assert counterfactual.evidence_valid is True
+        assert counterfactual.receipt_valid is True
+        assert counterfactual.error_codes == ()
 
 
 def test_canonical_test_case_schema_accepts_typed_cleanup_requirements():
     errors = list(evidence_validator._test_case_validator().iter_errors(_typed_test_case()))
     assert errors == []
+
+
+def test_public_assembly_signature_exposes_no_check_bypass():
+    from agentci.sandbox.receipt import assemble_receipt
+
+    assert "_disabled_check" not in inspect.signature(assemble_receipt).parameters
 
 
 def test_complete_pass_bundle_assembles_literal_content_addressed_manifest():
@@ -694,7 +695,9 @@ def test_public_replay_revalidates_manifest_digest_and_inventory():
     assert replay.error_codes == ("E_RECEIPT_INVENTORY_DIGEST_MISMATCH",)
 
 
-def test_embedded_attacker_key_cannot_replace_external_trust_policy():
+def test_public_replay_rejects_embedded_attacker_key_without_trust_injection():
+    from agentci.sandbox.receipt import validate_receipt_manifest
+
     document, bundle = _complete_bundle(PASS_EVIDENCE)
     manifest = copy.deepcopy(_success(document, bundle).manifest)
     attacker_public, attacker_private = _keypair()
@@ -716,6 +719,6 @@ def test_embedded_attacker_key_cannot_replace_external_trust_policy():
     # only from the external verifier policy passed to _replay.
     manifest["metadata"]["presented_keys"] = [attacker_public]
     manifest["manifest_digest"] = _manifest_digest(manifest)
-    replay = _replay(manifest, bundle)
+    replay = validate_receipt_manifest(manifest)
     assert replay.valid is False
     assert replay.error_codes == ("E_RECEIPT_UNTRUSTED_ATTESTER",)

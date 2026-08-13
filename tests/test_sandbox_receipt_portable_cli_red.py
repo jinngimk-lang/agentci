@@ -77,6 +77,54 @@ def test_bundle_loader_requires_exact_non_recursive_safe_file_set(
     assert caught.value.code == code
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink safety contract")
+def test_bundle_loader_rejects_posix_symlink_entry(tmp_path: Path):
+    from agentci.sandbox.receipt import ReceiptBundleError, load_receipt_bundle
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    for filename in BUNDLE_FILES:
+        (bundle / filename).write_text("{}", encoding="utf-8")
+    target = tmp_path / "outside.json"
+    target.write_text("{}", encoding="utf-8")
+    (bundle / "cleanup.json").unlink()
+    (bundle / "cleanup.json").symlink_to(target)
+
+    with pytest.raises(ReceiptBundleError) as caught:
+        load_receipt_bundle(
+            bundle,
+            mandatory_sources=("fixture-file-observer", "fixture-policy-observer"),
+        )
+
+    assert caught.value.code == "E_RECEIPT_BUNDLE_UNSAFE_ENTRY"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows reparse-point safety contract")
+def test_bundle_loader_rejects_windows_reparse_point_classification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agentci.sandbox import receipt as receipt_module
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    for filename in BUNDLE_FILES:
+        (bundle / filename).write_text("{}", encoding="utf-8")
+    original = receipt_module._lstat_regular_file
+
+    def classify(path: Path) -> bool:
+        return False if path.name == "cleanup.json" else original(path)
+
+    monkeypatch.setattr(receipt_module, "_lstat_regular_file", classify)
+    with pytest.raises(receipt_module.ReceiptBundleError) as caught:
+        receipt_module.load_receipt_bundle(
+            bundle,
+            mandatory_sources=("fixture-file-observer", "fixture-policy-observer"),
+        )
+
+    assert caught.value.code == "E_RECEIPT_BUNDLE_UNSAFE_ENTRY"
+
+
 @pytest.mark.parametrize(
     ("evidence", "run_id", "verdict"),
     [
