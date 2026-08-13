@@ -276,7 +276,12 @@ def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any
     return document, bundle
 
 
-def _assemble(document: dict[str, Any], bundle: dict[str, Any]):
+def _assemble(
+    document: dict[str, Any],
+    bundle: dict[str, Any],
+    *,
+    _disabled_check: str | None = None,
+):
     from agentci.sandbox.receipt import assemble_receipt
 
     return assemble_receipt(
@@ -287,6 +292,9 @@ def _assemble(document: dict[str, Any], bundle: dict[str, Any]):
         artifact_inventory=bundle["artifact_inventory"],
         trusted_observers=bundle["trusted_observers"],
         trusted_cleanup_attesters=bundle["trusted_cleanup_attesters"],
+        # Private test-only dependency injection. No CLI or receipt artifact may
+        # select disabled checks.
+        _disabled_check=_disabled_check,
     )
 
 
@@ -322,7 +330,19 @@ def _attack(
     assert result.receipt_valid is False
     assert result.error_codes == (code,)
     assert result.manifest is None
-    _success(document, bundle)
+    counterfactual = _assemble(
+        attacked_document,
+        attacked_bundle,
+        _disabled_check=code,
+    )
+    assert counterfactual.evidence_valid is True
+    assert counterfactual.receipt_valid is True
+    assert counterfactual.error_codes == ()
+
+
+def test_canonical_test_case_schema_accepts_typed_cleanup_requirements():
+    errors = list(evidence_validator._test_case_validator().iter_errors(_typed_test_case()))
+    assert errors == []
 
 
 def test_complete_pass_bundle_assembles_literal_content_addressed_manifest():
@@ -351,7 +371,9 @@ def test_event_addition_outside_signed_event_set_is_rejected():
         event["event_id"] += "-added"
         event["semantic_digest"] = evidence_validator.event_semantic_digest(event)
         document["events"].append(event)
+        document["authority_digest"] = evidence_validator.authority_binding_digest(document)
         document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
+        assert evidence_validator.validate(document) == []
 
     _attack("E_RECEIPT_OBSERVER_EVENT_SET_MISMATCH", mutate)
 
@@ -364,6 +386,35 @@ def test_unknown_event_reference_in_signed_observer_is_rejected():
         bundle["observer_attestations"][0] = _resign(sidecar, bundle["_observer_private"])
 
     _attack("E_RECEIPT_OBSERVER_UNKNOWN_EVENT", mutate)
+
+
+def test_signed_observer_event_set_omission_is_rejected():
+    def mutate(_document, bundle):
+        sidecar = bundle["observer_attestations"][0]
+        sidecar["event_bindings"].pop()
+        sidecar["event_set_digest"] = _digest(sidecar["event_bindings"])
+        bundle["observer_attestations"][0] = _resign(sidecar, bundle["_observer_private"])
+
+    _attack("E_RECEIPT_OBSERVER_EVENT_SET_MISMATCH", mutate)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source_id", "other-source"),
+        ("layer", "workspace"),
+        ("version", "v2"),
+        ("health", "degraded"),
+        ("coverage", "optional"),
+    ],
+)
+def test_signed_observer_covers_each_required_telemetry_source_field(field: str, value: str):
+    def mutate(_document, bundle):
+        sidecar = bundle["observer_attestations"][0]
+        sidecar["telemetry_source"][field] = value
+        bundle["observer_attestations"][0] = _resign(sidecar, bundle["_observer_private"])
+
+    _attack("E_RECEIPT_OBSERVER_SOURCE_PROJECTION_MISMATCH", mutate)
 
 
 def test_missing_mandatory_observer_is_rejected():
@@ -479,6 +530,18 @@ def test_cleanup_result_set_digest_tamper_is_rejected():
         bundle["cleanup_attestation"] = _resign(sidecar, bundle["_cleanup_private"])
 
     _attack("E_RECEIPT_CLEANUP_RESULT_SET_MISMATCH", mutate)
+
+
+def test_cleanup_real_but_semantically_wrong_event_is_rejected():
+    def mutate(document, bundle):
+        file_event = next(event for event in document["events"] if event["event_type"] == "file")
+        sidecar = bundle["cleanup_attestation"]
+        result = sidecar["requirement_results"][0]
+        result["event_ids"] = [file_event["event_id"]]
+        result["result_set_digest"] = _digest(result["event_ids"])
+        bundle["cleanup_attestation"] = _resign(sidecar, bundle["_cleanup_private"])
+
+    _attack("E_RECEIPT_CLEANUP_EVENT_SEMANTICS_MISMATCH", mutate)
 
 
 @pytest.mark.parametrize(
