@@ -20,9 +20,11 @@ from jsonschema.exceptions import FormatError
 
 try:
     from scripts.execution_attestation import execution_attestation_valid
+    from scripts.lifecycle_attestation import lifecycle_attestation_valid
     from scripts.runtime_environment_attestation import runtime_environment_attestation_valid
 except ModuleNotFoundError:  # direct script execution from repository root
     from execution_attestation import execution_attestation_valid
+    from lifecycle_attestation import lifecycle_attestation_valid
     from runtime_environment_attestation import runtime_environment_attestation_valid
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
@@ -259,9 +261,6 @@ def _source_suitable_for_requirement(test_case: dict[str, Any], source: dict[str
         return False
     event_type = requirement.get("event_type")
     if event_type == "utility":
-        # Utility is intentionally a separate proof dimension.  It may be
-        # observed by workspace/filesystem/process instrumentation even when the
-        # security probe's capability domain is network or credential.
         return source.get("layer") in {"workspace", "filesystem", "process", test_case.get("capability_domain")}
     required_layers = EVENT_SOURCE_LAYERS.get(event_type)
     return required_layers is None or source.get("layer") in required_layers
@@ -309,7 +308,6 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
 
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
-    """Fail closed until expansion can bind to external authenticated authority."""
     gated = {"expansion", "lateral", "unknown"}
     errors = []
     for policy in document.get("policy_history", []):
@@ -445,6 +443,8 @@ def _lifecycle_errors(
         ]
         if not workload or not attachment_id or len(matching) != 1:
             errors.append(f"lifecycle continuity {snapshot_id} requires one effective attachment for observed restore context")
+        if not lifecycle_attestation_valid(document, item, event):
+            errors.append(f"lifecycle continuity {snapshot_id} lacks valid external snapshot/restore attestation")
     return errors
 
 
@@ -674,9 +674,6 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                         f"mandatory PASS assertion {assertion_id} evidence event {event_id} fails typed canonical source suitability"
                     )
                 elif requirement is None or not _event_matches_requirement(event, requirement):
-                    # Extra events may accompany an assertion, but they do not
-                    # satisfy the typed claim and therefore cannot be used to
-                    # bypass the matching-event requirement above.
                     pass
 
                 epoch, workload, attachment_id = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
