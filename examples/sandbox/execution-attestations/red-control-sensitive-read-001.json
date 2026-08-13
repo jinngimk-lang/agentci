@@ -9,7 +9,6 @@
   "execution_observation": {
     "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
     "source_id": "fixture-policy-observer",
-    "semantic_digest": "sha256:ca46918c2e18270ec212b32799326a34e11c8cda307238c282e30e0d0f4caa05",
     "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
     "monotonic_ns": 1600
   },
@@ -17,14 +16,12 @@
     {
       "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:791ae9affba7e07ade5413380481e72e461736f4d5271ebc5303395ab79921b4",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 2000
     },
     {
       "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:084010e27dd1d2b051dce426e137cb31b13560a40f4b25a2f6e1b0dae284283c",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 1900
     }
@@ -32,5 +29,5 @@
   "clock_domain": "fixture-runner-monotonic-v1",
   "key_id": "fixture-runner-key-v3",
   "algorithm": "rsa-pkcs1v15-sha256",
-  "signature_b64": "V5sHoU8IwSMKXknAmiKGGTNOq8TszCazU0JlVxPN3nWoidpVrJprNHr5JhErVXExqE3i5yZBwzbuZAF8haixpjsSpjJcp4vCj3m96uzJSxGSYBx34faiYR4eyamPg+hjSmA4h82cSPadPJxKI2cXcNqvt5NNW7cNEieReig1eJ+7q9lOEcMF0NrRPr1D63dsdNKXJjeKrDgaz7NasAlYj+OjZiO8E/bIBqZOxMtUUJY7IoFg049OjHg00NTYXWUryVtbURUHFhaZKmqlaBv4pRBZJPzPnpmRiYs1eKV0Jwc98hbviO6TS5y+FHLZa7QAuvr0NTGCdx1rlTZlEDvckA=="
+  "signature_b64": "oi8cc3q31B3hZDnx87q9INYN3aWyzVN01Bvv4hBgOYnIR2qMJR1wtwIVCroxhxGiSgKqj2CHZ7YtVMQkHvgDzoC5WOCmkXw5zGdGaXchgjETUhqj+ygwIZrNUpFv/gtWhLzIws51rHYwcbNTXVqVCNCo2kEBoOgRMHkRpvPrPtDLqhXjYqnSOXWZ56kBYEj6tpA5Xa3RatDUTpbG3ryfjn4BizxFkoxK0qoyIMH+786yu4xH5anL7c7pJuuxpcrzptxyK2muntAnWB/2biJCTl4CeIshmZB81p7xGzrVayouFfaFair7h+Gpzi+CUnLxAOQ11DtrVZujmkfK/Ilh6A=="
 }
