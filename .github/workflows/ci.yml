@@ -35,3 +35,23 @@ jobs:
         run: python scripts/validate_growth_artifact.py .company/research/findings/demo-benchmark
       - name: Generate draft-only growth pack
         run: python scripts/generate_growth_pack.py .company/research/findings/demo-benchmark --output-root growth
+      - name: Clean wheel sandbox smoke
+        run: |
+          rm -rf /tmp/agentci-wheel /tmp/agentci-venv /tmp/agentci-smoke
+          mkdir -p /tmp/agentci-wheel /tmp/agentci-smoke
+          python -m pip wheel . --no-deps -w /tmp/agentci-wheel
+          python -m venv --system-site-packages /tmp/agentci-venv
+          /tmp/agentci-venv/bin/python -m pip install --no-deps /tmp/agentci-wheel/*.whl
+          cd /tmp/agentci-smoke
+          /tmp/agentci-venv/bin/agentci sandbox doctor --json > doctor.json
+          /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" --json --print-digest > verify.json
+          /tmp/agentci-venv/bin/python - <<'PY'
+          import json
+          doctor = json.load(open('doctor.json', encoding='utf-8'))
+          verify = json.load(open('verify.json', encoding='utf-8'))
+          assert doctor['state'] in {'ready', 'not-ready'}
+          assert verify['valid'] is True
+          assert verify['recorded_verdict'] == verify['expected_verdict'] == 'FAIL'
+          assert verify['certification_claim'] is False
+          assert verify['artifact_digest'].startswith('sha256:')
+          PY
