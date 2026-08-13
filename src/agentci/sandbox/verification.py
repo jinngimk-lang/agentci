@@ -37,6 +37,9 @@ class VerificationResult:
             payload.pop('receipt_written')
             payload.pop('receipt_path')
             payload.pop('receipt_errors')
+        else:
+            payload['evidence_valid'] = self.valid
+            payload['receipt_valid'] = self.receipt_written and not self.receipt_errors
         return payload
 
 

@@ -27,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument(
         '--receipt',
         type=Path,
-        help='write an opt-in proof-bearing verification receipt when strict bindings are complete',
+        help='write an opt-in strict content-addressed verification receipt manifest',
     )
     return parser
 

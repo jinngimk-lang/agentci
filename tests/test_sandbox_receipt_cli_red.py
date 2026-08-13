@@ -24,6 +24,16 @@ def run_cli(*args: str):
     )
 
 
+def test_verify_receipt_help_describes_a_strict_manifest_without_proof_claim():
+    """Breaks if CLI help overstates the opt-in artifact as proof-bearing."""
+    result = run_cli("sandbox", "verify", "--help")
+
+    assert result.returncode == 0, result.stderr
+    normalized_help = " ".join(result.stdout.split())
+    assert "strict content-addressed verification receipt manifest" in normalized_help
+    assert "proof-bearing" not in result.stdout
+
+
 def test_verify_receipt_option_is_a_public_cli_surface(tmp_path: Path):
     """Breaks if the opt-in receipt path is absent from the public parser."""
     output = tmp_path / "verification-receipt.json"
@@ -55,6 +65,8 @@ def test_pass_without_signed_observer_and_cleanup_bindings_cannot_emit_receipt(t
 
     assert result.returncode == 1, result.stderr or result.stdout
     payload = json.loads(result.stdout)
+    assert payload["evidence_valid"] is True
+    assert payload["receipt_valid"] is False
     assert payload["valid"] is True
     assert payload["recorded_verdict"] == "PASS"
     assert payload["expected_verdict"] == "PASS"
