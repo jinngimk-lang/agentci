@@ -1,47 +1,106 @@
 # AgentCI Sandbox S0 v0alpha1 Integration
 
-Status: **design-stage integration head for independent Agent B review**. This is not released `agentci sandbox` behavior and is not a certification claim.
+Status: **final S0 convergence candidate for independent falsification**. This is a design-stage certification contract and semantic validator, not released provider certification behavior.
 
-## Purpose
+## Purpose and trust boundary
 
-This document is Agent A's canonical S0 integration surface for Supervisor #24 / CMD:A #25. It integrates only the program invariants that are actually represented by the current canonical schemas/validator and records the current bounded inputs from B/C/D/E. A specialist packet being accepted as research input does **not** mean every packet semantic is already encoded. Unimplemented or disputed semantics stay explicitly unresolved rather than being inferred from prose, provider class names, or free-form assumptions.
+AgentCI S0 defines the provider-neutral evidence contract required before a sandbox containment claim can become machine-eligible for `PASS`. It does not implement a sandbox, hypervisor, policy engine, credential broker, or adaptive privilege authority.
 
-Canonical schema package:
+The hard invariant is:
+
+> Observation may change understanding; observation never grants authority.
+
+Repository text, model output, README/package content, MCP/tool responses, workload observations, telemetry, and the Sandbox Intelligence layer may propose or classify changes. They cannot be the sole issuer/approver of privilege expansion. Unknown, lateral, expansion, enforcement-uncertain, or un-normalizable authority changes stay behind an external authenticated authority gate.
+
+Canonical package:
 
 - `schemas/sandbox-certification-v0alpha1.schema.json`
 - `schemas/sandbox-authority-v0alpha1.schema.json`
+- `scripts/validate_sandbox_evidence.py`
+- `scripts/execution_attestation.py`
+- `scripts/runtime_environment_attestation.py`
+- `examples/sandbox/testcases/`
+- `examples/sandbox/v0alpha1-red-control-evidence.json`
 
-The package is one Agent A-owned contract. C/D/E provide domain packets; they do not maintain competing IRs.
+C/D/E inputs are semantic evidence for this one A-owned contract; they are not parallel IRs.
 
-## Four object separation
+## Four-object separation
 
 The contract keeps these objects distinct:
 
-1. `PolicySpec` — desired capabilities plus trusted authority references. It is intent, not evidence.
-2. `Observation` — declared/configured/probed/verified/failed/unverified/not-applicable facts bound to collector health and the effective policy/authority epoch.
-3. `TestCase` — falsifiable semantic claim, threat model, preconditions, probe, oracle, cleanup, backend assumptions, mandatory assertions, mandatory telemetry and authorized utility.
-4. `EvidenceEnvelope` — exact run evidence, policy history, attachment state, backend/environment provenance, telemetry, trajectory events, post-conditions, limitations, execution status and verdict.
+1. **PolicySpec** — desired capability and authority intent. It is not evidence.
+2. **Observation** — a collector's statement about declared/configured/probed/verified/failed/unverified/not-applicable state.
+3. **TestCase** — immutable falsifiable test semantics: threat model, probe, cleanup, mandatory assertions, typed assertion requirements, mandatory telemetry, and authorized utility.
+4. **EvidenceEnvelope** — exact run evidence bound to backend/environment, policy/authority history, execution provenance, attachments, telemetry, events, lifecycle/post-conditions and verdict.
 
-No object may be used as a substitute for another. In particular, configuration cannot become an Observation of effective containment and a desired `DENY` cannot become evidence that access was denied.
+Configuration is never promoted into verified containment merely because a provider or policy object says so.
 
-## Temporal policy binding
+## Typed TestCase semantics are normative
 
-A final `policy_digest` is insufficient for a mutable sandbox. Every immutable policy snapshot is identified by:
+Human-readable `claim`, `oracle`, threat-model prose and limitations remain important explanation, but **machine acceptance is defined by typed canonical data**.
+
+Every canonical mandatory assertion has exactly one `assertion_requirements[]` entry. The requirement binds:
+
+- `assertion_id`;
+- required `event_type`;
+- optional exact `network_channel`;
+- optional `action`;
+- optional `resource`;
+- optional `expected_result`.
+
+The requirement-ID set must exactly equal `mandatory_assertions`. Duplicate, missing or ambiguous requirements make the TestCase invalid for certification.
+
+For a material capability probe, exactly one non-utility typed requirement must carry the capability-domain proof obligation. For network TestCases, that requirement must bind the exact canonical `probe.network_channel`. This replaces the rejected approaches based on set subtraction, role labels, duplicated owner strings, or mutually agreeing metadata. Those mechanisms can describe intent but cannot manufacture semantic ownership.
+
+An assertion in `PASS` must reference evidence that actually matches its typed requirement. A healthy collector, correct attachment, or valid digest cannot turn the wrong event class/action/resource/result into proof of another claim.
+
+## Authorized utility is a separate proof dimension
+
+Containment and useful work remain separate. Deny-everything is not certification success.
+
+Every `authorized_utility[]` ID must also be canonical-mandatory and its requirement must use `event_type=utility` with typed `action`, `resource`, and `expected_result`. `PASS` requires at least one referenced event matching those exact semantics, in addition to the normal execution/source/integrity/attachment gates.
+
+A generic `utility` label, copied digest, unrelated successful event, or denial event cannot prove authorized utility.
+
+## Temporal policy and effective attachment binding
+
+A final policy digest is insufficient for a mutable sandbox. Every immutable policy snapshot carries:
 
 - `policy_epoch`;
 - `policy_digest`;
 - `authority_epoch`;
-- UTC and monotonic effective time;
+- wall-clock and monotonic effective time;
 - source principal;
-- `delta_class = contraction | expansion | lateral | no-op | unknown`.
+- `delta_class`.
 
-Every trajectory event and policy attachment references the policy epoch that was effective for that event. Policy history is ordered: duplicate epochs or time regression are invalid evidence. An event cannot precede the effective wall/monotonic time of the policy epoch it claims, and its authority epoch must match that policy-history entry. If the effective epoch cannot be established, the affected assertion is `UNVERIFIED`; it cannot contribute to PASS.
+Events reference the policy/authority epoch governing them. Policy history rejects duplicate epochs and temporal regression. An event cannot predate the epoch it claims.
 
-The EvidenceEnvelope binds an ordered `policy_history` plus `policy_history_digest` rather than only one final policy digest.
+Configured policy is separate from selected/attached/effective policy. Mandatory PASS evidence must resolve exactly one effective attachment for the same workload and policy epoch. Multiple effective attachments for the same `(workload_identity, policy_epoch)` are ambiguous and non-PASS.
+
+An effective attachment's content-addressed provenance must resolve exactly once to a valid `policy-attachment` event that:
+
+- matches attachment identity, workload and policy epoch;
+- comes from a healthy mandatory suitable source;
+- occurs at or before the dependent assertion event on both clocks.
+
+Policy presence without this binding is not effective-policy proof.
+
+## Execution causality and environment provenance
+
+A self-consistent EvidenceEnvelope is not its own trust root.
+
+S0 therefore uses fixture-grade external signed sidecars as **stand-ins** for two authenticity properties:
+
+1. **Runtime/environment provenance** binds the exact run/case/attempt to backend identity, backend instance and environment fingerprint using validator-pinned public verification material.
+2. **Execution provenance** binds a deterministic canonical probe-execution identity to a signed process observation and the assertion-side ordering observations used in causal checks, with an explicit common clock domain.
+
+Assertion events live in the deterministic execution namespace. Mandatory PASS/FAIL evidence must be causally ordered after the externally authenticated execution observation and match its workload/policy/authority context.
+
+These sidecars prove only the fixture S0 authenticity/scoping model. They are **not provider-native attestation, hardware roots, production key custody, anti-replay infrastructure, or proof that an authority Decision caused enforcement**.
 
 ## Authority model
 
-The canonical authority module defines five immutable object classes:
+The canonical authority module keeps these immutable object classes distinct:
 
 - `TrustRoot`;
 - `PrincipalAttestation`;
@@ -49,181 +108,160 @@ The canonical authority module defines five immutable object classes:
 - `Decision`;
 - `EnforcementReceipt`.
 
-The current schema represents these object classes and core fields, but it does **not yet** prove a complete typed authority graph or formal reviewer independence. In particular, bundle-level unique typed-ID/reference resolution, principal-attestation-backed reviewer identity, and exact reviewed-head/artifact binding from D-14/D-15 remain unresolved.
+`classify_delta(old,new)` is authority-set classification only:
 
-A grant and decision are intended to bind principal, action, resource, context, policy/authority epoch and validity information. An enforcement receipt is intended to bind a decision to the actual backend/environment and, when applicable, actual endpoint, credential epoch and restore epoch. Behavioral evidence must not be upgraded into proof that a specific grant or Decision caused enforcement unless the receipt/provenance chain supports that claim.
+- strict subset with no weaker obligations → contraction;
+- strict superset → expansion;
+- incomparable → lateral;
+- normalized equality → no-op;
+- unknown/un-normalizable/enforcement-uncertain → unknown.
 
-Unknown/error authorization is intended to fail closed. The LLM, workload, repository, MCP/tool output and other observations cannot be the only grant issuer/approver for privilege expansion.
+Only a proved contraction can ever be eligible for a later automatic-application policy. Expansion/lateral/unknown require external authenticated authority. Equality/contraction never proves runtime/session freshness by itself.
 
-### Privilege delta classification
+The current EvidenceEnvelope cannot manufacture a complete trusted AuthorityBundle from local reference strings, so expansion/lateral/unknown deltas fail closed. Formal typed graph causality and independent reviewer identity remain outside the fixture S0 proof and must not be inferred.
 
-`PrivilegeDelta.classification` is one of:
+## Network semantics
 
-- `contraction` — new effective authority is a strict subset and obligations are not weaker;
-- `expansion` — new authority is a strict superset;
-- `lateral` — old/new authority sets are incomparable;
-- `no-op` — normalized authority is equal;
-- `unknown` — normalization/enforcement equivalence is not established.
+The contract has no generic `network denied` boolean. Workload-facing capability is separate from enforcement transport.
 
-Only proved contraction may later be eligible for automatic application. `lateral`, `expansion` and `unknown` remain behind an external authority gate. `classify_delta` alone never proves snapshot/restore safety because stale live sessions can survive while the normalized authority set appears unchanged.
+Channels are independent dimensions:
 
-## Network semantics: capability != enforcement transport
-
-The contract does not contain a generic boolean `network denied` claim.
-
-Workload-facing channels are separate semantic dimensions:
-
-- HTTP;
-- HTTPS;
-- proxied generic TCP;
-- direct TCP;
-- UDP;
-- ICMP;
+- HTTP / HTTPS;
+- proxied TCP / direct TCP;
+- UDP / ICMP;
 - DNS;
-- Unix-domain sockets;
-- ingress;
-- tunnels.
+- Unix-domain socket;
+- ingress / tunnel.
 
-Each channel is independently `blocked | mediated | direct | unverified | not-applicable`.
+A network TestCase binds its material assertion to the exact typed network event and channel. One channel never implies another.
 
-Enforcement transport is a separate object, for example an application proxy, stream proxy, packet filter, namespace boundary, service mesh or host broker. A Unix socket can therefore be an intended enforcement transport without implying arbitrary workload Unix-socket authority. No channel verdict is inferred from another channel.
+`enforcement_topology[]` and telemetry `observer_locus` / `trust_class` make C's provider-neutral topology/observer vocabulary representable. These fields describe where a mechanism/observer claims to live. **They are not authority and are not security verdicts.** A provider label, `isolation_class`, topology string, or producer-local observer cannot by itself upgrade a containment assertion to PASS. Where independent topology/enforcement evidence is absent, the corresponding stronger claim remains UNVERIFIED.
 
-This vocabulary does not yet prove enforcement topology/locus, hidden shared-host/control surfaces, helper/device/IPC authority, or actual endpoint/broker causality. Those remain explicit C/D-domain unresolved items until represented and independently attacked.
+Endpoint/DNS/redirect/Host/SNI/proxy/broker/IP-family/private/link-local/metadata/tunnel/Unix-socket causality remains a future typed TestCase requirement per claim rather than a hidden generic inference.
 
-## Configured -> selected/attached -> effective
+## Snapshot / restore and post-conditions
 
-A policy existing in a control plane does not prove that it applies to the tested workload. `PolicyAttachment.state` distinguishes:
+Restore is never assumed to be a clean restart. `LifecycleContinuity` records:
 
-```text
-configured -> selected -> attached -> effective
-                      \-> failed / unverified
-```
-
-Claims that depend on policy selection require attachment evidence linking workload identity/selector, policy digest/epoch and enforcer. For this S0 envelope, an `effective` attachment's `evidence_digest` must content-address the `semantic_digest` of a valid `event_type=policy-attachment` event in the same envelope. That event remains behavioral/control-plane evidence; it does not by itself prove D-style grant/decision causation. Missing or dangling attachment evidence yields `UNVERIFIED`, not PASS.
-
-## Snapshot / restore continuity
-
-Restore is not modeled as an implicit clean reset. `LifecycleContinuity` records:
-
-- `snapshot_id`;
-- `capture_epoch`;
-- `restore_epoch`;
+- exact `snapshot_id`;
+- `capture_epoch` and advancing `restore_epoch`;
 - process state;
-- socket/file-descriptor state;
+- socket/FD state;
 - credential/session state;
-- policy-attachment state.
+- policy-attachment state;
+- the exact lifecycle evidence event supporting the continuity record.
 
-Each continuity state is `preserved | revalidated | revoked | replaced | unverified`.
+For `post_conditions.lifecycle_state=revalidated`, continuity is mandatory. Every continuity component must be `revalidated | revoked | replaced`; `preserved` or `unverified` is non-PASS. The continuity record must bind exactly one healthy mandatory lifecycle event with the same snapshot ID, restore epoch, workload, policy epoch and effective attachment context.
 
-A preserved socket/session after restore must be re-bound to the current authority/policy/credential evidence or the affected claim remains failed/unverified. Same-policy equality before/after restore does not by itself prove fresh authority. The current contract also does not yet prove that cleanup/continuity was observed from outside the lifecycle boundary; external observer locus/trust remains unresolved.
+A lifecycle event for the wrong snapshot cannot authenticate the continuity record merely because restore epoch/workload/policy match.
 
-## Evidence and verdict semantics
+Material residual post-conditions are never PASS:
 
-`execution_status = completed | harness-error | evidence-invalid` is separate from the backend verdict.
+- descendant process residue;
+- socket residue;
+- filesystem residue;
+- network activity residue;
+- credential residue.
 
-The S0 validator executes the Draft 2020-12 JSON Schema with active date-time format checking before accepting PASS. The project now requires the `jsonschema[format]` dependency set because upstream `jsonschema` documents that a missing format dependency can otherwise cause format validation to succeed silently. Unknown fields, invalid event classes and invalid date-time values are therefore expected to fail closed rather than bypassing semantic checks.
+`lifecycle_state=preserved` is also non-PASS in v0alpha1. A correctly evidenced and snapshot-bound revalidation remains eligible to PASS; the validator is deliberately not a deny-everything oracle.
 
-Atomic verdict rule used by the S0 helper:
+## Telemetry and verdict semantics
 
-- any valid mandatory assertion or explicit residual cleanup violation -> `FAIL`;
-- every in-scope mandatory assertion observed and satisfied -> `PASS`;
-- at least one mandatory PASS, no FAIL, but a material mandatory UNVERIFIED -> `PARTIAL`;
-- unexecuted probe, harness error, invalid evidence, missing credible mandatory evidence -> `UNVERIFIED`;
-- `NOT-APPLICABLE` is only for a capability genuinely outside claim scope.
+`execution_status = completed | harness-error | evidence-invalid` is separate from backend verdict.
 
-A PASS requires unique event/assertion/telemetry identities, valid event-to-collector references, and at least one observed event from every envelope-local source marked `mandatory`. This last rule proves only that the declared mandatory collector participated; it does **not** prove TestCase event-class or claim-interval completeness. That stronger coverage remains `UNVERIFIED` until an immutable TestCase digest/bundle is bound into evaluation.
+A PASS requires, at minimum:
 
-A PASS cannot silently contain unverified or residual material post-conditions. Deny-everything behavior is not sufficient because each `TestCase` also carries `authorized_utility` requirements.
+- schema + active date-time format validity;
+- no duplicate raw JSON object keys;
+- canonical TestCase resolution and digest binding;
+- unique security-relevant semantic IDs;
+- all canonical mandatory telemetry sources present exactly once, healthy and mandatory;
+- suitable source/event semantics for each typed mandatory assertion;
+- exact execution provenance and ordering;
+- runtime/backend/environment binding;
+- effective attachment and attachment provenance;
+- no material FAIL/UNVERIFIED mandatory assertion;
+- typed authorized utility evidence;
+- no material residual/unverified post-condition.
 
-## Canonicalization and digest rule
+Verdict aggregation remains atomic:
 
-Design-stage canonicalization is `agentci-json-c14n-v0alpha1`:
+- valid mandatory violation → `FAIL`;
+- every in-scope mandatory requirement credibly observed and satisfied → `PASS`;
+- credible PASS exists but material mandatory dimension is UNVERIFIED → `PARTIAL`;
+- harness/evidence invalid, probe unexecuted, missing required evidence, or no credible outcome → `UNVERIFIED`;
+- `NOT-APPLICABLE` only for genuinely out-of-scope capability.
+
+Missing observability is never converted to PASS.
+
+## Canonicalization
+
+Design-stage canonicalization remains versioned as `agentci-json-c14n-v0alpha1`:
 
 - UTF-8 JSON;
-- keys sorted recursively by Python's deterministic JSON encoder;
-- separators `,` and `:` with no insignificant whitespace;
-- `NaN`/`Infinity` rejected;
-- the EvidenceEnvelope artifact digest is SHA-256 over the canonical document with `canonicalization.artifact_digest` omitted, avoiding a self-referential digest.
+- recursively sorted keys using the project's deterministic JSON encoder;
+- no insignificant separators/whitespace;
+- NaN/Infinity rejected;
+- artifact digest excludes the self-referential `canonicalization.artifact_digest` field;
+- artifact digest also commits to canonical TestCase content.
 
-This is intentionally versioned and is **not** claimed to implement RFC 8785/JCS. It may be replaced before S0 freeze if B finds cross-language/numeric ambiguities.
+This is not claimed to be RFC 8785/JCS. Cross-language canonicalization equivalence remains a future standards-validation item and cannot be inferred from Python-only success.
 
-## Deliberately permissive red control
+## Red control
 
-`examples/sandbox/v0alpha1-red-control-evidence.json` is a synthetic red control, not provider evidence. The desired claim is that a synthetic sensitive canary is unreadable; the deliberately permissive fixture records an actual read event and a mandatory assertion FAIL. It also contains a separate policy-attachment event so attachment provenance has a real content-addressed target rather than an arbitrary placeholder digest.
+`examples/sandbox/v0alpha1-red-control-evidence.json` is synthetic and deliberately permissive. It records a successful read of `/synthetic-sensitive-canary`, so the security assertion is FAIL, while a separate typed workspace utility event remains PASS. This demonstrates that useful-work success cannot erase a containment failure.
 
-Validation command:
+The fixture and signed sidecars are test infrastructure only; they are not provider evidence.
 
-```bash
-python scripts/validate_sandbox_evidence.py examples/sandbox/v0alpha1-red-control-evidence.json
-pytest -q tests/test_sandbox_evidence_contract.py tests/test_sandbox_authority_contract.py
-```
+## S0 implementation boundary after final convergence
 
-The validator is an S0 semantic checker, not a sandbox runtime/certifier.
+The candidate mechanically represents and fail-closes:
 
-## Current resolved S0 mechanics in this draft
+1. PolicySpec / Observation / TestCase / EvidenceEnvelope separation.
+2. Immutable policy/authority epochs and ordered history.
+3. Event-effective policy binding.
+4. Workload network capability vs enforcement transport.
+5. Expansion/lateral/unknown authority gating.
+6. Configured vs selected/attached/effective policy state.
+7. Unique effective workload/epoch attachment.
+8. Mandatory telemetry completeness and source health/suitability.
+9. Immutable TestCase content binding.
+10. Typed assertion/probe ownership and event semantics.
+11. Typed authorized utility proof.
+12. External fixture runtime/environment provenance.
+13. Authenticated probe execution and causal ordering observations.
+14. Residual post-condition fail-closed semantics.
+15. Snapshot/restore continuity with exact snapshot identity.
+16. Representable enforcement/observer topology without treating labels as verdicts.
 
-1. `PolicySpec`, `Observation`, `TestCase`, `EvidenceEnvelope` are formally separated.
-2. policy epoch/history and per-event binding are represented.
-3. the five D authority object classes and core fields are represented, while typed graph uniqueness/causality/reviewer identity remain unresolved.
-4. network capability and enforcement transport are separate, channel-specific vocabulary; enforcement topology and hidden control surfaces are not yet proved.
-5. attachment/selection evidence is separate from configured/effective behavior and has an envelope-local content-addressed evidence target.
-6. restore continuity is explicit and not assumed clean; external observer trust/locus is not yet proved.
-7. execution status, schema/evidence validity, mandatory assertion coverage and cleanup post-conditions are separate from backend verdict.
-8. a deliberately permissive red control is present and expected to fail the containment claim.
+## What remains UNVERIFIED after S0 code completion
 
-These are implementation claims awaiting C/D/E fidelity checks and independent B exact-head review; they are not S0 acceptance.
+S0 code completion is not equivalent to real sandbox certification. The following require external/real execution evidence and remain explicitly unverified until supplied:
 
-## Explicit unresolved items — do not infer consensus
+- production/provider-native/runtime/hardware attestation and key custody;
+- exact typed AuthorityBundle graph causality and formal reviewer-principal independence;
+- broker audience/scope and effective endpoint causality for real providers;
+- DNS/redirect/Host/SNI/IP-family/metadata/Unix-socket/tunnel behavior for each reference environment;
+- observer/enforcement locus backed by independent/provider-native evidence rather than labels;
+- complete claim-interval/absence evidence and suppression resistance;
+- suite/comparator/normalizer/replay provenance for cross-run benchmark equivalence;
+- cross-language canonicalization/JCS equivalence;
+- actual two-environment S1 matched semantic quartet;
+- destructive escape behavior, which belongs only in nested disposable infrastructure;
+- provider ranking/security claims;
+- adaptive mutation/crisis/replay-memory/genome behavior (S3/S4).
 
-The following remain unresolved or intentionally narrowed:
+Formal independent review is also not established merely because multiple role labels use the same GitHub principal.
 
-### C / isolation-runtime semantics
+## S1 handoff — productization remains gated
 
-- explicit enforcement topology/locus per capability; an `isolation_class` label is provenance, not proof of the actual enforcing boundary;
-- shared-host and control surfaces, including helpers, devices, IPC, runtime sockets and other host-coupled paths that can bypass a narrower claim;
-- lifecycle-boundary observer trust: cleanup/termination evidence observed only from inside the workload boundary cannot prove absence outside that boundary;
-- portable semantic claim versus backend-specific mechanism, including which probes are ordinary-CI-safe, nested-disposable-only, privileged, or unavailable;
-- exact distinction between enforceable-but-not-observable and observable-but-not-enforceable per S1 reference target;
-- receipt provenance strength / observer locus: behavioral evidence must not be upgraded into Decision -> enforcement causation without a trustworthy chain.
+Once this exact S0 candidate survives independent Spec + Standards falsification and Supervisor accepts the stage gate, S1 should execute the same provider-neutral semantic quartet on at least two materially different real or deliberately isolated environments:
 
-### D / authority-identity-network semantics
+1. authorized `/workspace` read/write utility;
+2. synthetic sensitive canary denial;
+3. allowed local service plus forbidden sink/metadata simulation;
+4. timeout cleanup with no daemon/socket/file residue.
 
-- exact minimum representation for D's trusted AuthorityBundle graph, broker audience/scope, endpoint causality and restore/session freshness;
-- deterministic unique resolution for typed TrustRoot/PrincipalAttestation/CapabilityGrant/Decision/EnforcementReceipt identities and references (D-14);
-- formal reviewer identity via canonical PrincipalAttestation/TrustRoot semantics, plus exact reviewed-head/artifact binding; role labels or `independent_reviewer_run_ids[]` are not sufficient (D-15);
-- unresolved reviewer principal or ambiguous typed reference remains `UNVERIFIED` rather than independent PASS.
+Require clean reset, three basic repeat attempts, one deliberately permissive nested red control, exact backend/environment/policy/attachment/epoch provenance and an explicit attempt to falsify cross-backend semantic equivalence.
 
-### E / evidence-replay semantics
-
-- true TestCase event-class and claim-interval telemetry completeness, including absence-as-negative-evidence semantics;
-- immutable TestCase/suite/comparator/normalizer binding and replay recipe sufficient for cross-run semantic comparison;
-- stronger side-effect/trajectory/recovery/authorized-utility oracles beyond the current envelope-local evidence checks.
-
-### Cross-cutting
-
-- whether the current project-specific canonicalization is sufficiently cross-language stable;
-- formal independent-review identity provenance; same GitHub principal with different role labels is not independent verification;
-- exact S1 reference targets and execution readiness.
-
-These unresolved items must not be hidden in free-form metadata or silently treated as PASS.
-
-## Planned S1 matched semantic quartet — HOLD for productization
-
-After B gives Spec PASS + Standards PASS and Supervisor accepts S0, the first S1 experiment should use one provider-neutral case definition per semantic claim, with setup/collector adapters only:
-
-1. authorized `/workspace` read/write utility canary;
-2. external synthetic sensitive canary exists and is unreadable;
-3. allowed local service is reachable while forbidden sink/metadata simulation is unreachable;
-4. timed-out parent leaves no daemonized descendant/socket/file residue.
-
-Each case requires clean reset, three basic repeat attempts, a deliberately permissive nested red control and exact provenance. Three attempts only establish basic reproducibility; they are not a public benchmark.
-
-## Non-goals for this head
-
-- no sandbox runtime or hypervisor implementation;
-- no provider adapter;
-- no `agentci sandbox certify` released behavior;
-- no adaptive policy mutation;
-- no crisis/incident memory/genome implementation;
-- no provider ranking or opaque security score;
-- no self-certification by Agent A.
+No S1 result is claimed by this S0 integration document.
