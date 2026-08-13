@@ -22,6 +22,7 @@ package-dir = {"" = "src", "scripts" = "scripts"}
 
 [tool.setuptools.data-files]
 "share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
+"share/agentci/sandbox/authority-schema" = ["schemas/sandbox-authority-v0alpha1.schema.json"]
 "share/agentci/sandbox/testcases" = ["examples/sandbox/testcases/*.json"]
 "share/agentci/sandbox/execution-attestations" = ["examples/sandbox/execution-attestations/*.json"]
 "share/agentci/sandbox/lifecycle-attestations" = ["examples/sandbox/lifecycle-attestations/*.json"]
