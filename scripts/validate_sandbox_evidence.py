@@ -113,6 +113,8 @@ def _load_test_case(case_id: str) -> dict[str, Any] | None:
     utility_ids = test_case.get("authorized_utility", [])
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
     if len(set(utility_ids)) != len(utility_ids) or any(x not in mandatory_ids for x in utility_ids): return None
+    if test_case.get("probe", {}).get("network_channel") is not None and not (mandatory_ids - set(utility_ids)):
+        return None
     return test_case
 
 def _source_suitable_for_event(test_case: dict[str, Any], source: dict[str, Any], event_type: Any) -> bool:
@@ -141,6 +143,57 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
     if post.get("descendants") == "residual": errors.append("residual descendants violate PASS")
     if post.get("filesystem_residue") == "residual": errors.append("residual filesystem state violate PASS")
     if post.get("sockets") == "residual": errors.append("residual sockets violate PASS")
+    if post.get("network_activity") == "residual": errors.append("residual network activity violates PASS")
+    if post.get("credential_state") == "residual": errors.append("residual credential state violates PASS")
+    if post.get("lifecycle_state") == "preserved": errors.append("preserved lifecycle state violates PASS without revalidation")
+    return errors
+
+def _lifecycle_continuity_errors(document: dict[str, Any]) -> list[str]:
+    if document.get("post_conditions", {}).get("lifecycle_state") != "revalidated":
+        return []
+    errors: list[str] = []
+    continuity = document.get("lifecycle_continuity", [])
+    if not continuity:
+        return ["revalidated lifecycle state requires lifecycle continuity evidence"]
+    safe_states = {"revalidated", "revoked", "replaced"}
+    state_fields = ("process_state", "socket_fd_state", "credential_session_state", "policy_attachment_state")
+    telemetry = document.get("telemetry", [])
+    source_ids = [source.get("source_id") for source in telemetry]
+    duplicate_sources = _duplicates(source_ids)
+    telemetry_by_source = {source.get("source_id"): source for source in telemetry if source.get("source_id") is not None and source.get("source_id") not in duplicate_sources}
+    attachments = document.get("policy_attachments", [])
+    attachment_ids = [attachment.get("attachment_id") for attachment in attachments]
+    duplicate_attachments = _duplicates(attachment_ids)
+    events = document.get("events", [])
+    for item in continuity:
+        snapshot_id = item.get("snapshot_id")
+        capture_epoch, restore_epoch = item.get("capture_epoch"), item.get("restore_epoch")
+        if not isinstance(capture_epoch, int) or not isinstance(restore_epoch, int) or restore_epoch <= capture_epoch:
+            errors.append("lifecycle continuity requires restore_epoch greater than capture_epoch")
+        for field in state_fields:
+            if item.get(field) not in safe_states:
+                errors.append(f"lifecycle continuity {field} must be revalidated, revoked, or replaced before PASS")
+        expected_event_id = f"lifecycle:{snapshot_id}:{restore_epoch}"
+        matching_events = []
+        for event in events:
+            if event.get("event_type") != "lifecycle" or event.get("restore_epoch") != restore_epoch or event.get("event_id") != expected_event_id:
+                continue
+            source = telemetry_by_source.get(event.get("source_id"))
+            if source is None or source.get("coverage") != "mandatory" or source.get("health") != "healthy" or source.get("layer") != "lifecycle":
+                continue
+            epoch, workload, attachment_id = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
+            effective_attachments = [
+                attachment for attachment in attachments
+                if attachment.get("state") == "effective"
+                and attachment.get("policy_epoch") == epoch
+                and attachment.get("workload_identity") == workload
+                and attachment.get("attachment_id") == attachment_id
+                and attachment.get("attachment_id") not in duplicate_attachments
+            ]
+            if workload and attachment_id and len(effective_attachments) == 1:
+                matching_events.append(event)
+        if len(matching_events) != 1:
+            errors.append("lifecycle continuity requires exactly one healthy mandatory lifecycle event bound to the exact snapshot, restore epoch, workload, and effective policy attachment")
     return errors
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
@@ -199,6 +252,21 @@ def _execution_binding_errors(document: dict[str, Any], test_case: dict[str, Any
         elif not _event_not_after(execution_event, event):
             errors.append(f"execution provenance event {binding_id} must occur at or before assertion evidence")
     return errors
+
+def _network_probe_assertion_errors(test_case: dict[str, Any] | None, assertion: dict[str, Any], events_by_id: dict[str, dict[str, Any]], duplicate_events: set[Any]) -> list[str]:
+    if test_case is None or not assertion.get("mandatory") or assertion.get("state") != "PASS":
+        return []
+    channel = test_case.get("probe", {}).get("network_channel")
+    if channel is None or assertion.get("assertion_id") in set(test_case.get("authorized_utility", [])):
+        return []
+    matching = []
+    for event_id in assertion.get("evidence_event_ids", []):
+        if event_id in duplicate_events:
+            continue
+        event = events_by_id.get(event_id)
+        if event is not None and event.get("event_type") == "network" and event.get("channel") == channel and isinstance(event.get("endpoint"), str) and event.get("endpoint"):
+            matching.append(event)
+    return [] if matching else [f"mandatory PASS assertion {assertion.get('assertion_id')} requires exact {channel} network evidence for the canonical probe"]
 
 def _evidence_errors(document: dict[str, Any]) -> list[str]:
     errors = []
@@ -267,9 +335,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
         if attachment.get("state") == "effective"
     ]
     for workload_identity, policy_epoch in sorted(_duplicates(effective_bindings), key=lambda value: (str(value[0]), str(value[1]))):
-        errors.append(
-            f"multiple effective policy attachments for workload {workload_identity} and policy epoch {policy_epoch} are ambiguous"
-        )
+        errors.append(f"multiple effective policy attachments for workload {workload_identity} and policy epoch {policy_epoch} are ambiguous")
     for attachment in attachments:
         aid, policy = attachment.get("attachment_id"), history_by_epoch.get(attachment.get("policy_epoch"))
         if policy is None: errors.append(f"attachment {aid} references unknown policy epoch"); continue
@@ -281,18 +347,14 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     for x in sorted(duplicate_assertions): errors.append(f"duplicate assertion_id {x}")
     if test_case is not None:
         canonical_mandatory = set(test_case.get("mandatory_assertions", []))
-        present_mandatory = {
-            assertion.get("assertion_id")
-            for assertion in assertions
-            if assertion.get("mandatory") and assertion.get("assertion_id") not in duplicate_assertions
-        }
-        for assertion_id in sorted(canonical_mandatory - present_mandatory):
-            errors.append(f"canonical mandatory assertion {assertion_id} is missing from EvidenceEnvelope")
+        present_mandatory = {assertion.get("assertion_id") for assertion in assertions if assertion.get("mandatory") and assertion.get("assertion_id") not in duplicate_assertions}
+        for assertion_id in sorted(canonical_mandatory - present_mandatory): errors.append(f"canonical mandatory assertion {assertion_id} is missing from EvidenceEnvelope")
     for assertion in assertions:
         assertion_id, evidence_ids = assertion.get("assertion_id"), assertion.get("evidence_event_ids", []); mandatory_pass = assertion.get("mandatory") and assertion.get("state") == "PASS"
         if mandatory_pass and not evidence_ids: errors.append(f"mandatory PASS assertion {assertion_id} requires event evidence")
         if mandatory_pass and test_case is not None and assertion_id not in set(test_case.get("mandatory_assertions", [])): errors.append(f"mandatory PASS assertion {assertion_id} is not bound by canonical TestCase")
         errors.extend(_execution_binding_errors(document, test_case, telemetry_by_source, events_by_id, dup_events, assertion))
+        errors.extend(_network_probe_assertion_errors(test_case, assertion, events_by_id, dup_events))
         for event_id in evidence_ids:
             if event_id not in event_ids: errors.append(f"assertion {assertion_id} references missing evidence event {event_id}"); continue
             if event_id in dup_events: errors.append(f"assertion {assertion_id} evidence event {event_id} does not resolve uniquely"); continue
@@ -317,6 +379,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                             elif provenance_source.get("coverage") != "mandatory" or provenance_source.get("health") != "healthy": errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance from a healthy mandatory telemetry source")
                             elif test_case is None or not _source_suitable_for_event(test_case, provenance_source, provenance_event.get("event_type")): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} attachment provenance fails canonical TestCase source suitability")
                             elif not _event_not_after(provenance_event, event): errors.append(f"mandatory PASS assertion {assertion_id} evidence event {event_id} requires attachment effectiveness provenance at or before the PASS event on both clocks")
+    errors.extend(_lifecycle_continuity_errors(document))
     return errors
 
 def _is_credible_pass(assertion: dict[str, Any]) -> bool: return assertion.get("state") == "PASS" and bool(assertion.get("evidence_event_ids"))
