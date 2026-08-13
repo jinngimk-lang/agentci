@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentci.dev/schemas/sandbox-authority-v0alpha1.schema.json",
+  "title": "AgentCI Sandbox Authority Model v0alpha1",
+  "description": "Canonical S0 authority module used by the sandbox certification contract. Design-stage, not released behavior.",
+  "$defs": {
+    "Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "TrustRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trust_root_id", "tenant_id", "root_identity", "baseline_digest", "authority_epoch"],
+      "properties": {
+        "trust_root_id": {"type": "string"},
+        "tenant_id": {"type": "string"},
+        "root_identity": {"type": "string"},
+        "baseline_digest": {"$ref": "#/$defs/Digest"},
+        "authority_epoch": {"type": "integer", "minimum": 0}
+      }
+    },
+    "PrincipalAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attestation_id", "principal_type", "principal_id", "tenant_id", "run_id", "attestation_digest", "not_before", "expires_at"],
+      "properties": {
+        "attestation_id": {"type": "string"},
+        "principal_type": {"enum": ["owner", "supervisor", "workload", "policy-engine", "broker", "runtime", "mcp-server", "tool-server", "external-service", "other"]},
+        "principal_id": {"type": "string"},
+        "tenant_id": {"type": "string"},
+        "workload_id": {"type": "string"},
+        "session_id": {"type": "string"},
+        "run_id": {"type": "string"},
+        "attestation_digest": {"$ref": "#/$defs/Digest"},
+        "not_before": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "CapabilityGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grant_id", "issuer_principal_id", "subject_principal_id", "action", "resource", "context_digest", "audience", "not_before", "expires_at", "revocation_epoch", "policy_digest", "authority_epoch", "delegation_allowed"],
+      "properties": {
+        "grant_id": {"type": "string"},
+        "issuer_principal_id": {"type": "string"},
+        "subject_principal_id": {"type": "string"},
+        "action": {"type": "string"},
+        "resource": {"type": "string"},
+        "context_digest": {"$ref": "#/$defs/Digest"},
+        "audience": {"type": "string"},
+        "pep": {"type": "string"},
+        "parent_grant_id": {"type": "string"},
+        "delegation_allowed": {"type": "boolean"},
+        "not_before": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "revocation_epoch": {"type": "integer", "minimum": 0},
+        "policy_digest": {"$ref": "#/$defs/Digest"},
+        "authority_epoch": {"type": "integer", "minimum": 0},
+        "nonce_digest": {"$ref": "#/$defs/Digest"},
+        "signature_digest": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "Decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_id", "principal_id", "action", "resource", "context_digest", "policy_digest", "policy_epoch", "authority_epoch", "effect", "obligations"],
+      "properties": {
+        "decision_id": {"type": "string"},
+        "principal_id": {"type": "string"},
+        "action": {"type": "string"},
+        "resource": {"type": "string"},
+        "context_digest": {"$ref": "#/$defs/Digest"},
+        "grant_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "policy_digest": {"$ref": "#/$defs/Digest"},
+        "policy_epoch": {"type": "integer", "minimum": 0},
+        "authority_epoch": {"type": "integer", "minimum": 0},
+        "effect": {"enum": ["DENY", "PERMIT"]},
+        "obligations": {"type": "array", "items": {"type": "string"}},
+        "decision_error": {"type": "string"}
+      }
+    },
+    "EnforcementReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "decision_id", "environment_fingerprint", "backend_instance_id", "policy_digest", "policy_epoch", "authority_epoch", "enforced_at_utc", "enforced_at_monotonic_ns", "result", "audit_digest"],
+      "properties": {
+        "receipt_id": {"type": "string"},
+        "decision_id": {"type": "string"},
+        "environment_fingerprint": {"$ref": "#/$defs/Digest"},
+        "backend_instance_id": {"type": "string"},
+        "actual_endpoint": {"type": "string"},
+        "credential_epoch": {"type": "integer", "minimum": 0},
+        "policy_digest": {"$ref": "#/$defs/Digest"},
+        "policy_epoch": {"type": "integer", "minimum": 0},
+        "authority_epoch": {"type": "integer", "minimum": 0},
+        "restore_epoch": {"type": "integer", "minimum": 0},
+        "enforced_at_utc": {"type": "string", "format": "date-time"},
+        "enforced_at_monotonic_ns": {"type": "integer", "minimum": 0},
+        "result": {"enum": ["enforced", "denied", "failed", "unverified"]},
+        "audit_digest": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "PrivilegeDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["old_authority_digest", "new_authority_digest", "classification", "obligations_not_weaker", "evidence_digest"],
+      "properties": {
+        "old_authority_digest": {"$ref": "#/$defs/Digest"},
+        "new_authority_digest": {"$ref": "#/$defs/Digest"},
+        "classification": {"enum": ["contraction", "expansion", "lateral", "no-op", "unknown"]},
+        "obligations_not_weaker": {"type": "boolean"},
+        "evidence_digest": {"$ref": "#/$defs/Digest"},
+        "automatic_application_eligible": {"type": "boolean"}
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "trust_roots", "principal_attestations", "grants", "decisions", "enforcement_receipts", "privilege_deltas"],
+  "properties": {
+    "apiVersion": {"const": "agentci.dev/sandbox/v0alpha1"},
+    "kind": {"const": "AuthorityBundle"},
+    "trust_roots": {"type": "array", "items": {"$ref": "#/$defs/TrustRoot"}},
+    "principal_attestations": {"type": "array", "items": {"$ref": "#/$defs/PrincipalAttestation"}},
+    "grants": {"type": "array", "items": {"$ref": "#/$defs/CapabilityGrant"}},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/Decision"}},
+    "enforcement_receipts": {"type": "array", "items": {"$ref": "#/$defs/EnforcementReceipt"}},
+    "privilege_deltas": {"type": "array", "items": {"$ref": "#/$defs/PrivilegeDelta"}}
+  }
+}

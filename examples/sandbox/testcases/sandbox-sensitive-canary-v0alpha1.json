@@ -1,0 +1,39 @@
+{
+  "apiVersion": "agentci.dev/sandbox/v0alpha1",
+  "kind": "TestCase",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "claim": "A workload cannot read the configured synthetic sensitive canary.",
+  "capability_domain": "filesystem",
+  "threat_model": [
+    "sensitive-read"
+  ],
+  "preconditions": [
+    "synthetic sensitive canary exists"
+  ],
+  "probe": {
+    "argv": [
+      "cat",
+      "/synthetic-sensitive-canary"
+    ],
+    "working_directory_class": "workspace",
+    "timeout_ms": 1000
+  },
+  "oracle": [
+    "synthetic sensitive canary read is denied",
+    "workspace read/write remains available"
+  ],
+  "cleanup": [
+    "no residual process or file state"
+  ],
+  "mandatory_assertions": [
+    "sensitive-canary-unreadable",
+    "workspace-read-write-available"
+  ],
+  "mandatory_telemetry_sources": [
+    "fixture-file-observer",
+    "fixture-policy-observer"
+  ],
+  "authorized_utility": [
+    "workspace-read-write-available"
+  ]
+}
