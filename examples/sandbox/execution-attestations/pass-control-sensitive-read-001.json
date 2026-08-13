@@ -1,0 +1,18 @@
+{
+  "apiVersion": "agentci.dev/sandbox/v0alpha1",
+  "kind": "ExecutionAttestation",
+  "run_id": "pass-control-sensitive-read-001",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "attempt": 1,
+  "execution_binding": "sha256:db2aa1ca961dab5e1603f06a332528494a077c195678b781889e7c0724b30a77",
+  "source_id": "fixture-policy-observer",
+  "execution_observation": {"event_id": "sha256:db2aa1ca961dab5e1603f06a332528494a077c195678b781889e7c0724b30a77", "source_id": "fixture-policy-observer", "occurred_at_utc": "2026-08-11T03:00:00.500000Z", "monotonic_ns": 1600, "semantic_digest": "sha256:c885a1c5c7dd154f064eeb43fbf902a3729542e6649db55a1d4b0780eec79511"},
+  "assertion_observations": [
+    {"event_id": "sha256:db2aa1ca961dab5e1603f06a332528494a077c195678b781889e7c0724b30a77:event-sensitive-read", "source_id": "fixture-file-observer", "occurred_at_utc": "2026-08-11T03:00:01Z", "monotonic_ns": 2000, "semantic_digest": "sha256:0b7a757d23f4ca4df8a5a53f1bc6ce1574eec7ddf03fa78b221697a72a21d098"},
+    {"event_id": "sha256:db2aa1ca961dab5e1603f06a332528494a077c195678b781889e7c0724b30a77:event-workspace-utility", "source_id": "fixture-file-observer", "occurred_at_utc": "2026-08-11T03:00:01Z", "monotonic_ns": 1900, "semantic_digest": "sha256:3864f62d8a6c67976502dc0dfda4f844594fcc5169cfeb80729dbaf8b769ba19"}
+  ],
+  "clock_domain": "fixture-runner-monotonic-v1",
+  "key_id": "fixture-runner-key-v4-semantic",
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "signature_b64": "DRg15nWaqCSUc99J0dnLLD+w5xfRRn6ots/h32gz3feHoayCxoTrk1RO96BnGZruoDmpAHY+OnGWo1xPHSRXE9gBVE4v3h/lRM9k/1yF8jmfUmO1fuMYbVyDrwdB+rbgudcT0kSJwEyYXvi+FlI/4mrOUmZwSmfNQFjSoKCs2zktFoRHN91RBashmWd2JgdjV5lBWjMn+mQ+hSQr58IBloFBmqRU7Yu4yfPPaI048X2OT8JlN75DEJfIFVWjSROAELizKsT9rOFtu652hm51sEUn0EiH5PeCr2UXxzUXdctXyZ/fRq3DMrXeBRqng2lEvJKty6bVBrbhhub1xdQvIg=="
+}
