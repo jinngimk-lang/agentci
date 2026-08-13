@@ -1,8 +1,8 @@
 """Installed adapter for the canonical AgentCI S0 EvidenceEnvelope validator.
 
 This module intentionally does not implement verdict semantics. It delegates to
-``scripts.validate_sandbox_evidence`` so there is one S0 validator while the
-Developer Preview product surface remains a thin presentation layer.
+the repository's canonical ``scripts.validate_sandbox_evidence`` implementation
+and only supplies wheel-safe locations for the exact same canonical resources.
 """
 from __future__ import annotations
 
@@ -10,12 +10,11 @@ from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
 
-from scripts.validate_sandbox_evidence import (
-    artifact_digest,
-    expected_verdict,
-    load_evidence_json,
-    validate,
-)
+from scripts import execution_attestation as execution_attestation_module
+from scripts import runtime_environment_attestation as runtime_environment_attestation_module
+from scripts import validate_sandbox_evidence as validator
+
+from .resource_loader import INSTALLED_ROOT, SOURCE_ROOT
 
 
 @dataclass(frozen=True)
@@ -32,6 +31,21 @@ class VerificationResult:
         return asdict(self)
 
 
+def _configure_canonical_resources() -> None:
+    """Point the unchanged canonical validator at wheel data when needed."""
+    source_schema = SOURCE_ROOT / 'schemas' / 'sandbox-certification-v0alpha1.schema.json'
+    if source_schema.is_file():
+        return
+
+    validator.SCHEMA_PATH = INSTALLED_ROOT / 'schema' / 'sandbox-certification-v0alpha1.schema.json'
+    validator.TEST_CASE_DIR = INSTALLED_ROOT / 'testcases'
+    execution_attestation_module.ATTESTATION_DIR = INSTALLED_ROOT / 'execution-attestations'
+    runtime_environment_attestation_module.ATTESTATION_DIR = INSTALLED_ROOT / 'runtime-environment-attestations'
+    validator._schema_validator.cache_clear()
+    validator._test_case_validator.cache_clear()
+    validator._load_test_case.cache_clear()
+
+
 def verify_evidence_file(path: Path, *, include_digest: bool = False) -> VerificationResult:
     """Validate one EvidenceEnvelope without treating verdict FAIL as tool failure.
 
@@ -39,9 +53,10 @@ def verify_evidence_file(path: Path, *, include_digest: bool = False) -> Verific
     including its recorded verdict. It does not mean the sandbox verdict is
     PASS and it is never a certification claim.
     """
+    _configure_canonical_resources()
     raw = path.read_text(encoding='utf-8')
     try:
-        document = load_evidence_json(raw)
+        document = validator.load_evidence_json(raw)
     except (json.JSONDecodeError, ValueError) as exc:
         return VerificationResult(
             valid=False,
@@ -52,13 +67,13 @@ def verify_evidence_file(path: Path, *, include_digest: bool = False) -> Verific
             artifact_digest=None,
         )
 
-    expected = expected_verdict(document)
-    errors = tuple(validate(document))
+    expected = validator.expected_verdict(document)
+    errors = tuple(validator.validate(document))
     return VerificationResult(
         valid=not errors,
         run_id=document.get('run_id') if isinstance(document.get('run_id'), str) else None,
         recorded_verdict=document.get('verdict') if isinstance(document.get('verdict'), str) else None,
         expected_verdict=expected,
         errors=errors,
-        artifact_digest=artifact_digest(document) if include_digest else None,
+        artifact_digest=validator.artifact_digest(document) if include_digest else None,
     )
