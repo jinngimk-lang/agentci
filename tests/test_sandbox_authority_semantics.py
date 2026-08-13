@@ -11,6 +11,21 @@ def _digest(char):
     return "sha256:" + char * 64
 
 
+def _attestation(principal_id, suffix):
+    return {
+        "attestation_id": f"att-{suffix}",
+        "principal_type": "workload",
+        "principal_id": principal_id,
+        "tenant_id": "tenant-1",
+        "workload_id": principal_id,
+        "session_id": f"session-{suffix}",
+        "run_id": "run-1",
+        "attestation_digest": _digest(str(suffix)[-1] if str(suffix)[-1].isdigit() else "a"),
+        "not_before": "2026-08-13T00:00:00Z",
+        "expires_at": "2026-08-13T01:00:00Z",
+    }
+
+
 def _bundle():
     return {
         "apiVersion": "agentci.dev/sandbox/v0alpha1",
@@ -24,20 +39,7 @@ def _bundle():
                 "authority_epoch": 7,
             }
         ],
-        "principal_attestations": [
-            {
-                "attestation_id": "att-1",
-                "principal_type": "workload",
-                "principal_id": "workload-1",
-                "tenant_id": "tenant-1",
-                "workload_id": "workload-1",
-                "session_id": "session-1",
-                "run_id": "run-1",
-                "attestation_digest": _digest("2"),
-                "not_before": "2026-08-13T00:00:00Z",
-                "expires_at": "2026-08-13T01:00:00Z",
-            }
-        ],
+        "principal_attestations": [_attestation("workload-1", 1)],
         "grants": [
             {
                 "grant_id": "grant-1",
@@ -114,6 +116,54 @@ def test_valid_authority_graph_is_accepted(tmp_path):
 def test_untrusted_self_grant_issuer_is_rejected(tmp_path):
     bundle = _bundle()
     bundle["grants"][0]["issuer_principal_id"] = "workload-output"
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_attested_workload_cannot_issue_grant_without_delegated_parent(tmp_path):
+    bundle = _bundle()
+    bundle["grants"][0]["issuer_principal_id"] = "workload-1"
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_explicit_nonexpanding_delegation_is_accepted(tmp_path):
+    bundle = _bundle()
+    bundle["principal_attestations"].append(_attestation("workload-2", 2))
+    parent = bundle["grants"][0]
+    parent["delegation_allowed"] = True
+    child = dict(parent)
+    child.update(
+        {
+            "grant_id": "grant-2",
+            "issuer_principal_id": "workload-1",
+            "subject_principal_id": "workload-2",
+            "parent_grant_id": "grant-1",
+            "delegation_allowed": False,
+            "not_before": "2026-08-13T00:10:00Z",
+            "expires_at": "2026-08-13T00:50:00Z",
+        }
+    )
+    bundle["grants"].append(child)
+    result = _run(tmp_path, bundle)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_delegated_child_cannot_expand_parent_semantics(tmp_path):
+    bundle = _bundle()
+    bundle["principal_attestations"].append(_attestation("workload-2", 2))
+    parent = bundle["grants"][0]
+    parent["delegation_allowed"] = True
+    child = dict(parent)
+    child.update(
+        {
+            "grant_id": "grant-2",
+            "issuer_principal_id": "workload-1",
+            "subject_principal_id": "workload-2",
+            "parent_grant_id": "grant-1",
+            "resource": "/",
+            "delegation_allowed": False,
+        }
+    )
+    bundle["grants"].append(child)
     assert _run(tmp_path, bundle).returncode != 0
 
 
