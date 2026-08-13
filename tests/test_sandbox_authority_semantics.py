@@ -41,7 +41,7 @@ def _bundle():
         "grants": [
             {
                 "grant_id": "grant-1",
-                "issuer_principal_id": "owner-1",
+                "issuer_principal_id": "owner-key-1",
                 "subject_principal_id": "workload-1",
                 "action": "read",
                 "resource": "/workspace",
@@ -109,6 +109,12 @@ def _run(tmp_path, bundle):
 def test_valid_authority_graph_is_accepted(tmp_path):
     result = _run(tmp_path, _bundle())
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_untrusted_self_grant_issuer_is_rejected(tmp_path):
+    bundle = _bundle()
+    bundle["grants"][0]["issuer_principal_id"] = "workload-output"
+    assert _run(tmp_path, bundle).returncode != 0
 
 
 def test_duplicate_typed_ids_are_rejected(tmp_path):
