@@ -10,7 +10,7 @@ The lane is especially useful for finding:
 
 - stale or contradictory README / `llms.txt` / `AGENTS.md` / CLI-help contracts;
 - undocumented setup assumptions;
-- broken first-run paths;
+- broken first-run or clean-wheel paths;
 - machine-discovery gaps;
 - design-stage capabilities that look released;
 - evidence that cannot be reproduced from public instructions;
@@ -31,6 +31,31 @@ Read in this order when available:
 6. only then follow linked architecture / issue / PR evidence.
 
 Do not use private conversation memory to fill a public documentation gap. If a correct answer requires hidden context, that is itself a discoverability defect.
+
+## AgentCI 0.2 clean-product check
+
+AgentCI 0.2 is a **pre-alpha Developer Preview / not a security certification**. For a release/installation claim, the preferred clean-room check is a built wheel installed into a fresh environment and invoked from a working directory outside the repository.
+
+At minimum verify:
+
+```bash
+agentci --help
+agentci sandbox --help
+agentci sandbox doctor --json
+agentci sandbox verify /path/to/v0alpha1-red-control-evidence.json --json --print-digest
+```
+
+Required outsider conclusions:
+
+- `doctor` may report installed/missing/unverified candidates but default discovery/version probes cannot turn a backend into a security verdict;
+- readiness is not backend execution, isolation proof, or security certification;
+- `sandbox verify` must be available from the installed wheel without depending on the current working directory being the source repository;
+- the canonical permissive red control must be **valid evidence** with `recorded_verdict=FAIL`, `expected_verdict=FAIL`, and `certification_claim=false`;
+- valid evidence does not mean PASS;
+- malformed/tampered evidence is rejected rather than normalized into PASS;
+- unavailable material capability or evidence remains `UNVERIFIED`/non-PASS.
+
+If an installed package cannot locate its canonical schema/TestCase/attestation resources outside the source tree, that is a product/packaging defect, not an acceptable documentation caveat.
 
 ## Clone/API fallback
 
@@ -80,7 +105,7 @@ The External Verifier is a perspective/lane, not a seventh authority role.
 Prefer small, reproducible findings:
 
 - one stale public statement;
-- one command that fails from a clean checkout;
+- one command that fails from a clean checkout or wheel;
 - one missing machine-discovery link;
 - one contradictory role or stage description;
 - one public claim that cannot be traced to evidence;
@@ -113,4 +138,4 @@ For code or behavioral fixes, use RED→GREEN. For pure documentation correction
 
 **Required correction:** synchronize README, `AGENTS.md`, and `llms.txt`; preserve C/D/E ownership; expose this verification protocol; make clear that External Verifier is a clean-perspective lane rather than independent review authority.
 
-**Remaining unverified:** local clean-install/CLI execution from the external verifier runtime remains unverified until a runtime with GitHub/package network access can acquire the checkout. Existing GitHub CI is separate execution evidence, not a substitute for that future clean-environment check.
+**Historical limitation:** local clean-install/CLI execution was unavailable in that verifier runtime. AgentCI 0.2 subsequently makes clean-wheel doctor + verify an explicit CI/release requirement; future verifier runs should use it whenever the environment can build/install the wheel.

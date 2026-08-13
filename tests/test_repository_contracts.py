@@ -169,7 +169,11 @@ def test_public_surfaces_route_released_truth_bounded_sandbox_doctor():
         assert 'agentci sandbox doctor' in surface
         assert 'readiness' in surface
         assert 'not isolation proof' in surface or 'does not prove isolation' in surface
-        assert 'not security certification' in surface or 'does not prove security certification' in surface
+        assert (
+            'not security certification' in surface
+            or 'not a security certification' in surface
+            or 'does not prove security certification' in surface
+        )
 
     assert 'current s0 integration pr: https://github.com/jinngimk-lang/agentci/pull/34' not in llms
     assert 'current s0 integration pr #34' not in readme
