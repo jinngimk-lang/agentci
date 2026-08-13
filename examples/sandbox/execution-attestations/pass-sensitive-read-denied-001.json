@@ -1,20 +1,20 @@
 {
-  "apiVersion": "agentci.dev/sandbox/v0alpha1",
+  "apiVersion": "agentci.dev/sandbox-attestation/v0alpha1",
   "kind": "ExecutionAttestation",
-  "run_id": "red-control-sensitive-read-001",
+  "run_id": "pass-sensitive-read-denied-001",
   "case_id": "sandbox-sensitive-canary-v0alpha1",
   "attempt": 1,
-  "execution_binding": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+  "execution_binding": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679",
   "source_id": "fixture-policy-observer",
   "execution_observation": {
-    "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+    "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679",
     "source_id": "fixture-policy-observer",
     "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
     "monotonic_ns": 1600
   },
   "assertion_observations": [
     {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-sensitive-read",
       "source_id": "fixture-file-observer",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 2000,
@@ -23,7 +23,7 @@
       "endpoint": null,
       "action": "read",
       "resource": "/synthetic-sensitive-canary",
-      "observed_result": "read-succeeded",
+      "observed_result": "denied",
       "workload_identity": "fixture-workload",
       "attachment_id": "attach-1",
       "policy_epoch": 0,
@@ -32,7 +32,7 @@
       "snapshot_id": null
     },
     {
-      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-workspace-utility",
       "source_id": "fixture-file-observer",
       "occurred_at_utc": "2026-08-11T03:00:01Z",
       "monotonic_ns": 1900,
@@ -53,5 +53,5 @@
   "clock_domain": "fixture-runner-monotonic-v1",
   "key_id": "fixture-runner-key-v4",
   "algorithm": "rsa-pkcs1v15-sha256",
-  "signature_b64": "GgBI+0xxUhagika6eja6GjHCsERqSqKwQhUGSGv9qrtYAOhI47dF1CXCaCjAbBQ4UVU+sPpeLnNRaRypIKBiB6vwvz/4S7CnUKotj51P2plh8HKVRk7Cd2v1eVtsN0ujpDHBiMT4K7UhFRIe5VMgpR6tje/4X+3cWKUx8d31rwjdnx3l8bkNTpeD/RTD5oqqdWvLpOzWYNQ5AlIYlTI4S9dGH0Vjg2I8Fh1f2vqnKjc2NvK45spikN9LtioFXT+26rcX2pVFpxwJueLlwtJDuoW0/z4+k87pb/3wo4wmcv4br62Mi5dnsBz8LnP2TasZaalF0i1Cgexm5wFt+df/JQ=="
+  "signature_b64": "f+pxKlVSdUdPNCImYJtDZlo0vhhbYx90SnWAPhnxkYUSTdimXpQ8VHTTPEIq8Zy0lp3JNyAz21aF1Jn6EtzX43W74NAu4tG07APNcuHU/+mKg14D0hMKp+G6P6gNQ930sErJBKHW+guh8bfzXesIIkEMG80RP7mqSImHtv06yuMCTTyAUFWwqcRh7x32xKfDm1b+VYlj1w5yF6bPh/f4Z67wcNu0a/Lqr5QaoqwyU/NEJMxbOyDrMo9jNMcPDjkSIokZnD+75miTgBfu15QMmmRDjB8SiNnfBhOMwbS4vclfk2fjf9IQYknnFLtyH70Tij+gZ6uM3JX/jAjTfPCoJA=="
 }

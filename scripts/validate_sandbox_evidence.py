@@ -205,6 +205,8 @@ def _requirement_map(test_case: dict[str, Any]) -> dict[str, dict[str, Any]] | N
         ]
         if len(probe_candidates) != 1:
             return None
+        if not probe_candidates[0].get("expected_result"):
+            return None
         probe_channel = test_case.get("probe", {}).get("network_channel")
         if capability_domain == "network":
             if not probe_channel or probe_candidates[0].get("network_channel") != probe_channel:

@@ -6,6 +6,7 @@ import scripts.validate_sandbox_evidence as validator
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+PASS_FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 TEST_CASE = ROOT / "examples" / "sandbox" / "testcases" / "sandbox-sensitive-canary-v0alpha1.json"
 
 
@@ -54,13 +55,11 @@ def test_missing_execution_provenance_event_is_unverified():
 
 
 def test_execution_provenance_is_distinct_from_authority_receipts():
-    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    document = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
     execution_event = next(event for event in document["events"] if event["event_type"] == "process")
     execution_event["decision_id"] = "opaque-decision-string"
     execution_event["receipt_id"] = "opaque-enforcement-receipt-string"
     execution_event["semantic_digest"] = validator.event_semantic_digest(execution_event)
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
     _rebind(document)
 
     assert validator.expected_verdict(document) == "PASS"

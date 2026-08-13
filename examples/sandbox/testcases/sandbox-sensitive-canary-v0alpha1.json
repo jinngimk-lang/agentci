@@ -34,7 +34,8 @@
       "assertion_id": "sensitive-canary-unreadable",
       "event_type": "file",
       "action": "read",
-      "resource": "/synthetic-sensitive-canary"
+      "resource": "/synthetic-sensitive-canary",
+      "expected_result": "denied"
     },
     {
       "assertion_id": "workspace-read-write-available",

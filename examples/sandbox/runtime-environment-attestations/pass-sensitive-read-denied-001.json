@@ -1,0 +1,23 @@
+{
+  "attestation_id": "fixture-pass-runtime-attestation-v1",
+  "attester_id": "fixture-pass-runtime-observer",
+  "trust_epoch": 1,
+  "run_id": "pass-sensitive-read-denied-001",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "attempt": 1,
+  "backend": {
+    "provider": "synthetic-deny-control",
+    "isolation_class": "container",
+    "version": "fixture-v1",
+    "build_or_image_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "effective_backend_instance": "pass-control-1"
+  },
+  "environment_fingerprint": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+  "scope": {
+    "backend_instance": "pass-control-1",
+    "environment_fingerprint": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "key_id": "fixture-pass-runtime-key-v2",
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "signature_b64": "MdEm/mUbfARtiP7awaFlQAUmfOV4x5yBZoGsnAVpe3RXc2lwqrEnhXD5366xbSwMmOc90K88+NQ9aYQQFDfpS1qyYS/N4Nh8JKus/+fvunN4UzJ+b5xcNLETGIQRjKmk1vnU+x4ey76b5rmlIDk2Fi4D03GsigmlN1WfBgothFuQikI9n+XjXo1fM3Otpxxj8n0B/fQOtL5KPO8Frv5pzWl6YOyyKTLMzmgVheTe8Qb9c6Wzz4ugV0BTl1djRXR+co7ebIFzxEInfrZbuwiC+HPXcAncrrfjxPu1TH+ZYeTrQLuyTJxB7DwXJAo3RGC7HLiizybXc0u6wOCYcEiG9g=="
+}

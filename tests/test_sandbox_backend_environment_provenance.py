@@ -10,7 +10,7 @@ from scripts.validate_sandbox_evidence import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-red-control-evidence.json"
+FIXTURE = ROOT / "examples" / "sandbox" / "v0alpha1-pass-evidence.json"
 
 
 def _rebind_all(document):
@@ -24,8 +24,6 @@ def _rebind_all(document):
 
 def _passing_fixture():
     document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    document["assertions"][0]["state"] = "PASS"
-    document["verdict"] = "PASS"
     _rebind_all(document)
     assert expected_verdict(document) == "PASS"
     return document
