@@ -15,6 +15,7 @@ try:
     from scripts.execution_attestation import execution_attestation_valid
 except ModuleNotFoundError:  # direct script execution from repository root
     from execution_attestation import execution_attestation_valid
+from scripts.runtime_environment_attestation import runtime_environment_attestation_valid
 
 CANONICALIZATION = "agentci-json-c14n-v0alpha1"
 VERDICT_RULE = "agentci-sandbox-atomic-v0alpha1"
@@ -210,6 +211,7 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
     if document.get("policy_history_digest") != policy_history_digest(document): errors.append("policy history digest mismatch")
     if document.get("authority_digest") != authority_binding_digest(document): errors.append("authority digest mismatch")
     errors.extend(_authority_expansion_errors(document))
+    if not runtime_environment_attestation_valid(document): errors.append("runtime/environment provenance is not independently bound to this execution")
     case_id = document.get("case_id"); test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
     if test_case is None: errors.append(f"case_id {case_id} does not resolve to one canonical TestCase")
     history = document.get("policy_history", []); epochs = [x.get("policy_epoch") for x in history]; dup_epochs = _duplicates(epochs)
@@ -258,6 +260,15 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
         if event.get("event_type") == "policy-attachment" and event.get("semantic_digest") == event_semantic_digest(event): attachment_events_by_digest.setdefault(event.get("semantic_digest"), []).append(event)
     attachments = document.get("policy_attachments", []); attachment_ids = [x.get("attachment_id") for x in attachments]; dup_attachments = _duplicates(attachment_ids)
     for x in sorted(dup_attachments): errors.append(f"duplicate attachment_id {x}")
+    effective_bindings = [
+        (attachment.get("workload_identity"), attachment.get("policy_epoch"))
+        for attachment in attachments
+        if attachment.get("state") == "effective"
+    ]
+    for workload_identity, policy_epoch in sorted(_duplicates(effective_bindings), key=lambda value: (str(value[0]), str(value[1]))):
+        errors.append(
+            f"multiple effective policy attachments for workload {workload_identity} and policy epoch {policy_epoch} are ambiguous"
+        )
     for attachment in attachments:
         aid, policy = attachment.get("attachment_id"), history_by_epoch.get(attachment.get("policy_epoch"))
         if policy is None: errors.append(f"attachment {aid} references unknown policy epoch"); continue
