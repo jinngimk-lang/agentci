@@ -47,11 +47,21 @@ jobs:
           /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" --json --print-digest > verify.json
           /tmp/agentci-venv/bin/python - <<'PY'
           import json
+          from pathlib import Path
+          import sys
+          from scripts import validate_sandbox_authority as authority_validator
+
           doctor = json.load(open('doctor.json', encoding='utf-8'))
           verify = json.load(open('verify.json', encoding='utf-8'))
+          resource_root = Path(sys.prefix) / 'share' / 'agentci' / 'sandbox'
+          lifecycle_sidecar = resource_root / 'lifecycle-attestations' / 'red-control-sensitive-read-001-11.json'
+          authority_schema = resource_root / 'authority-schema' / 'sandbox-authority-v0alpha1.schema.json'
           assert doctor['state'] in {'ready', 'not-ready'}
           assert verify['valid'] is True
           assert verify['recorded_verdict'] == verify['expected_verdict'] == 'FAIL'
           assert verify['certification_claim'] is False
           assert verify['artifact_digest'].startswith('sha256:')
+          assert lifecycle_sidecar.is_file()
+          assert authority_schema.is_file()
+          assert authority_validator.SCHEMA_PATH == authority_schema
           PY

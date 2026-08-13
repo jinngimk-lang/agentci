@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from scripts import execution_attestation as execution_attestation_module
+from scripts import lifecycle_attestation as lifecycle_attestation_module
 from scripts import runtime_environment_attestation as runtime_environment_attestation_module
 from scripts import validate_sandbox_evidence as validator
 
@@ -40,6 +41,7 @@ def _configure_canonical_resources() -> None:
     validator.SCHEMA_PATH = INSTALLED_ROOT / 'schema' / 'sandbox-certification-v0alpha1.schema.json'
     validator.TEST_CASE_DIR = INSTALLED_ROOT / 'testcases'
     execution_attestation_module.ATTESTATION_DIR = INSTALLED_ROOT / 'execution-attestations'
+    lifecycle_attestation_module.ATTESTATION_DIR = INSTALLED_ROOT / 'lifecycle-attestations'
     runtime_environment_attestation_module.ATTESTATION_DIR = INSTALLED_ROOT / 'runtime-environment-attestations'
     validator._schema_validator.cache_clear()
     validator._test_case_validator.cache_clear()
