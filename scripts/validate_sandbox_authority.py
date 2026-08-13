@@ -277,6 +277,14 @@ def validate(document: dict[str, Any]) -> list[str]:
                 errors.append(f"receipt {receipt_id} {field} does not match decision")
         if decision.get("effect") == "DENY" and receipt.get("result") == "enforced":
             errors.append(f"receipt {receipt_id} cannot report enforced for a DENY decision")
+        if decision.get("effect") == "PERMIT" and receipt.get("result") == "enforced":
+            enforced_at = _instant(receipt["enforced_at_utc"])
+            for grant_id in decision.get("grant_ids", []):
+                grant = grants_by_id.get(grant_id)
+                if grant is None:
+                    continue
+                if enforced_at < _instant(grant["not_before"]) or enforced_at >= _instant(grant["expires_at"]):
+                    errors.append(f"receipt {receipt_id} enforcement occurred outside active grant {grant_id} validity")
 
     for delta in document.get("privilege_deltas", []):
         eligible = delta.get("automatic_application_eligible", False)
