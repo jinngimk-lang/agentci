@@ -1,0 +1,128 @@
+name: Sandbox doctor real-host feedback
+description: Report reproducible pre-alpha sandbox doctor behavior from a real host
+labels: ["sandbox"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing AgentCI on a real host. This form collects reproducible readiness evidence without turning tool detection into a containment or security claim.
+
+        Please review and redact command output before posting. Do not include credentials, tokens, private paths, or other secrets.
+
+  - type: input
+    id: source_ref
+    attributes:
+      label: Exact AgentCI source / package reference
+      description: Commit SHA, tag, or exact package version that you installed.
+      placeholder: e.g. 0123456789abcdef... or agentci==0.x.y
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: e.g. Ubuntu 24.04, Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: e.g. 3.11.9
+    validations:
+      required: true
+
+  - type: input
+    id: backend
+    attributes:
+      label: Backend / tool and version
+      description: Docker, Podman, WSL, Windows Sandbox, bubblewrap, or another observed candidate. Use unknown when exact version is unavailable.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prior_usability
+    attributes:
+      label: Was that backend actually usable before this test?
+      options: ["yes", "no", "unknown"]
+    validations:
+      required: true
+
+  - type: textarea
+    id: install
+    attributes:
+      label: Clean install result
+      description: Include the install command and concise result. Redact sensitive paths or repository credentials.
+    validations:
+      required: true
+
+  - type: input
+    id: exit_code
+    attributes:
+      label: doctor exit code
+      placeholder: e.g. 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor_json
+    attributes:
+      label: doctor JSON
+      description: Paste the redacted output of `agentci sandbox doctor --json`. A zero exit code does not itself mean ready.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_observed
+    attributes:
+      label: Expected vs observed
+      description: State the concrete mismatch, or explain why the report matches the host's known state.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: unexpected_change
+    attributes:
+      label: Did the command start, create, or change anything unexpectedly?
+      options: ["no", "yes", "unknown"]
+    validations:
+      required: true
+
+  - type: textarea
+    id: friction
+    attributes:
+      label: First-run friction or unclear wording
+      description: Include the smallest reproduction when possible.
+
+  - type: textarea
+    id: route_probe
+    attributes:
+      label: Suggested safe route-proof probe (optional)
+      description: Suggest only bounded, non-destructive checks. Do not post escape payloads or secrets.
+
+  - type: input
+    id: artifact_ref
+    attributes:
+      label: Artifact / reproduction reference (optional)
+      description: Link to a public log, gist, workflow artifact, or reproduction branch if useful. Keep sensitive material out of public artifacts.
+
+  - type: dropdown
+    id: truth_boundary
+    attributes:
+      label: Truth-boundary acknowledgement
+      description: Tool/version detection and client health do not by themselves prove backend usability, containment, isolation, or security certification.
+      options:
+        - "I understand this report is readiness/feedback evidence only"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: retention
+    attributes:
+      label: May AgentCI retain this report as public project evidence?
+      options: ["yes", "no"]
+    validations:
+      required: true
