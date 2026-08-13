@@ -29,6 +29,21 @@
     "sensitive-canary-unreadable",
     "workspace-read-write-available"
   ],
+  "assertion_requirements": [
+    {
+      "assertion_id": "sensitive-canary-unreadable",
+      "event_type": "file",
+      "action": "read",
+      "resource": "/synthetic-sensitive-canary"
+    },
+    {
+      "assertion_id": "workspace-read-write-available",
+      "event_type": "utility",
+      "action": "read-write",
+      "resource": "/workspace",
+      "expected_result": "available"
+    }
+  ],
   "mandatory_telemetry_sources": [
     "fixture-file-observer",
     "fixture-policy-observer"

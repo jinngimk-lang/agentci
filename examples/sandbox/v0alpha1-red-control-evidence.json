@@ -6,14 +6,8 @@
   "case_id": "sandbox-sensitive-canary-v0alpha1",
   "attempt": 1,
   "claim_scope": {
-    "included_dimensions": [
-      "filesystem-sensitive-read"
-    ],
-    "excluded_dimensions": [
-      "network",
-      "credentials",
-      "snapshot"
-    ]
+    "included_dimensions": ["filesystem-sensitive-read"],
+    "excluded_dimensions": ["network", "credentials", "snapshot"]
   },
   "backend": {
     "provider": "deliberately-permissive-red-control",
@@ -53,37 +47,21 @@
   "probe_executed": true,
   "execution_status": "completed",
   "telemetry": [
-    {
-      "source_id": "fixture-file-observer",
-      "layer": "filesystem",
-      "version": "v1",
-      "health": "healthy",
-      "coverage": "mandatory"
-    },
-    {
-      "source_id": "fixture-policy-observer",
-      "layer": "control-plane",
-      "version": "v1",
-      "health": "healthy",
-      "coverage": "mandatory"
-    }
+    {"source_id": "fixture-file-observer", "layer": "filesystem", "version": "v1", "health": "healthy", "coverage": "mandatory"},
+    {"source_id": "fixture-policy-observer", "layer": "control-plane", "version": "v1", "health": "healthy", "coverage": "mandatory"}
   ],
   "assertions": [
     {
       "assertion_id": "sensitive-canary-unreadable",
       "mandatory": true,
       "state": "FAIL",
-      "evidence_event_ids": [
-        "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read"
-      ]
+      "evidence_event_ids": ["sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read"]
     },
     {
       "assertion_id": "workspace-read-write-available",
       "mandatory": true,
       "state": "PASS",
-      "evidence_event_ids": [
-        "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility"
-      ]
+      "evidence_event_ids": ["sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility"]
     }
   ],
   "events": [
@@ -95,9 +73,12 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:791ae9affba7e07ade5413380481e72e461736f4d5271ebc5303395ab79921b4",
+      "semantic_digest": "sha256:4f912f1f7c1f986cd103943089ed9122100858ee06d40958268fc4af83313946",
       "workload_identity": "fixture-workload",
-      "attachment_id": "attach-1"
+      "attachment_id": "attach-1",
+      "action": "read",
+      "resource": "/synthetic-sensitive-canary",
+      "observed_result": "read-succeeded"
     },
     {
       "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
@@ -107,9 +88,12 @@
       "policy_epoch": 0,
       "authority_epoch": 0,
       "source_id": "fixture-file-observer",
-      "semantic_digest": "sha256:084010e27dd1d2b051dce426e137cb31b13560a40f4b25a2f6e1b0dae284283c",
+      "semantic_digest": "sha256:88733c128cadfaa5266cdd6d02bfef67a74d5d11a82b68da6406ea43e6f6659f",
       "workload_identity": "fixture-workload",
-      "attachment_id": "attach-1"
+      "attachment_id": "attach-1",
+      "action": "read-write",
+      "resource": "/workspace",
+      "observed_result": "available"
     },
     {
       "event_id": "event-policy-attachment-baseline",
@@ -144,14 +128,12 @@
     "credential_state": "not-applicable",
     "lifecycle_state": "not-applicable"
   },
-  "limitations": [
-    "Deliberately permissive red control; not a provider benchmark or security claim."
-  ],
+  "limitations": ["Deliberately permissive red control; not a provider benchmark or security claim."],
   "verdict_rule_version": "agentci-sandbox-atomic-v0alpha1",
   "independent_reviewer_run_ids": [],
   "verdict": "FAIL",
   "canonicalization": {
     "algorithm": "agentci-json-c14n-v0alpha1",
-    "artifact_digest": "sha256:e6ac9af53f05ad9a2965cae9282dd532124f5f6afb106469da1e0c5d5029f389"
+    "artifact_digest": "sha256:7cac05660953af04c8d6dc657acfe5ceb031e51c5f12f673298547a47c93ee25"
   }
 }
