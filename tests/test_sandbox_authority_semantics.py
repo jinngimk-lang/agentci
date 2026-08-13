@@ -11,12 +11,12 @@ def _digest(char):
     return "sha256:" + char * 64
 
 
-def _attestation(principal_id, suffix):
+def _attestation(principal_id, suffix, *, tenant_id="tenant-1"):
     return {
         "attestation_id": f"att-{suffix}",
         "principal_type": "workload",
         "principal_id": principal_id,
-        "tenant_id": "tenant-1",
+        "tenant_id": tenant_id,
         "workload_id": principal_id,
         "session_id": f"session-{suffix}",
         "run_id": "run-1",
@@ -189,6 +189,44 @@ def test_delegation_cycle_without_root_authority_is_rejected(tmp_path):
         }
     )
     bundle["grants"].append(grant_2)
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_duplicate_root_identity_is_rejected(tmp_path):
+    bundle = _bundle()
+    duplicate_root = dict(bundle["trust_roots"][0])
+    duplicate_root.update({"trust_root_id": "root-2", "tenant_id": "tenant-2"})
+    bundle["trust_roots"].append(duplicate_root)
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_root_cannot_issue_cross_tenant_grant(tmp_path):
+    bundle = _bundle()
+    bundle["trust_roots"].append(
+        {
+            "trust_root_id": "root-2",
+            "tenant_id": "tenant-2",
+            "root_identity": "owner-key-2",
+            "baseline_digest": _digest("a"),
+            "authority_epoch": 7,
+        }
+    )
+    bundle["principal_attestations"][0]["tenant_id"] = "tenant-2"
+    bundle["grants"][0]["issuer_principal_id"] = "owner-key-1"
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_root_grant_authority_epoch_must_match_root(tmp_path):
+    bundle = _bundle()
+    bundle["grants"][0]["authority_epoch"] = 8
+    bundle["decisions"][0]["authority_epoch"] = 8
+    bundle["enforcement_receipts"][0]["authority_epoch"] = 8
+    assert _run(tmp_path, bundle).returncode != 0
+
+
+def test_grant_validity_must_fit_subject_attestation(tmp_path):
+    bundle = _bundle()
+    bundle["grants"][0]["expires_at"] = "2026-08-13T02:00:00Z"
     assert _run(tmp_path, bundle).returncode != 0
 
 
