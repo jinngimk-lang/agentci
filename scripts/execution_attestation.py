@@ -64,33 +64,30 @@ def _rsa_pkcs1v15_sha256_verify(message: bytes, signature_b64: Any, key: dict[st
     return encoded == expected
 
 
-def _observation_projection(event: dict[str, Any]) -> dict[str, Any] | None:
+def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
+    """Project only fields actually used to establish causal ordering.
+
+    Deliberately excludes Decision/EnforcementReceipt and other event payload
+    fields so execution provenance remains distinct from authority semantics.
+    """
     event_id = event.get("event_id")
     source_id = event.get("source_id")
-    semantic_digest = event.get("semantic_digest")
     occurred_at_utc = event.get("occurred_at_utc")
     monotonic_ns = event.get("monotonic_ns")
-    if not all(isinstance(value, str) and value for value in (event_id, source_id, semantic_digest, occurred_at_utc)):
+    if not all(isinstance(value, str) and value for value in (event_id, source_id, occurred_at_utc)):
         return None
     if not isinstance(monotonic_ns, int):
         return None
     return {
         "event_id": event_id,
         "source_id": source_id,
-        "semantic_digest": semantic_digest,
         "occurred_at_utc": occurred_at_utc,
         "monotonic_ns": monotonic_ns,
     }
 
 
 def _causal_assertion_observations(document: dict[str, Any], binding_id: str) -> list[dict[str, Any]] | None:
-    """Return assertion observations whose timing participates in PASS causality.
-
-    The validator requires mandatory PASS/FAIL assertion evidence to live under
-    the exact execution binding namespace. If temporal ordering is used as
-    proof, those right-hand observations must be authenticated by the same
-    external sidecar rather than merely rehashed by the envelope producer.
-    """
+    """Return assertion observations whose timing participates in PASS causality."""
     events_by_id = {
         event.get("event_id"): event
         for event in document.get("events", [])
@@ -107,7 +104,7 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
             event = events_by_id.get(event_id)
             if not isinstance(event, dict):
                 return None
-            projection = _observation_projection(event)
+            projection = _ordering_observation(event)
             if projection is None:
                 return None
             observations.append(projection)
@@ -119,11 +116,11 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
 def execution_attestation_valid(document: dict[str, Any], binding_id: str, source_id: Any) -> bool:
     """Verify one execution binding and all causal timing inputs externally.
 
-    The signed fixture sidecar authenticates both the execution/process
-    observation and every assertion-side observation whose temporal fields are
-    used by the validator for causal ordering. A non-empty signed clock-domain
-    label makes the comparison explicit. This is an S0 authenticity stand-in,
-    not provider-native runtime causation or production key custody.
+    The signed fixture sidecar authenticates the execution/process ordering
+    observation and every assertion-side ordering observation used by the
+    validator. A signed common clock-domain label makes comparability explicit.
+    This is an S0 authenticity stand-in, not provider-native runtime causation,
+    authority proof, anti-replay, or production key custody.
     """
     run_id = _safe_token(document.get("run_id"))
     case_id = _safe_token(document.get("case_id"))
@@ -139,7 +136,7 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
     ]
     if len(matching_events) != 1:
         return False
-    execution_observation = _observation_projection(matching_events[0])
+    execution_observation = _ordering_observation(matching_events[0])
     assertion_observations = _causal_assertion_observations(document, binding_id)
     if execution_observation is None or assertion_observations is None or not assertion_observations:
         return False
