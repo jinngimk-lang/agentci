@@ -154,3 +154,27 @@ def test_agents_route_category_reframing_strategy_skill():
         'observation != authority',
     ]:
         assert term in skill
+
+
+def test_public_surfaces_route_released_truth_bounded_sandbox_doctor():
+    readme = read('README.md').lower()
+    llms = read('llms.txt').lower()
+    skill = read('skills/agentci/SKILL.md').lower()
+    cli = read('src/agentci/cli.py').lower()
+
+    assert "subparsers.add_parser('sandbox'" in cli
+    assert "add_parser('doctor'" in cli
+
+    for surface in [readme, llms, skill]:
+        assert 'agentci sandbox doctor' in surface
+        assert 'readiness' in surface
+        assert 'not isolation proof' in surface or 'does not prove isolation' in surface
+        assert 'not security certification' in surface or 'does not prove security certification' in surface
+
+    assert 'current s0 integration pr: https://github.com/jinngimk-lang/agentci/pull/34' not in llms
+    assert 'current s0 integration pr #34' not in readme
+
+    # Public discovery may describe future concepts, but it must not present the
+    # unreleased certifier as a command users should invoke today.
+    for surface in [readme, llms, skill]:
+        assert '```bash\nagentci sandbox certify' not in surface
