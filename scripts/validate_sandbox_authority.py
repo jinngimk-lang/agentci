@@ -58,6 +58,26 @@ def _unique_index(items: list[dict[str, Any]], field: str, errors: list[str], la
     }
 
 
+def _validate_delegation_subset(grant: dict[str, Any], parent: dict[str, Any], errors: list[str]) -> None:
+    """Require a delegated child to be provably non-expanding.
+
+    v0alpha1 intentionally has no provider-specific resource hierarchy or
+    action lattice. Equality is therefore the only portable subset relation we
+    can prove for those dimensions; time and revocation may only narrow/freshen.
+    """
+    grant_id = grant.get("grant_id")
+    parent_id = parent.get("grant_id")
+    for field in ("action", "resource", "context_digest", "audience", "pep", "policy_digest", "authority_epoch"):
+        if grant.get(field) != parent.get(field):
+            errors.append(f"grant {grant_id} expands or changes parent {parent_id} {field}")
+    if grant.get("not_before") < parent.get("not_before"):
+        errors.append(f"grant {grant_id} starts before delegated parent {parent_id}")
+    if grant.get("expires_at") > parent.get("expires_at"):
+        errors.append(f"grant {grant_id} expires after delegated parent {parent_id}")
+    if grant.get("revocation_epoch") < parent.get("revocation_epoch"):
+        errors.append(f"grant {grant_id} weakens delegated parent {parent_id} revocation epoch")
+
+
 def validate(document: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     schema_errors = sorted(_schema_validator().iter_errors(document), key=lambda error: list(error.path))
@@ -89,7 +109,6 @@ def validate(document: dict[str, Any]) -> list[str]:
 
     root_identities = {item.get("root_identity") for item in roots if isinstance(item.get("root_identity"), str)}
     root_tenants = {item.get("tenant_id") for item in roots}
-    trusted_issuers = root_identities | set(attestations_by_principal)
 
     for attestation in attestations:
         if attestation.get("tenant_id") not in root_tenants:
@@ -101,13 +120,15 @@ def validate(document: dict[str, Any]) -> list[str]:
         grant_id = grant.get("grant_id")
         issuer = grant.get("issuer_principal_id")
         subject = grant.get("subject_principal_id")
-        if issuer not in trusted_issuers:
-            errors.append(f"grant {grant_id} issuer {issuer} is not a trusted root or attested principal")
+        parent_id = grant.get("parent_grant_id")
+
+        if issuer not in root_identities and issuer not in attestations_by_principal:
+            errors.append(f"grant {grant_id} issuer {issuer} is not a trusted root or uniquely attested principal")
         if subject not in attestations_by_principal:
             errors.append(f"grant {grant_id} subject {subject} does not resolve to one PrincipalAttestation")
         if grant.get("not_before") >= grant.get("expires_at"):
             errors.append(f"grant {grant_id} validity interval is invalid")
-        parent_id = grant.get("parent_grant_id")
+
         if parent_id is not None:
             parent = grants_by_id.get(parent_id)
             if parent is None:
@@ -116,6 +137,14 @@ def validate(document: dict[str, Any]) -> list[str]:
                 errors.append(f"grant {grant_id} parent {parent_id} does not permit delegation")
             elif parent.get("subject_principal_id") != issuer:
                 errors.append(f"grant {grant_id} issuer is not the delegated parent subject")
+            else:
+                _validate_delegation_subset(grant, parent, errors)
+
+        # PrincipalAttestation proves identity only. It does not authorize that
+        # principal to mint a CapabilityGrant. Non-root issuers must trace to an
+        # explicit parent grant that delegates a non-expanding authority slice.
+        if issuer not in root_identities and parent_id is None:
+            errors.append(f"grant {grant_id} non-root issuer {issuer} requires delegated parent authority")
 
     decision_keys: dict[tuple[Any, ...], str] = {}
     for decision in decisions:
