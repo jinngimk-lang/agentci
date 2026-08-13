@@ -8,7 +8,6 @@ import sys
 from .config import ConfigError
 from .runner import run_suite
 from .sandbox import collect_readiness_report
-from .sandbox.verification import verify_evidence_file
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +47,10 @@ def main(argv: list[str] | None = None) -> int:
                 _print_sandbox_doctor(report)
             return 0
         if args.command == 'sandbox' and args.sandbox_command == 'verify':
+            # Keep repository-only verifier dependencies off legacy `test` and
+            # readiness paths until the wheel-safe resource gate is satisfied.
+            from .sandbox.verification import verify_evidence_file
+
             result = verify_evidence_file(args.path, include_digest=args.print_digest)
             if args.json:
                 print(json.dumps(result.to_dict(), sort_keys=True))
