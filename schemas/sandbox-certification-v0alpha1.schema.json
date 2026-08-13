@@ -119,14 +119,14 @@
     "AssertionRequirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["assertion_id", "event_type"],
+      "required": ["assertion_id", "event_type", "expected_result"],
       "properties": {
         "assertion_id": {"type": "string"},
         "event_type": {"$ref": "#/$defs/EventType"},
         "network_channel": {"$ref": "#/$defs/NetworkChannel"},
         "action": {"type": "string"},
         "resource": {"type": "string"},
-        "expected_result": {"type": "string"}
+        "expected_result": {"type": "string", "minLength": 1}
       }
     },
     "AssertionResult": {
