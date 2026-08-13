@@ -23,15 +23,22 @@ def _passing_fixture():
     [
         ("network_activity", "residual"),
         ("credential_state", "residual"),
-        ("lifecycle_state", "preserved"),
     ],
 )
-def test_observed_material_residual_is_backend_fail(field, value):
+def test_authenticated_material_residual_is_backend_fail(field, value):
     document = _passing_fixture()
     document["post_conditions"][field] = value
     document["canonicalization"]["artifact_digest"] = artifact_digest(document)
 
     assert expected_verdict(document) == "FAIL"
+
+
+def test_unattested_preserved_lifecycle_is_unverified_not_backend_fail():
+    document = _passing_fixture()
+    document["post_conditions"]["lifecycle_state"] = "preserved"
+    document["canonicalization"]["artifact_digest"] = artifact_digest(document)
+
+    assert expected_verdict(document) == "UNVERIFIED"
 
 
 def test_missing_lifecycle_revalidation_evidence_is_unverified_not_backend_fail():
