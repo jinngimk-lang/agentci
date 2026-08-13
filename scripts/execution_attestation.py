@@ -1,9 +1,11 @@
 """S0 stand-in for authenticated runner/collector execution provenance.
 
 The EvidenceEnvelope is intentionally not the trust root. A signed sidecar is
-loaded from a separate channel and verified against a validator-pinned public
-key. This models the minimum authenticity property required by the S0 contract
-without claiming a released provider attestation service.
+loaded from a separate channel and verified against validator-pinned public
+material. The signature covers both causal ordering and the semantic digest of
+each signed event. This is fixture-grade S0 evidence, not provider-native
+attestation, authority proof, anti-replay infrastructure, or production key
+custody.
 """
 from __future__ import annotations
 
@@ -17,8 +19,6 @@ ROOT = Path(__file__).resolve().parents[1]
 ATTESTATION_DIR = ROOT / "examples" / "sandbox" / "execution-attestations"
 ALGORITHM = "rsa-pkcs1v15-sha256"
 
-# Public verification material only. Private signing keys are not stored in
-# this repository and are not derivable from EvidenceEnvelope fields.
 TRUSTED_RSA_KEYS = {
     "fixture-runner-key-v2": {
         "modulus_hex": "bfee16e846ba53691fe81c306df4faf3ef164db5d4798973336b09532d13c2bc8d1ee9337cc1fac88ad3287678b50f8b02538ab463e8ad1bd761c812b1f4664d169dbc7100c2149e45afa7d0a981f0cb6e306874cabe88129b60350f8bf14c64434c5ffb0892a395cc3f28483fe61aedf6a708007a842dc99656fb30c487e38e5a96b0a6ec806d09c8f76787768d26462545f0f2dd6461a8cb3c2f88a987f5fc3833bbaadf94e3e62796a08cd5211a56748eafc8e7b17fa898b00a302a62d9b53134ebb7f952d4851a6ee196ea55208b35615b339bd088603211fda294c0a69919e4bf5e3eb1021c7f85367ade7d82d66aedaabd4c09a631c087ba105f6766f7",
@@ -26,6 +26,10 @@ TRUSTED_RSA_KEYS = {
     },
     "fixture-runner-key-v3": {
         "modulus_hex": "ad1c7ce3739cf370e0b685742e68e296df726923211678b2e1abed997f671cb27028d01c2a0fd818038c816ac51c3bfbec229e45b4c98d1d5bea029bdf3946a3340e66e98fe065fb7970e16ba15caf670cc343f9faa8eaaf7b3f0dd388a564ba0bf3d674e99bc85138c734205e00cda39b07bb47ad5f4f1a5dffbf226177bd87a7aa42c639baa1397c40ee7279c0913c12ab1d640c2a3d76654e45ed48254a37547e01b75845d5873bd1f22ba3f23c5e4f37743e287710062991b3c9519b7f8abb257c953ac5e0ad87a82e4d1cb87a72f0765aa3c6324933f6059ab7499cd1d4eb1de377eafe636e84307c609edd13aabacca83c9d9065589c3538039011f2ef",
+        "exponent": 65537,
+    },
+    "fixture-runner-key-v4-semantic": {
+        "modulus_hex": "b70cec2e74d293add38b6b28b53a6001825a95e2c5f29e3b9c0e0ea2295a64e0a2bd6d4290d1fdac072adcc41fa5456d8701e8cdd881bd78047464a32b98f73a7f10cca08c1ad75819f03fbaeeb104a06d50b5b17c0c4a60610d4102bfc1c06d78e16242dac7bf4fe40cdcaafc2b771df9d74a26fee6f099c0beb3fb6a570e96cbcd5f6f98ea9c3d3cb5dd53eb999b875f834af35649dff2ec43638e301e8386755c765ab77337f6d4a4a923b49e835ea475cba9d4b0fe9043f7d95d4bf7b3d58dad9a8b36f239ff7861940b39555fc28ce8fe23071683b33b3455f74276926ef8444b8211bd22434f00ba643b100de0dc500fa324db2a84e6c36054731f34cb",
         "exponent": 65537,
     },
 }
@@ -65,16 +69,19 @@ def _rsa_pkcs1v15_sha256_verify(message: bytes, signature_b64: Any, key: dict[st
 
 
 def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
-    """Project only fields actually used to establish causal ordering.
+    """Project externally authenticated causal and semantic observation fields.
 
-    Deliberately excludes Decision/EnforcementReceipt and other event payload
-    fields so execution provenance remains distinct from authority semantics.
+    `semantic_digest` is recomputed independently by the EvidenceEnvelope
+    validator from the complete event payload. Signing that digest transitively
+    authenticates event type/channel/endpoint/action/resource/result and the
+    other event semantics without conflating them with authority decisions.
     """
     event_id = event.get("event_id")
     source_id = event.get("source_id")
     occurred_at_utc = event.get("occurred_at_utc")
     monotonic_ns = event.get("monotonic_ns")
-    if not all(isinstance(value, str) and value for value in (event_id, source_id, occurred_at_utc)):
+    semantic_digest = event.get("semantic_digest")
+    if not all(isinstance(value, str) and value for value in (event_id, source_id, occurred_at_utc, semantic_digest)):
         return None
     if not isinstance(monotonic_ns, int):
         return None
@@ -83,11 +90,11 @@ def _ordering_observation(event: dict[str, Any]) -> dict[str, Any] | None:
         "source_id": source_id,
         "occurred_at_utc": occurred_at_utc,
         "monotonic_ns": monotonic_ns,
+        "semantic_digest": semantic_digest,
     }
 
 
 def _causal_assertion_observations(document: dict[str, Any], binding_id: str) -> list[dict[str, Any]] | None:
-    """Return assertion observations whose timing participates in PASS causality."""
     events_by_id = {
         event.get("event_id"): event
         for event in document.get("events", [])
@@ -114,14 +121,7 @@ def _causal_assertion_observations(document: dict[str, Any], binding_id: str) ->
 
 
 def execution_attestation_valid(document: dict[str, Any], binding_id: str, source_id: Any) -> bool:
-    """Verify one execution binding and all causal timing inputs externally.
-
-    The signed fixture sidecar authenticates the execution/process ordering
-    observation and every assertion-side ordering observation used by the
-    validator. A signed common clock-domain label makes comparability explicit.
-    This is an S0 authenticity stand-in, not provider-native runtime causation,
-    authority proof, anti-replay, or production key custody.
-    """
+    """Verify one execution binding plus signed causal/semantic observations."""
     run_id = _safe_token(document.get("run_id"))
     case_id = _safe_token(document.get("case_id"))
     if run_id is None or case_id is None or not isinstance(source_id, str):
@@ -130,9 +130,7 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
     matching_events = [
         event
         for event in document.get("events", [])
-        if isinstance(event, dict)
-        and event.get("event_id") == binding_id
-        and event.get("source_id") == source_id
+        if isinstance(event, dict) and event.get("event_id") == binding_id and event.get("source_id") == source_id
     ]
     if len(matching_events) != 1:
         return False
