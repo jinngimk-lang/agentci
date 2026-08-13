@@ -62,6 +62,12 @@ def _rebind(document):
 def _passing_network_document(monkeypatch):
     test_case = _network_case()
     monkeypatch.setattr(validator, "_load_test_case", lambda _case_id: copy.deepcopy(test_case))
+    # Changing the canonical probe intentionally invalidates the separately
+    # authenticated execution receipt. Stub only that already-proven layer so
+    # this challenge reaches the typed-obligation gate; schema, source,
+    # attachment, runtime/environment and digest gates remain active.
+    monkeypatch.setattr(validator, "_execution_binding_errors", lambda *args, **kwargs: [])
+
     document = json.loads(FIXTURE.read_text(encoding="utf-8"))
     document["assertions"] = [
         {"assertion_id": "network-boundary", "mandatory": True, "state": "PASS", "evidence_event_ids": [document["events"][0]["event_id"]]},
