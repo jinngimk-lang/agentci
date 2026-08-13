@@ -224,6 +224,25 @@ Do not:
 
 Destructive sandbox-escape work belongs only in explicitly nested, disposable, bounded environments.
 
+## Growth Pack and publishing boundary
+
+AgentCI still preserves the V0 evidence-to-distribution loop. Canonical research/Growth Artifacts live under:
+
+```text
+.company/research/findings/<artifact-id>/
+  facts.json
+  evidence.md
+  sources.json
+```
+
+Validate one with `scripts/validate_growth_artifact.py`, then generate a draft **Growth Pack** with `scripts/generate_growth_pack.py` only when the evidence rules pass.
+
+The repository has **no built-in external social-posting API**. Publishing authorization and human/agent distribution boundaries remain documented in [`.company/growth/publishing-authorization.md`](.company/growth/publishing-authorization.md). Public numeric, performance, adoption, and security claims must remain traceable to canonical evidence.
+
+## GitHub governance
+
+Repository **branch protection** is authoritative. The rotating A–E workflow may decide and merge eligible exact heads under Owner authorization, but it must preserve separation of duties, passing CI, expected-head checks, and post-merge verification. Repository administration and secrets remain outside ordinary change-level authority.
+
 ## Repository architecture
 
 ```text
@@ -243,13 +262,4 @@ AGENTS.md                    project-wide agent/skill router
 
 ## Evidence and public claims
 
-Canonical public technical claims must trace to reproducible evidence. Research/Growth Artifacts use:
-
-```text
-.company/research/findings/<artifact-id>/
-  facts.json
-  evidence.md
-  sources.json
-```
-
-Recruitment and open research can begin early. Security/certification claims come late, after the corresponding evidence actually exists.
+Canonical public technical claims must trace to reproducible evidence. Recruitment and open research can begin early. Security/certification claims come late, after the corresponding evidence actually exists.
