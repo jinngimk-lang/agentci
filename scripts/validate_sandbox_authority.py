@@ -78,6 +78,37 @@ def _validate_delegation_subset(grant: dict[str, Any], parent: dict[str, Any], e
         errors.append(f"grant {grant_id} weakens delegated parent {parent_id} revocation epoch")
 
 
+def _validate_delegation_chain_to_root(
+    grant: dict[str, Any],
+    grants_by_id: dict[str, dict[str, Any]],
+    root_identities: set[str],
+    errors: list[str],
+) -> None:
+    """Reject cyclic or rootless delegation provenance.
+
+    Local parent consistency is insufficient: two attested principals must not
+    be able to bootstrap authority by mutually naming each other's grants.
+    """
+    origin_id = grant.get("grant_id")
+    current = grant
+    seen: set[str] = set()
+    while current.get("issuer_principal_id") not in root_identities:
+        current_id = current.get("grant_id")
+        if not isinstance(current_id, str):
+            return
+        if current_id in seen:
+            errors.append(f"grant {origin_id} delegation chain is cyclic and does not terminate at a TrustRoot")
+            return
+        seen.add(current_id)
+        parent_id = current.get("parent_grant_id")
+        if not isinstance(parent_id, str):
+            return
+        parent = grants_by_id.get(parent_id)
+        if parent is None:
+            return
+        current = parent
+
+
 def validate(document: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     schema_errors = sorted(_schema_validator().iter_errors(document), key=lambda error: list(error.path))
@@ -143,8 +174,11 @@ def validate(document: dict[str, Any]) -> list[str]:
         # PrincipalAttestation proves identity only. It does not authorize that
         # principal to mint a CapabilityGrant. Non-root issuers must trace to an
         # explicit parent grant that delegates a non-expanding authority slice.
-        if issuer not in root_identities and parent_id is None:
-            errors.append(f"grant {grant_id} non-root issuer {issuer} requires delegated parent authority")
+        if issuer not in root_identities:
+            if parent_id is None:
+                errors.append(f"grant {grant_id} non-root issuer {issuer} requires delegated parent authority")
+            else:
+                _validate_delegation_chain_to_root(grant, grants_by_id, root_identities, errors)
 
     decision_keys: dict[tuple[Any, ...], str] = {}
     for decision in decisions:
