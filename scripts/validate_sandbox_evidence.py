@@ -185,6 +185,8 @@ def _requirement_map(test_case: dict[str, Any]) -> dict[str, dict[str, Any]] | N
     mandatory_ids = set(test_case.get("mandatory_assertions", []))
     if set(ids) != mandatory_ids:
         return None
+    if any(not item.get("expected_result") for item in requirements):
+        return None
     by_id = {item["assertion_id"]: item for item in requirements}
     utility_ids = set(test_case.get("authorized_utility", []))
     for utility_id in utility_ids:
@@ -259,9 +261,6 @@ def _source_suitable_for_requirement(test_case: dict[str, Any], source: dict[str
         return False
     event_type = requirement.get("event_type")
     if event_type == "utility":
-        # Utility is intentionally a separate proof dimension.  It may be
-        # observed by workspace/filesystem/process instrumentation even when the
-        # security probe's capability domain is network or credential.
         return source.get("layer") in {"workspace", "filesystem", "process", test_case.get("capability_domain")}
     required_layers = EVENT_SOURCE_LAYERS.get(event_type)
     return required_layers is None or source.get("layer") in required_layers
@@ -309,7 +308,6 @@ def _residual_errors(document: dict[str, Any]) -> list[str]:
 
 
 def _authority_expansion_errors(document: dict[str, Any]) -> list[str]:
-    """Fail closed until expansion can bind to external authenticated authority."""
     gated = {"expansion", "lateral", "unknown"}
     errors = []
     for policy in document.get("policy_history", []):
@@ -674,9 +672,6 @@ def _evidence_errors(document: dict[str, Any]) -> list[str]:
                         f"mandatory PASS assertion {assertion_id} evidence event {event_id} fails typed canonical source suitability"
                     )
                 elif requirement is None or not _event_matches_requirement(event, requirement):
-                    # Extra events may accompany an assertion, but they do not
-                    # satisfy the typed claim and therefore cannot be used to
-                    # bypass the matching-event requirement above.
                     pass
 
                 epoch, workload, attachment_id = event.get("policy_epoch"), event.get("workload_identity"), event.get("attachment_id")
