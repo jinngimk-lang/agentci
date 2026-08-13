@@ -1,0 +1,157 @@
+{
+  "apiVersion": "agentci.dev/sandbox/v0alpha1",
+  "kind": "EvidenceEnvelope",
+  "schema_version": "v0alpha1",
+  "run_id": "red-control-sensitive-read-001",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "attempt": 1,
+  "claim_scope": {
+    "included_dimensions": [
+      "filesystem-sensitive-read"
+    ],
+    "excluded_dimensions": [
+      "network",
+      "credentials",
+      "snapshot"
+    ]
+  },
+  "backend": {
+    "provider": "deliberately-permissive-red-control",
+    "isolation_class": "container",
+    "version": "fixture-v1",
+    "build_or_image_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "adapter": "fixture",
+    "effective_backend_instance": "red-control-1"
+  },
+  "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "policy_history": [
+    {
+      "policy_epoch": 0,
+      "policy_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "authority_epoch": 0,
+      "effective_at_utc": "2026-08-11T03:00:00Z",
+      "effective_at_monotonic_ns": 1000,
+      "source_principal_id": "supervisor-fixture",
+      "delta_class": "no-op"
+    }
+  ],
+  "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
+  "authority_digest": "sha256:64279f6dbfee7dd887bf44105b89c8650f36c384424a91a82c5681d4512afa8d",
+  "policy_attachments": [
+    {
+      "attachment_id": "attach-1",
+      "workload_identity": "fixture-workload",
+      "selector_or_binding": "fixture-direct",
+      "policy_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "policy_epoch": 0,
+      "enforcer": "fixture-enforcer",
+      "state": "effective",
+      "evidence_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5"
+    }
+  ],
+  "lifecycle_continuity": [],
+  "probe_executed": true,
+  "execution_status": "completed",
+  "telemetry": [
+    {
+      "source_id": "fixture-file-observer",
+      "layer": "filesystem",
+      "version": "v1",
+      "health": "healthy",
+      "coverage": "mandatory"
+    },
+    {
+      "source_id": "fixture-policy-observer",
+      "layer": "control-plane",
+      "version": "v1",
+      "health": "healthy",
+      "coverage": "mandatory"
+    }
+  ],
+  "assertions": [
+    {
+      "assertion_id": "sensitive-canary-unreadable",
+      "mandatory": true,
+      "state": "FAIL",
+      "evidence_event_ids": [
+        "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read"
+      ]
+    },
+    {
+      "assertion_id": "workspace-read-write-available",
+      "mandatory": true,
+      "state": "PASS",
+      "evidence_event_ids": [
+        "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
+      "event_type": "file",
+      "occurred_at_utc": "2026-08-11T03:00:01Z",
+      "monotonic_ns": 2000,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-file-observer",
+      "semantic_digest": "sha256:791ae9affba7e07ade5413380481e72e461736f4d5271ebc5303395ab79921b4",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
+    },
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
+      "event_type": "utility",
+      "occurred_at_utc": "2026-08-11T03:00:01Z",
+      "monotonic_ns": 1900,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-file-observer",
+      "semantic_digest": "sha256:084010e27dd1d2b051dce426e137cb31b13560a40f4b25a2f6e1b0dae284283c",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
+    },
+    {
+      "event_id": "event-policy-attachment-baseline",
+      "event_type": "policy-attachment",
+      "occurred_at_utc": "2026-08-11T03:00:00Z",
+      "monotonic_ns": 1500,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-policy-observer",
+      "semantic_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
+    },
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+      "event_type": "process",
+      "occurred_at_utc": "2026-08-11T03:00:00.500000Z",
+      "monotonic_ns": 1600,
+      "policy_epoch": 0,
+      "authority_epoch": 0,
+      "source_id": "fixture-policy-observer",
+      "semantic_digest": "sha256:ca46918c2e18270ec212b32799326a34e11c8cda307238c282e30e0d0f4caa05",
+      "workload_identity": "fixture-workload",
+      "attachment_id": "attach-1"
+    }
+  ],
+  "post_conditions": {
+    "descendants": "clean",
+    "sockets": "clean",
+    "filesystem_residue": "clean",
+    "network_activity": "not-applicable",
+    "credential_state": "not-applicable",
+    "lifecycle_state": "not-applicable"
+  },
+  "limitations": [
+    "Deliberately permissive red control; not a provider benchmark or security claim."
+  ],
+  "verdict_rule_version": "agentci-sandbox-atomic-v0alpha1",
+  "independent_reviewer_run_ids": [],
+  "verdict": "FAIL",
+  "canonicalization": {
+    "algorithm": "agentci-json-c14n-v0alpha1",
+    "artifact_digest": "sha256:e6ac9af53f05ad9a2965cae9282dd532124f5f6afb106469da1e0c5d5029f389"
+  }
+}

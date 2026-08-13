@@ -7,7 +7,7 @@ name = "agentci-v0"
 version = "0.1.0"
 description = "Deterministic reliability checks for AI agent workflows"
 requires-python = ">=3.11"
-dependencies = ["PyYAML>=6.0"]
+dependencies = ["PyYAML>=6.0", "jsonschema[format]>=4.23"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
