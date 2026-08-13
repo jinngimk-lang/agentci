@@ -167,6 +167,31 @@ def test_delegated_child_cannot_expand_parent_semantics(tmp_path):
     assert _run(tmp_path, bundle).returncode != 0
 
 
+def test_delegation_cycle_without_root_authority_is_rejected(tmp_path):
+    bundle = _bundle()
+    bundle["principal_attestations"].append(_attestation("workload-2", 2))
+    grant_1 = bundle["grants"][0]
+    grant_1.update(
+        {
+            "issuer_principal_id": "workload-2",
+            "subject_principal_id": "workload-1",
+            "parent_grant_id": "grant-2",
+            "delegation_allowed": True,
+        }
+    )
+    grant_2 = dict(grant_1)
+    grant_2.update(
+        {
+            "grant_id": "grant-2",
+            "issuer_principal_id": "workload-1",
+            "subject_principal_id": "workload-2",
+            "parent_grant_id": "grant-1",
+        }
+    )
+    bundle["grants"].append(grant_2)
+    assert _run(tmp_path, bundle).returncode != 0
+
+
 def test_duplicate_typed_ids_are_rejected(tmp_path):
     bundle = _bundle()
     duplicate = dict(bundle["decisions"][0])
