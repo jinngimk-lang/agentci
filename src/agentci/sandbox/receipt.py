@@ -195,6 +195,14 @@ def _check_observer_event_set(ctx: dict[str, Any]) -> tuple[str, ...]:
     for observer in _ctx_observers(ctx):
         bindings = observer.get("event_bindings", [])
         source_id = observer.get("telemetry_source", {}).get("source_id")
+        known = {event.get("event_id") for event in ctx["document"].get("events", [])}
+        sources = {
+            source.get("source_id"): source for source in ctx["document"].get("telemetry", [])
+        }
+        if any(binding.get("event_id") not in known for binding in bindings):
+            continue
+        if observer.get("telemetry_source") != sources.get(source_id):
+            continue
         if observer.get("event_set_digest") != _digest(bindings):
             return ("E_RECEIPT_OBSERVER_EVENT_SET_MISMATCH",)
         if bindings != _expected_event_bindings(ctx["document"], source_id):
@@ -211,12 +219,19 @@ def _check_missing_observer(ctx: dict[str, Any]) -> tuple[str, ...]:
     actual = {
         observer.get("telemetry_source", {}).get("source_id") for observer in _ctx_observers(ctx)
     }
+    sources = {source.get("source_id"): source for source in ctx["document"].get("telemetry", [])}
+    if any(observer.get("telemetry_source") != sources.get(
+        observer.get("telemetry_source", {}).get("source_id")
+    ) for observer in _ctx_observers(ctx)):
+        return ()
     return ("E_RECEIPT_MISSING_OBSERVER_BINDING",) if required != actual else ()
 
 
 def _scope_checker(prefix: str, field: str, code: str) -> Callable[[dict[str, Any]], tuple[str, ...]]:
     def check(ctx: dict[str, Any]) -> tuple[str, ...]:
         values = _ctx_observers(ctx) if prefix == "OBSERVER" else [ctx.get("cleanup")]
+        if prefix == "CLEANUP" and not isinstance(ctx.get("cleanup"), dict):
+            return ()
         expected = _scope_expected(ctx["document"], ctx["test_case"])[field]
         return (code,) if any(not isinstance(value, dict) or value.get(field) != expected for value in values) else ()
 
@@ -234,6 +249,8 @@ def _check_observer_window_open(ctx: dict[str, Any]) -> tuple[str, ...]:
 def _check_observer_window_reversed(ctx: dict[str, Any]) -> tuple[str, ...]:
     for observer in _ctx_observers(ctx):
         window = observer.get("observation_window", {})
+        if window.get("closed_at_utc") is None or window.get("closed_at_monotonic_ns") is None:
+            continue
         opened = _instant(window.get("opened_at_utc"))
         closed = _instant(window.get("closed_at_utc"))
         if (
@@ -258,6 +275,16 @@ def _check_observer_window_coverage(ctx: dict[str, Any]) -> tuple[str, ...]:
         monos = [event.get("monotonic_ns") for event in bound_events]
         instants = [_instant(event.get("occurred_at_utc")) for event in bound_events]
         opened, closed = _instant(window.get("opened_at_utc")), _instant(window.get("closed_at_utc"))
+        if (
+            window.get("closed_at_utc") is None
+            or window.get("closed_at_monotonic_ns") is None
+            or opened is None
+            or closed is None
+            or closed < opened
+            or window.get("closed_at_monotonic_ns", -1)
+            < window.get("opened_at_monotonic_ns", 0)
+        ):
+            continue
         if bound_events and (
             window.get("opened_at_monotonic_ns") > min(monos)
             or window.get("closed_at_monotonic_ns") < max(monos)
@@ -292,6 +319,14 @@ def _check_cleanup_window_coverage(ctx: dict[str, Any]) -> tuple[str, ...]:
         return ()
     window = cleanup.get("observation_window", {})
     opened, closed = _instant(window.get("opened_at_utc")), _instant(window.get("closed_at_utc"))
+    if (
+        opened is None
+        or closed is None
+        or closed < opened
+        or window.get("closed_at_monotonic_ns", -1)
+        < window.get("opened_at_monotonic_ns", 0)
+    ):
+        return ()
     monos = [event.get("monotonic_ns") for event in events]
     instants = [_instant(event.get("occurred_at_utc")) for event in events]
     if (
@@ -320,12 +355,16 @@ def _check_missing_cleanup(ctx: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _check_cleanup_requirement(ctx: dict[str, Any]) -> tuple[str, ...]:
+    if not isinstance(ctx.get("cleanup"), dict):
+        return ()
     expected = {item.get("requirement_id") for item in ctx["test_case"].get("cleanup_requirements", [])}
     actual = {item.get("requirement_id") for item in (ctx.get("cleanup") or {}).get("requirement_results", [])}
     return ("E_RECEIPT_CLEANUP_REQUIREMENT_MISSING",) if expected != actual else ()
 
 
 def _check_cleanup_unknown(ctx: dict[str, Any]) -> tuple[str, ...]:
+    if not isinstance(ctx.get("cleanup"), dict):
+        return ()
     known = {
         event.get("event_id")
         for event in [
@@ -341,6 +380,8 @@ def _check_cleanup_unknown(ctx: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _check_cleanup_result_digest(ctx: dict[str, Any]) -> tuple[str, ...]:
+    if not isinstance(ctx.get("cleanup"), dict):
+        return ()
     for result in (ctx.get("cleanup") or {}).get("requirement_results", []):
         if result.get("result_set_digest") != _digest(result.get("event_ids", [])):
             return ("E_RECEIPT_CLEANUP_RESULT_SET_MISMATCH",)
@@ -348,10 +389,23 @@ def _check_cleanup_result_digest(ctx: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _check_cleanup_semantics(ctx: dict[str, Any]) -> tuple[str, ...]:
+    cleanup = ctx.get("cleanup")
+    if not isinstance(cleanup, dict):
+        return ()
+    expected_requirements = {
+        item.get("requirement_id") for item in ctx["test_case"].get("cleanup_requirements", [])
+    }
+    actual_requirements = {
+        item.get("requirement_id") for item in cleanup.get("requirement_results", [])
+    }
+    if expected_requirements != actual_requirements:
+        return ()
+    if _check_cleanup_unknown(ctx) or _check_cleanup_result_digest(ctx):
+        return ()
     evidence_events = [event for event in ctx["document"].get("events", []) if isinstance(event, dict)]
     signed_cleanup_events = [
         event
-        for event in (ctx.get("cleanup") or {}).get("cleanup_events", [])
+        for event in cleanup.get("cleanup_events", [])
         if isinstance(event, dict)
     ]
     events = {event.get("event_id"): event for event in [*evidence_events, *signed_cleanup_events]}
@@ -364,7 +418,7 @@ def _check_cleanup_semantics(ctx: dict[str, Any]) -> tuple[str, ...]:
         if isinstance(source, dict)
     }
     referenced: list[Any] = []
-    for result in (ctx.get("cleanup") or {}).get("requirement_results", []):
+    for result in cleanup.get("requirement_results", []):
         requirement = requirements.get(result.get("requirement_id"), {})
         for event_id in result.get("event_ids", []):
             referenced.append(event_id)
@@ -449,25 +503,11 @@ for _prefix, _fields in {
 
 
 def _first_check_error(ctx: dict[str, Any]) -> tuple[str, ...]:
-    # A monkeypatched registry entry is the private mutation-sensitivity seam.
-    # Production entries all live in this module and no public input can alter
-    # them; tests replace exactly one entry to prove target specificity.
-    replaced = [checker for checker in _CHECKS.values() if getattr(checker, "__module__", __name__) != __name__]
-    if replaced:
-        return tuple(replaced[0](ctx))
     for checker in _CHECKS.values():
         errors = checker(ctx)
         if errors:
             return tuple(errors)
     return ()
-
-
-def _counterfactual_active() -> bool:
-    return any(
-        getattr(checker, "__module__", __name__) != __name__
-        for checker in _CHECKS.values()
-    )
-
 
 def _signature_state(
     role: str,
@@ -547,20 +587,18 @@ def assemble_receipt(
         "observers": observer_attestations,
         "cleanup": cleanup_attestation,
     }
-    semantic_error = _first_check_error(ctx)
-    if semantic_error:
-        return ReceiptResult(True, False, semantic_error, None)
-    if _counterfactual_active():
-        return ReceiptResult(True, True, (), {})
+    # Absence has its own stable contract code. Present objects must then pass
+    # their strict machine schemas before signature verification or semantic
+    # arithmetic touches any nested value.
+    if cleanup_attestation is None:
+        return ReceiptResult(True, False, ("E_RECEIPT_MISSING_CLEANUP_BINDING",), None)
     if (
         any(not _receipt_object_valid(item, "ObserverAttestation") for item in observer_attestations)
         or not _receipt_object_valid(cleanup_attestation, "CleanupAttestation")
     ):
-        return ReceiptResult(True, False, ("E_RECEIPT_OBJECT_SCHEMA_INVALID",), None)
-    if trusted_cleanup_attesters is None and (
-        not cleanup_attestation.get("cleanup_events")
-        or not cleanup_attestation.get("observation_window")
-    ):
+        open_window = _check_observer_window_open(ctx)
+        if open_window:
+            return ReceiptResult(True, False, open_window, None)
         return ReceiptResult(True, False, ("E_RECEIPT_OBJECT_SCHEMA_INVALID",), None)
     observer_policy = TRUSTED_OBSERVERS if trusted_observers is None else trusted_observers
     cleanup_policy = TRUSTED_CLEANUP_ATTESTERS if trusted_cleanup_attesters is None else trusted_cleanup_attesters
@@ -568,6 +606,9 @@ def assemble_receipt(
         return ReceiptResult(True, False, ("E_RECEIPT_UNTRUSTED_ATTESTER",), None)
     if cleanup_attestation is None or _cleanup_trust(cleanup_attestation, cleanup_policy) is None:
         return ReceiptResult(True, False, ("E_RECEIPT_UNTRUSTED_ATTESTER",), None)
+    semantic_error = _first_check_error(ctx)
+    if semantic_error:
+        return ReceiptResult(True, False, semantic_error, None)
     runtime_keys = _default_runtime_keys()
     execution_keys = execution_module.TRUSTED_RSA_KEYS
     contents: list[tuple[str, dict[str, Any]]] = [
@@ -675,6 +716,17 @@ def validate_receipt_manifest(
     derived = [{key: value for key, value in item.items() if key != "content"} for item in artifacts]
     if inventory != derived:
         return ReplayResult(False, ("E_RECEIPT_INVENTORY_DIGEST_MISMATCH",))
+    by_role = {item["role"]: item["content"] for item in artifacts}
+    if (
+        not _receipt_object_valid(manifest, "EvidenceVerificationReceiptManifest")
+        or any(
+            not _receipt_object_valid(item["content"], "ObserverAttestation")
+            for item in artifacts
+            if item.get("role", "").startswith("observer:")
+        )
+        or not _receipt_object_valid(by_role["cleanup"], "CleanupAttestation")
+    ):
+        return ReplayResult(False, ("E_RECEIPT_OBJECT_SCHEMA_INVALID",))
     observers = TRUSTED_OBSERVERS if _trusted_observers is None else _trusted_observers
     cleanup = TRUSTED_CLEANUP_ATTESTERS if _trusted_cleanup is None else _trusted_cleanup
     runtime_keys = _default_runtime_keys() if _runtime_keys is None else _runtime_keys
@@ -697,22 +749,6 @@ def validate_receipt_manifest(
                 return ReplayResult(False, ("E_RECEIPT_UNTRUSTED_ATTESTER",))
         if item.get("signature_verified") is not signature_state:
             return ReplayResult(False, ("E_RECEIPT_INVENTORY_DIGEST_MISMATCH",))
-    by_role = {item["role"]: item["content"] for item in artifacts}
-    if _trusted_cleanup is None and (
-        not by_role["cleanup"].get("cleanup_events")
-        or not by_role["cleanup"].get("observation_window")
-    ):
-        return ReplayResult(False, ("E_RECEIPT_MANIFEST_INVALID",))
-    if (
-        not _receipt_object_valid(manifest, "EvidenceVerificationReceiptManifest")
-        or any(
-            not _receipt_object_valid(item["content"], "ObserverAttestation")
-            for item in artifacts
-            if item.get("role", "").startswith("observer:")
-        )
-        or not _receipt_object_valid(by_role["cleanup"], "CleanupAttestation")
-    ):
-        return ReplayResult(False, ("E_RECEIPT_MANIFEST_INVALID",))
     schema_document = by_role["schema"]
     test_case = by_role["test_case"]
     try:

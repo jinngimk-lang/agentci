@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from datetime import datetime
 import json
 from pathlib import Path
 
@@ -24,43 +23,6 @@ from tests.test_sandbox_receipt_contract_red import (
 
 def _sidecar_event_bundle():
     document, bundle = _complete_bundle(PASS_EVIDENCE)
-    cleanup_events = [event for event in document["events"] if event["event_type"] == "cleanup"]
-    document["events"] = [event for event in document["events"] if event["event_type"] != "cleanup"]
-    document["authority_digest"] = evidence_validator.authority_binding_digest(document)
-    document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
-
-    for observer in bundle["observer_attestations"]:
-        source_id = observer["telemetry_source"]["source_id"]
-        events = [event for event in document["events"] if event["source_id"] == source_id]
-        ordered_by_utc = sorted(
-            events,
-            key=lambda event: datetime.fromisoformat(event["occurred_at_utc"].replace("Z", "+00:00")),
-        )
-        observer["event_bindings"] = sorted(
-            (
-                {"event_id": event["event_id"], "semantic_digest": event["semantic_digest"]}
-                for event in events
-            ),
-            key=lambda item: item["event_id"],
-        )
-        observer["event_set_digest"] = _digest(observer["event_bindings"])
-        observer["observation_window"] = {
-            "opened_at_utc": ordered_by_utc[0]["occurred_at_utc"],
-            "opened_at_monotonic_ns": min(event["monotonic_ns"] for event in events),
-            "closed_at_utc": ordered_by_utc[-1]["occurred_at_utc"],
-            "closed_at_monotonic_ns": max(event["monotonic_ns"] for event in events),
-        }
-        observer.update(_resign(observer, bundle["_observer_private"]))
-    bundle["cleanup_attestation"]["cleanup_events"] = cleanup_events
-    bundle["cleanup_attestation"]["observation_window"] = {
-        "opened_at_utc": min(event["occurred_at_utc"] for event in cleanup_events),
-        "opened_at_monotonic_ns": min(event["monotonic_ns"] for event in cleanup_events),
-        "closed_at_utc": max(event["occurred_at_utc"] for event in cleanup_events),
-        "closed_at_monotonic_ns": max(event["monotonic_ns"] for event in cleanup_events),
-    }
-    bundle["cleanup_attestation"] = _resign(
-        bundle["cleanup_attestation"], bundle["_cleanup_private"]
-    )
     assert _assemble(document, bundle).receipt_valid is True
     return document, bundle
 
@@ -195,7 +157,7 @@ def test_public_receipt_objects_have_strict_machine_schema():
     schema_path = root / "schemas" / "sandbox-receipt-v0alpha1.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
-    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    document, bundle = _sidecar_event_bundle()
     manifest = _success(document, bundle).manifest
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     objects = [*bundle["observer_attestations"], bundle["cleanup_attestation"], manifest]
@@ -204,3 +166,21 @@ def test_public_receipt_objects_have_strict_machine_schema():
         attacked = copy.deepcopy(value)
         attacked["unexpected_contract_field"] = True
         assert list(validator.iter_errors(attacked)), value["kind"]
+
+
+@pytest.mark.parametrize("field", ["cleanup_events", "observation_window"])
+def test_cleanup_attestation_schema_requires_signed_events_and_closed_window(field: str):
+    root = Path(__file__).resolve().parents[1]
+    schema = json.loads(
+        (root / "schemas" / "sandbox-receipt-v0alpha1.schema.json").read_text(encoding="utf-8")
+    )
+    target = {
+        "$schema": schema["$schema"],
+        "$defs": schema["$defs"],
+        "$ref": "#/$defs/CleanupAttestation",
+    }
+    _document, bundle = _sidecar_event_bundle()
+    attacked = copy.deepcopy(bundle["cleanup_attestation"])
+    attacked.pop(field)
+
+    assert list(Draft202012Validator(target, format_checker=FormatChecker()).iter_errors(attacked))

@@ -240,9 +240,15 @@ def _inventory_item(role: str, artifact: dict[str, Any], *, content: bytes | Non
 def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     document = json.loads(evidence_path.read_text(encoding="utf-8"))
     test_case = _typed_test_case()
-    _add_cleanup_events(document, test_case)
     document["authority_digest"] = evidence_validator.authority_binding_digest(document)
     document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
+    cleanup_document = copy.deepcopy(document)
+    _add_cleanup_events(cleanup_document, test_case)
+    cleanup_events = [
+        copy.deepcopy(event)
+        for event in cleanup_document["events"]
+        if event["event_type"] == "cleanup"
+    ]
     observer_public, observer_private = _keypair()
     cleanup_public, cleanup_private = _keypair()
     observers = [
@@ -250,7 +256,17 @@ def _complete_bundle(evidence_path: Path) -> tuple[dict[str, Any], dict[str, Any
         for source in document["telemetry"]
         if source["coverage"] == "mandatory"
     ]
-    cleanup = _sign(_cleanup_projection(document, test_case), cleanup_private)
+    cleanup_payload = _cleanup_projection(cleanup_document, test_case)
+    cleanup_payload["evidence_artifact_digest"] = evidence_validator.artifact_digest(document)
+    cleanup_payload["authority_digest"] = document["authority_digest"]
+    cleanup_payload["cleanup_events"] = cleanup_events
+    cleanup_payload["observation_window"] = {
+        "opened_at_utc": min(event["occurred_at_utc"] for event in cleanup_events),
+        "opened_at_monotonic_ns": min(event["monotonic_ns"] for event in cleanup_events),
+        "closed_at_utc": max(event["occurred_at_utc"] for event in cleanup_events),
+        "closed_at_monotonic_ns": max(event["monotonic_ns"] for event in cleanup_events),
+    }
+    cleanup = _sign(cleanup_payload, cleanup_private)
     runtime = json.loads((RUNTIME_DIR / f"{document['run_id']}.json").read_text(encoding="utf-8"))
     execution = json.loads((EXECUTION_DIR / f"{document['run_id']}.json").read_text(encoding="utf-8"))
     bundle = {
@@ -329,6 +345,20 @@ def _replay(manifest: dict[str, Any], bundle: dict[str, Any]):
     )
 
 
+def _rebind_evidence_scope(document: dict[str, Any], bundle: dict[str, Any]) -> None:
+    expected = {
+        "evidence_artifact_digest": evidence_validator.artifact_digest(document),
+        "authority_digest": document["authority_digest"],
+    }
+    for observer in bundle["observer_attestations"]:
+        observer.update(expected)
+        observer.update(_resign(observer, bundle["_observer_private"]))
+    bundle["cleanup_attestation"].update(expected)
+    bundle["cleanup_attestation"] = _resign(
+        bundle["cleanup_attestation"], bundle["_cleanup_private"]
+    )
+
+
 def _success(document: dict[str, Any], bundle: dict[str, Any]):
     result = _assemble(document, bundle)
     assert result.evidence_valid is True
@@ -370,14 +400,18 @@ def _attack(
     assert result.manifest is None
     from agentci.sandbox import receipt as receipt_module
 
-    # Negative control on the identical mutation. This private registry is a
-    # test seam only: assemble_receipt, CLI flags, and artifacts expose no bypass.
-    with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setitem(receipt_module._CHECKS, code, lambda *_args, **_kwargs: ())
-        counterfactual = _assemble(attacked_document, attacked_bundle)
-        assert counterfactual.evidence_valid is True
-        assert counterfactual.receipt_valid is True
-        assert counterfactual.error_codes == ()
+    context = {
+        "document": attacked_document,
+        "test_case": attacked_bundle["test_case"],
+        "observers": attacked_bundle["observer_attestations"],
+        "cleanup": attacked_bundle["cleanup_attestation"],
+    }
+    for checker_code, checker in receipt_module._CHECKS.items():
+        observed = tuple(checker(context))
+        if checker_code == code:
+            assert observed == (code,)
+        else:
+            assert observed == (), f"{checker_code} also matched target mutation {code}"
 
 
 def test_canonical_test_case_schema_accepts_typed_cleanup_requirements():
@@ -386,9 +420,12 @@ def test_canonical_test_case_schema_accepts_typed_cleanup_requirements():
 
 
 def test_public_assembly_signature_exposes_no_check_bypass():
+    from agentci.sandbox import receipt as receipt_module
     from agentci.sandbox.receipt import assemble_receipt
 
     assert "_disabled_check" not in inspect.signature(assemble_receipt).parameters
+    assert not hasattr(receipt_module, "_counterfactual_active")
+    assert "__module__" not in inspect.getsource(receipt_module._first_check_error)
 
 
 def test_complete_pass_bundle_assembles_literal_content_addressed_manifest():
@@ -412,13 +449,14 @@ def test_duplicate_observer_is_rejected():
 
 
 def test_event_addition_outside_signed_event_set_is_rejected():
-    def mutate(document, _bundle):
+    def mutate(document, bundle):
         event = copy.deepcopy(document["events"][0])
         event["event_id"] += "-added"
         event["semantic_digest"] = evidence_validator.event_semantic_digest(event)
         document["events"].append(event)
         document["authority_digest"] = evidence_validator.authority_binding_digest(document)
         document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
+        _rebind_evidence_scope(document, bundle)
         assert evidence_validator.validate(document) == []
 
     _attack("E_RECEIPT_OBSERVER_EVENT_SET_MISMATCH", mutate)
@@ -535,6 +573,7 @@ def test_in_scope_not_applicable_cleanup_state_is_rejected():
     def mutate(document, bundle):
         document["post_conditions"]["descendants"] = "not-applicable"
         document["canonicalization"]["artifact_digest"] = evidence_validator.artifact_digest(document)
+        _rebind_evidence_scope(document, bundle)
         result = bundle["cleanup_attestation"]["requirement_results"][0]
         result["state"] = "not-applicable"
         bundle["cleanup_attestation"] = _resign(result and bundle["cleanup_attestation"], bundle["_cleanup_private"])

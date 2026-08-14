@@ -107,7 +107,7 @@
     "CleanupAttestation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["apiVersion", "kind", "attester_id", "trust_epoch", "run_id", "case_id", "attempt", "evidence_artifact_digest", "test_case_digest", "backend_instance", "environment_fingerprint", "policy_history_digest", "authority_digest", "requirement_results", "key_id", "algorithm", "signature_b64"],
+      "required": ["apiVersion", "kind", "attester_id", "trust_epoch", "run_id", "case_id", "attempt", "evidence_artifact_digest", "test_case_digest", "backend_instance", "environment_fingerprint", "policy_history_digest", "authority_digest", "requirement_results", "cleanup_events", "observation_window", "key_id", "algorithm", "signature_b64"],
       "properties": {
         "apiVersion": {"const": "agentci.dev/sandbox-cleanup-attestation/v0alpha1"},
         "kind": {"const": "CleanupAttestation"},
