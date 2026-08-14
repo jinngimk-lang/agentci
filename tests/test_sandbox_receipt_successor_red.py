@@ -18,11 +18,48 @@ from tests.test_sandbox_receipt_contract_red import (
     _inventory_item,
     _manifest_digest,
     _replay,
+    _resign,
     _success,
 )
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize("window", ["bad", 7, [], None])
+def test_assembly_rejects_non_object_observer_window_as_object_schema(window):
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    observer = bundle["observer_attestations"][0]
+    observer["observation_window"] = window
+    bundle["observer_attestations"][0] = _resign(observer, bundle["_observer_private"])
+
+    result = _assemble(document, bundle)
+
+    assert result.evidence_valid is True
+    assert result.receipt_valid is False
+    assert result.error_codes == ("E_RECEIPT_OBJECT_SCHEMA_INVALID",)
+    assert result.manifest is None
+
+
+@pytest.mark.parametrize("mutation", ["missing", "null"])
+def test_assembly_preserves_open_window_code_for_object_windows(mutation: str):
+    document, bundle = _complete_bundle(PASS_EVIDENCE)
+    observer = bundle["observer_attestations"][0]
+    window = observer["observation_window"]
+    if mutation == "missing":
+        window.pop("closed_at_utc")
+        window.pop("closed_at_monotonic_ns")
+    else:
+        window["closed_at_utc"] = None
+        window["closed_at_monotonic_ns"] = None
+    bundle["observer_attestations"][0] = _resign(observer, bundle["_observer_private"])
+
+    result = _assemble(document, bundle)
+
+    assert result.evidence_valid is True
+    assert result.receipt_valid is False
+    assert result.error_codes == ("E_RECEIPT_OBSERVER_WINDOW_OPEN",)
+    assert result.manifest is None
 
 
 @pytest.mark.parametrize("mutation", ["monotonic_ns", "signature_shape"])

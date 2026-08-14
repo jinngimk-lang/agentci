@@ -241,6 +241,8 @@ def _scope_checker(prefix: str, field: str, code: str) -> Callable[[dict[str, An
 def _check_observer_window_open(ctx: dict[str, Any]) -> tuple[str, ...]:
     for observer in _ctx_observers(ctx):
         window = observer.get("observation_window", {})
+        if not isinstance(window, dict):
+            continue
         if window.get("closed_at_utc") is None or window.get("closed_at_monotonic_ns") is None:
             return ("E_RECEIPT_OBSERVER_WINDOW_OPEN",)
     return ()
