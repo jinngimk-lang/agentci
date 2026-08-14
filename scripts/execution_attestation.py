@@ -181,6 +181,35 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
         return False
     if not isinstance(attestation, dict):
         return False
+
+    return execution_attestation_valid_value(document, binding_id, source_id, attestation)
+
+
+def execution_attestation_valid_value(
+    document: dict[str, Any],
+    binding_id: str,
+    source_id: Any,
+    attestation: dict[str, Any],
+    trusted_keys: dict[str, dict[str, Any]] | None = None,
+) -> bool:
+    """Verify an embedded sidecar against exact causal observations."""
+    run_id = _safe_token(document.get("run_id"))
+    case_id = _safe_token(document.get("case_id"))
+    if run_id is None or case_id is None or not isinstance(source_id, str) or not isinstance(attestation, dict):
+        return False
+    matching_events = [
+        event
+        for event in document.get("events", [])
+        if isinstance(event, dict)
+        and event.get("event_id") == binding_id
+        and event.get("source_id") == source_id
+    ]
+    if len(matching_events) != 1:
+        return False
+    execution_observation = _ordering_observation(matching_events[0])
+    assertion_observations = _causal_assertion_observations(document, binding_id)
+    if execution_observation is None or assertion_observations is None or not assertion_observations:
+        return False
     clock_domain = attestation.get("clock_domain")
     if not isinstance(clock_domain, str) or not clock_domain:
         return False
@@ -202,7 +231,7 @@ def execution_attestation_valid(document: dict[str, Any], binding_id: str, sourc
             return False
     if attestation.get("algorithm") != ALGORITHM:
         return False
-    key = TRUSTED_RSA_KEYS.get(attestation.get("key_id"))
+    key = (TRUSTED_RSA_KEYS if trusted_keys is None else trusted_keys).get(attestation.get("key_id"))
     if key is None:
         return False
     return _rsa_pkcs1v15_sha256_verify(_canonical_bytes(payload), attestation.get("signature_b64"), key)

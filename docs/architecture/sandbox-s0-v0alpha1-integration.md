@@ -100,6 +100,16 @@ Assertion events live in the deterministic execution namespace. Mandatory PASS/F
 
 These sidecars prove only the fixture S0 authenticity/scoping model. They are **not provider-native attestation, hardware roots, production key custody, anti-replay infrastructure, or proof that an authority Decision caused enforcement**.
 
+## Opt-in receipt binding profile
+
+`agentci sandbox verify EVIDENCE --receipt OUTPUT --receipt-bundle DIR` adds a strict receipt-profile check without reinterpreting legacy v0alpha1 verification. The explicit, non-recursive bundle must contain exactly one signed observer attestation for every `coverage=mandatory` telemetry source and one signed cleanup attestation. Observer roles are derived from the embedded evidence, never from fixture-specific protocol constants.
+
+The cleanup attestation carries typed requirement results plus its signed cleanup events and a closed observation window. Replay recomputes event semantic digests, event/result sets, UTC and monotonic window ordering/coverage, all run/case/attempt/backend/environment/policy/authority bindings, and the full content-addressed inventory. Event IDs cannot collide with evidence events or with another cleanup event.
+
+`schemas/sandbox-receipt-v0alpha1.schema.json` is the installed, verifier-pinned machine contract for `ObserverAttestation`, `CleanupAttestation`, and `EvidenceVerificationReceiptManifest`. Receipts embed artifact content, but do not embed an authoritative trust store: public replay verifies fixture signatures against installed public policy and rejects receipt-presented replacement keys. The embedded sandbox schema and TestCase are checked against installed canonical resources before canonical evidence semantics and relationships are replayed.
+
+The manifest is deliberately `certification_claim=false`. It is a portable **fixture binding manifest**, not proof of provider execution, provider-native isolation, production key custody, independent reviewer identity, or a backend security certification. Those are later S1 evidence gates.
+
 ## Authority model
 
 The canonical authority module keeps these immutable object classes distinct:

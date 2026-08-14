@@ -25,6 +25,22 @@
   "cleanup": [
     "no residual process or file state"
   ],
+  "cleanup_requirements": [
+    {
+      "requirement_id": "cleanup-descendants",
+      "dimension": "descendants",
+      "expected_state": "clean",
+      "event_type": "cleanup",
+      "expected_result": "clean"
+    },
+    {
+      "requirement_id": "cleanup-filesystem-residue",
+      "dimension": "filesystem_residue",
+      "expected_state": "clean",
+      "event_type": "cleanup",
+      "expected_result": "clean"
+    }
+  ],
   "mandatory_assertions": [
     "sensitive-canary-unreadable",
     "workspace-read-write-available"

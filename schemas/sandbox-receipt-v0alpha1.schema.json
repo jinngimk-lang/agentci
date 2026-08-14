@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentci.dev/schemas/sandbox-receipt-v0alpha1.schema.json",
+  "title": "AgentCI Sandbox Receipt Profile v0alpha1",
+  "description": "Strict fixture observer, cleanup, and verification-receipt objects; not a provider proof or certification.",
+  "oneOf": [
+    {"$ref": "#/$defs/ObserverAttestation"},
+    {"$ref": "#/$defs/CleanupAttestation"},
+    {"$ref": "#/$defs/EvidenceVerificationReceiptManifest"}
+  ],
+  "$defs": {
+    "Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "Signature": {"type": "string", "pattern": "^[A-Za-z0-9+/]+={0,2}$"},
+    "TelemetrySource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "layer", "version", "health", "coverage"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "layer": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "health": {"enum": ["healthy", "degraded", "failed", "unverified"]},
+        "coverage": {"enum": ["mandatory", "optional", "unavailable"]},
+        "observer_locus": {"enum": ["workload", "runtime", "host", "control-plane", "external", "unverified"]},
+        "trust_class": {"enum": ["producer-local", "independently-authenticated", "provider-native", "unverified"]}
+      }
+    },
+    "ObservationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opened_at_utc", "opened_at_monotonic_ns", "closed_at_utc", "closed_at_monotonic_ns"],
+      "properties": {
+        "opened_at_utc": {"type": "string", "format": "date-time"},
+        "opened_at_monotonic_ns": {"type": "integer", "minimum": 0},
+        "closed_at_utc": {"type": "string", "format": "date-time"},
+        "closed_at_monotonic_ns": {"type": "integer", "minimum": 0}
+      }
+    },
+    "EventBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "semantic_digest"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "semantic_digest": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "CleanupEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_type", "occurred_at_utc", "monotonic_ns", "policy_epoch", "authority_epoch", "source_id", "semantic_digest", "workload_identity", "attachment_id", "action", "resource", "observed_result"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "event_type": {"const": "cleanup"},
+        "occurred_at_utc": {"type": "string", "format": "date-time"},
+        "monotonic_ns": {"type": "integer", "minimum": 0},
+        "policy_epoch": {"type": "integer", "minimum": 0},
+        "authority_epoch": {"type": "integer", "minimum": 0},
+        "source_id": {"type": "string", "minLength": 1},
+        "semantic_digest": {"$ref": "#/$defs/Digest"},
+        "workload_identity": {"type": "string", "minLength": 1},
+        "attachment_id": {"type": "string", "minLength": 1},
+        "action": {"const": "verify-cleanup"},
+        "resource": {"enum": ["descendants", "filesystem_residue"]},
+        "observed_result": {"const": "clean"}
+      }
+    },
+    "RequirementResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "dimension", "state", "event_ids", "result_set_digest"],
+      "properties": {
+        "requirement_id": {"type": "string", "minLength": 1},
+        "dimension": {"enum": ["descendants", "filesystem_residue"]},
+        "state": {"enum": ["clean", "residual", "unverified", "not-applicable"]},
+        "event_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+        "result_set_digest": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "ObserverAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "attester_id", "trust_epoch", "run_id", "case_id", "attempt", "evidence_artifact_digest", "test_case_digest", "backend_instance", "environment_fingerprint", "policy_history_digest", "authority_digest", "telemetry_source", "observation_window", "event_bindings", "event_set_digest", "key_id", "algorithm", "signature_b64"],
+      "properties": {
+        "apiVersion": {"const": "agentci.dev/sandbox-observer-attestation/v0alpha1"},
+        "kind": {"const": "ObserverAttestation"},
+        "attester_id": {"type": "string", "minLength": 1},
+        "trust_epoch": {"type": "integer", "minimum": 0},
+        "run_id": {"type": "string", "minLength": 1},
+        "case_id": {"type": "string", "minLength": 1},
+        "attempt": {"type": "integer", "minimum": 1},
+        "evidence_artifact_digest": {"$ref": "#/$defs/Digest"},
+        "test_case_digest": {"$ref": "#/$defs/Digest"},
+        "backend_instance": {"type": "string", "minLength": 1},
+        "environment_fingerprint": {"$ref": "#/$defs/Digest"},
+        "policy_history_digest": {"$ref": "#/$defs/Digest"},
+        "authority_digest": {"$ref": "#/$defs/Digest"},
+        "telemetry_source": {"$ref": "#/$defs/TelemetrySource"},
+        "observation_window": {"$ref": "#/$defs/ObservationWindow"},
+        "event_bindings": {"type": "array", "items": {"$ref": "#/$defs/EventBinding"}, "minItems": 1, "uniqueItems": true},
+        "event_set_digest": {"$ref": "#/$defs/Digest"},
+        "key_id": {"type": "string", "minLength": 1},
+        "algorithm": {"const": "rsa-pkcs1v15-sha256"},
+        "signature_b64": {"$ref": "#/$defs/Signature"}
+      }
+    },
+    "CleanupAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "attester_id", "trust_epoch", "run_id", "case_id", "attempt", "evidence_artifact_digest", "test_case_digest", "backend_instance", "environment_fingerprint", "policy_history_digest", "authority_digest", "requirement_results", "cleanup_events", "observation_window", "key_id", "algorithm", "signature_b64"],
+      "properties": {
+        "apiVersion": {"const": "agentci.dev/sandbox-cleanup-attestation/v0alpha1"},
+        "kind": {"const": "CleanupAttestation"},
+        "attester_id": {"type": "string", "minLength": 1},
+        "trust_epoch": {"type": "integer", "minimum": 0},
+        "run_id": {"type": "string", "minLength": 1},
+        "case_id": {"type": "string", "minLength": 1},
+        "attempt": {"type": "integer", "minimum": 1},
+        "evidence_artifact_digest": {"$ref": "#/$defs/Digest"},
+        "test_case_digest": {"$ref": "#/$defs/Digest"},
+        "backend_instance": {"type": "string", "minLength": 1},
+        "environment_fingerprint": {"$ref": "#/$defs/Digest"},
+        "policy_history_digest": {"$ref": "#/$defs/Digest"},
+        "authority_digest": {"$ref": "#/$defs/Digest"},
+        "requirement_results": {"type": "array", "items": {"$ref": "#/$defs/RequirementResult"}, "minItems": 1, "uniqueItems": true},
+        "cleanup_events": {"type": "array", "items": {"$ref": "#/$defs/CleanupEvent"}, "minItems": 1, "uniqueItems": true},
+        "observation_window": {"$ref": "#/$defs/ObservationWindow"},
+        "key_id": {"type": "string", "minLength": 1},
+        "algorithm": {"const": "rsa-pkcs1v15-sha256"},
+        "signature_b64": {"$ref": "#/$defs/Signature"}
+      }
+    },
+    "ArtifactInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_digest", "payload_digest", "signature_verified"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "content_digest": {"$ref": "#/$defs/Digest"},
+        "payload_digest": {"$ref": "#/$defs/Digest"},
+        "signature_verified": {"type": "boolean"}
+      }
+    },
+    "EmbeddedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content_digest", "payload_digest", "signature_verified", "content"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "content_digest": {"$ref": "#/$defs/Digest"},
+        "payload_digest": {"$ref": "#/$defs/Digest"},
+        "signature_verified": {"type": "boolean"},
+        "content": {"type": "object"}
+      }
+    },
+    "EvidenceVerificationReceiptManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "run_id", "evidence_artifact_digest", "recorded_verdict", "expected_verdict", "certification_claim", "metadata", "artifacts", "artifact_inventory", "manifest_digest"],
+      "properties": {
+        "apiVersion": {"const": "agentci.dev/sandbox-verification-receipt/v0alpha1"},
+        "kind": {"const": "EvidenceVerificationReceiptManifest"},
+        "run_id": {"type": "string", "minLength": 1},
+        "evidence_artifact_digest": {"$ref": "#/$defs/Digest"},
+        "recorded_verdict": {"enum": ["PASS", "FAIL", "PARTIAL", "UNVERIFIED", "NOT-APPLICABLE"]},
+        "expected_verdict": {"enum": ["PASS", "FAIL", "PARTIAL", "UNVERIFIED", "NOT-APPLICABLE"]},
+        "certification_claim": {"const": false},
+        "metadata": {"type": "object"},
+        "artifacts": {"type": "array", "items": {"$ref": "#/$defs/EmbeddedArtifact"}, "minItems": 1},
+        "artifact_inventory": {"type": "array", "items": {"$ref": "#/$defs/ArtifactInventoryItem"}, "minItems": 1},
+        "manifest_digest": {"$ref": "#/$defs/Digest"}
+      }
+    }
+  }
+}

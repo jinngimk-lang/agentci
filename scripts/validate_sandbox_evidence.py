@@ -82,9 +82,15 @@ def canonical_bytes(document: dict[str, Any]) -> bytes:
     if isinstance(candidate.get("canonicalization"), dict):
         candidate["canonicalization"].pop("artifact_digest", None)
     case_id = candidate.get("case_id")
+    # Typed cleanup requirements were added to the canonical TestCase without
+    # changing the legacy EvidenceEnvelope digest contract. Evidence events,
+    # including legal cleanup events, remain part of the envelope digest.
     test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
+    digest_case = copy.deepcopy(test_case) if test_case is not None else None
+    if digest_case is not None:
+        digest_case.pop("cleanup_requirements", None)
     return canonical_value_bytes(
-        {"evidence": candidate, "test_case_digest": digest_value(test_case) if test_case is not None else None}
+        {"evidence": candidate, "test_case_digest": digest_value(digest_case) if digest_case is not None else None}
     )
 
 
@@ -126,6 +132,7 @@ def authority_binding_projection(document: dict[str, Any]) -> dict[str, Any]:
                 "attachment_id": x.get("attachment_id"),
             }
             for x in document.get("events", [])
+            if isinstance(x, dict)
         ],
     }
 
@@ -279,8 +286,12 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 def _format_fields_valid(document: dict[str, Any]) -> bool:
     checker = FormatChecker()
-    values = [x.get("effective_at_utc") for x in document.get("policy_history", [])] + [
-        x.get("occurred_at_utc") for x in document.get("events", [])
+    values = [
+        x.get("effective_at_utc")
+        for x in document.get("policy_history", [])
+        if isinstance(x, dict)
+    ] + [
+        x.get("occurred_at_utc") for x in document.get("events", []) if isinstance(x, dict)
     ]
     for value in values:
         try:
@@ -453,7 +464,10 @@ def _lifecycle_errors(
 def _evidence_errors(document: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if list(_schema_validator().iter_errors(document)) or not _format_fields_valid(document):
-        errors.append("schema validation failed")
+        # Semantic validation assumes the strict object shapes guaranteed by
+        # the schema. Fail closed before projection arithmetic can dereference
+        # a malformed list member; digesting remains independently available.
+        return ["schema validation failed"]
     if document.get("apiVersion") != "agentci.dev/sandbox/v0alpha1":
         errors.append("unexpected apiVersion")
     if document.get("kind") != "EvidenceEnvelope":
@@ -801,6 +815,8 @@ def expected_verdict(document: dict[str, Any]) -> str:
 
 def validate(document: dict[str, Any]) -> list[str]:
     errors = _evidence_errors(document)
+    if errors == ["schema validation failed"]:
+        return errors
     errors.extend(_residual_errors(document))
     verdict = expected_verdict(document)
     if document.get("verdict") != verdict:

@@ -129,6 +129,18 @@
         "expected_result": {"type": "string"}
       }
     },
+    "CleanupRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "dimension", "expected_state", "event_type", "expected_result"],
+      "properties": {
+        "requirement_id": {"type": "string"},
+        "dimension": {"enum": ["descendants", "filesystem_residue"]},
+        "expected_state": {"const": "clean"},
+        "event_type": {"const": "cleanup"},
+        "expected_result": {"const": "clean"}
+      }
+    },
     "AssertionResult": {
       "type": "object",
       "additionalProperties": false,
@@ -255,6 +267,7 @@
         },
         "oracle": {"type": "array", "items": {"type": "string"}, "minItems": 1},
         "cleanup": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "cleanup_requirements": {"type": "array", "items": {"$ref": "#/$defs/CleanupRequirement"}, "minItems": 1, "uniqueItems": true},
         "backend_assumptions": {"type": "array", "items": {"type": "string"}},
         "mandatory_assertions": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
         "assertion_requirements": {"type": "array", "items": {"$ref": "#/$defs/AssertionRequirement"}, "minItems": 1},
