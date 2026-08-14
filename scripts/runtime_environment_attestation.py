@@ -36,6 +36,10 @@ TRUSTED_ATTESTERS = {
     },
 }
 
+# Key-id view used by self-contained receipt replay. Authority remains the
+# verifier-pinned attester policy above; this alias does not trust receipt data.
+TRUSTED_RSA_KEYS = {value["key_id"]: value for value in TRUSTED_ATTESTERS.values()}
+
 _SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
@@ -87,8 +91,22 @@ def runtime_environment_attestation_valid(document: dict[str, Any]) -> bool:
     if not isinstance(attestation, dict):
         return False
 
+    return runtime_environment_attestation_valid_value(document, attestation)
+
+
+def runtime_environment_attestation_valid_value(
+    document: dict[str, Any],
+    attestation: dict[str, Any],
+    trust_policy: dict[str, dict[str, Any]] | None = None,
+) -> bool:
+    """Verify an embedded sidecar without mutating the file-backed validator."""
+    run_id = _safe_token(document.get("run_id"))
+    case_id = _safe_token(document.get("case_id"))
+    if run_id is None or case_id is None or not isinstance(attestation, dict):
+        return False
+
     attester_id = attestation.get("attester_id")
-    trust = TRUSTED_ATTESTERS.get(attester_id)
+    trust = (TRUSTED_ATTESTERS if trust_policy is None else trust_policy).get(attester_id)
     if trust is None or attestation.get("trust_epoch") != trust.get("trust_epoch"):
         return False
     if attestation.get("key_id") != trust.get("key_id") or attestation.get("algorithm") != ALGORITHM:

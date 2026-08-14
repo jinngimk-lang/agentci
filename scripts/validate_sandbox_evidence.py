@@ -82,9 +82,18 @@ def canonical_bytes(document: dict[str, Any]) -> bytes:
     if isinstance(candidate.get("canonicalization"), dict):
         candidate["canonicalization"].pop("artifact_digest", None)
     case_id = candidate.get("case_id")
+    # Receipt-profile cleanup bindings are additive to v0alpha1. Keep legacy
+    # EvidenceEnvelope digests stable; the receipt separately content-addresses
+    # and signs the full cleanup events and typed TestCase requirements.
+    candidate["events"] = [
+        event for event in candidate.get("events", []) if event.get("event_type") != "cleanup"
+    ]
     test_case = _load_test_case(case_id) if isinstance(case_id, str) else None
+    digest_case = copy.deepcopy(test_case) if test_case is not None else None
+    if digest_case is not None:
+        digest_case.pop("cleanup_requirements", None)
     return canonical_value_bytes(
-        {"evidence": candidate, "test_case_digest": digest_value(test_case) if test_case is not None else None}
+        {"evidence": candidate, "test_case_digest": digest_value(digest_case) if digest_case is not None else None}
     )
 
 
@@ -126,6 +135,7 @@ def authority_binding_projection(document: dict[str, Any]) -> dict[str, Any]:
                 "attachment_id": x.get("attachment_id"),
             }
             for x in document.get("events", [])
+            if x.get("event_type") != "cleanup"
         ],
     }
 
