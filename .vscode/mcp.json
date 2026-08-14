@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "azure-storage-readonly": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure/mcp@latest",
+        "server",
+        "start",
+        "--namespace",
+        "storage",
+        "--read-only"
+      ]
+    }
+  }
+}
