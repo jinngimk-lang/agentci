@@ -1,0 +1,42 @@
+{
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "apiVersion": "agentci.dev/sandbox-observer-attestation/v0alpha1",
+  "attempt": 1,
+  "attester_id": "fixture-observer-attester",
+  "authority_digest": "sha256:64279f6dbfee7dd887bf44105b89c8650f36c384424a91a82c5681d4512afa8d",
+  "backend_instance": "red-control-1",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "event_bindings": [
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-sensitive-read",
+      "semantic_digest": "sha256:4f912f1f7c1f986cd103943089ed9122100858ee06d40958268fc4af83313946"
+    },
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc:event-workspace-utility",
+      "semantic_digest": "sha256:88733c128cadfaa5266cdd6d02bfef67a74d5d11a82b68da6406ea43e6f6659f"
+    }
+  ],
+  "event_set_digest": "sha256:d7c94cf13f64dccad14213c49e0a49a7b093203398987ea05d3e2dc5ce05fece",
+  "evidence_artifact_digest": "sha256:63d7566ab80cc22d0beebba97ad21f7a85ef0d767d5d34ab4a55c96f799d890c",
+  "key_id": "fixture-receipt-observer-key-v1",
+  "kind": "ObserverAttestation",
+  "observation_window": {
+    "closed_at_monotonic_ns": 2000,
+    "closed_at_utc": "2026-08-11T03:00:01Z",
+    "opened_at_monotonic_ns": 1900,
+    "opened_at_utc": "2026-08-11T03:00:01Z"
+  },
+  "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
+  "run_id": "red-control-sensitive-read-001",
+  "signature_b64": "OnxUaTUXihrpE5wY+o/j1AufDDUDGiLhHOhIPX1dQ8TuNpT+8Uf4lAx+h+LcHQE6heJ8A3GgMPbmCMOh02/qXnn5TbnXxCHFwW55NvHxMyLrZ0U8IL+xYWeoVbnDYyyO",
+  "telemetry_source": {
+    "coverage": "mandatory",
+    "health": "healthy",
+    "layer": "filesystem",
+    "source_id": "fixture-file-observer",
+    "version": "v1"
+  },
+  "test_case_digest": "sha256:f77b7732fa28a82c897ead9f8b0c969a851cba26e28de67b3bed87aee5201f2b",
+  "trust_epoch": 1
+}

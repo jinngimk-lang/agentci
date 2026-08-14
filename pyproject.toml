@@ -22,11 +22,14 @@ package-dir = {"" = "src", "scripts" = "scripts"}
 
 [tool.setuptools.data-files]
 "share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
+"share/agentci/sandbox/receipt-schema" = ["schemas/sandbox-receipt-v0alpha1.schema.json"]
 "share/agentci/sandbox/authority-schema" = ["schemas/sandbox-authority-v0alpha1.schema.json"]
 "share/agentci/sandbox/testcases" = ["examples/sandbox/testcases/*.json"]
 "share/agentci/sandbox/execution-attestations" = ["examples/sandbox/execution-attestations/*.json"]
 "share/agentci/sandbox/lifecycle-attestations" = ["examples/sandbox/lifecycle-attestations/*.json"]
 "share/agentci/sandbox/runtime-environment-attestations" = ["examples/sandbox/runtime-environment-attestations/*.json"]
+"share/agentci/sandbox/receipt-bundles/pass-sensitive-read-denied-001" = ["examples/sandbox/receipt-bundles/pass-sensitive-read-denied-001/*.json"]
+"share/agentci/sandbox/receipt-bundles/red-control-sensitive-read-001" = ["examples/sandbox/receipt-bundles/red-control-sensitive-read-001/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

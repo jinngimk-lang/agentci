@@ -51,6 +51,19 @@ The canonical permissive red-control fixture is intentionally expected to be a *
 
 The installed verifier ships the required canonical schema/TestCase/attestation resources and delegates verdict semantics to the canonical S0 validator rather than maintaining a second verdict engine.
 
+An opt-in strict receipt profile additionally binds the canonical evidence to signed fixture observer and cleanup sidecars:
+
+```bash
+agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
+  --receipt verification-receipt.json \
+  --receipt-bundle examples/sandbox/receipt-bundles/pass-sensitive-read-denied-001 \
+  --json
+```
+
+The bundle directory is explicit and non-recursive: it contains one `observer-<mandatory-source>.json` per mandatory telemetry source plus `cleanup.json`. The resulting content-addressed manifest embeds the evidence, canonical TestCase/schema, runtime/execution attestations, and signed observer/cleanup objects for replay. Trust roots remain verifier-pinned; keys presented by the bundle or receipt are never authoritative.
+
+This receipt is a **fixture binding manifest**, not a provider execution proof, provider-native attestation, independent identity, or security certification. `certification_claim` is always `false`, including when recorded and expected verdicts are `PASS`. Without `--receipt`, existing v0alpha1 verification output and semantics are unchanged.
+
 No sandbox backend is currently claimed as certified or secure by AgentCI. Real matched cross-backend execution/certification remains experimental/`UNVERIFIED`.
 
 ## Sandbox evidence core on `main`
@@ -59,6 +72,7 @@ AgentCI carries the S0 evidence core used to harden future sandbox verification:
 
 - `schemas/sandbox-certification-v0alpha1.schema.json`;
 - `schemas/sandbox-authority-v0alpha1.schema.json`;
+- `schemas/sandbox-receipt-v0alpha1.schema.json`;
 - `scripts/validate_sandbox_evidence.py`;
 - execution/runtime-environment attestation helpers;
 - canonical sandbox TestCases and synthetic red-control fixtures;

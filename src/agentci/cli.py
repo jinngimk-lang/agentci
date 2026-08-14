@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help='write an opt-in strict content-addressed verification receipt manifest',
     )
+    verify_parser.add_argument(
+        '--receipt-bundle',
+        type=Path,
+        help='read the exact signed observer and cleanup sidecar directory for --receipt',
+    )
     return parser
 
 
@@ -52,6 +57,8 @@ def main(argv: list[str] | None = None) -> int:
                 _print_sandbox_doctor(report)
             return 0
         if args.command == 'sandbox' and args.sandbox_command == 'verify':
+            if args.receipt_bundle is not None and args.receipt is None:
+                parser.error('--receipt-bundle requires --receipt')
             # Keep repository-only verifier dependencies off legacy `test` and
             # readiness paths until the wheel-safe resource gate is satisfied.
             from .sandbox.verification import verify_evidence_file
@@ -60,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.path,
                 include_digest=args.print_digest,
                 receipt_path=args.receipt,
+                receipt_bundle_path=args.receipt_bundle,
             )
             if args.json:
                 print(json.dumps(result.to_dict(), sort_keys=True))

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import copy
+from datetime import datetime
 import hashlib
 import inspect
 import json
@@ -152,6 +153,10 @@ def _observer_projection(document: dict[str, Any], source: dict[str, Any]) -> di
         key=lambda item: item["event_id"],
     )
     events = [event for event in document["events"] if event["source_id"] == source["source_id"]]
+    ordered_by_utc = sorted(
+        events,
+        key=lambda event: datetime.fromisoformat(event["occurred_at_utc"].replace("Z", "+00:00")),
+    )
     return {
         "apiVersion": "agentci.dev/sandbox-observer-attestation/v0alpha1",
         "kind": "ObserverAttestation",
@@ -168,9 +173,9 @@ def _observer_projection(document: dict[str, Any], source: dict[str, Any]) -> di
         "authority_digest": document["authority_digest"],
         "telemetry_source": copy.deepcopy(source),
         "observation_window": {
-            "opened_at_utc": min(event["occurred_at_utc"] for event in events),
+            "opened_at_utc": ordered_by_utc[0]["occurred_at_utc"],
             "opened_at_monotonic_ns": min(event["monotonic_ns"] for event in events),
-            "closed_at_utc": max(event["occurred_at_utc"] for event in events),
+            "closed_at_utc": ordered_by_utc[-1]["occurred_at_utc"],
             "closed_at_monotonic_ns": max(event["monotonic_ns"] for event in events),
         },
         "event_bindings": event_bindings,

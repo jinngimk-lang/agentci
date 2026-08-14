@@ -1,0 +1,76 @@
+{
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "apiVersion": "agentci.dev/sandbox-cleanup-attestation/v0alpha1",
+  "attempt": 1,
+  "attester_id": "fixture-cleanup-attester",
+  "authority_digest": "sha256:d8ef7cfac61a41de7fbbf5a78c30c514b487ec0b2c9cf9c7d3bbf3e8e327985d",
+  "backend_instance": "pass-control-1",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "cleanup_events": [
+    {
+      "action": "verify-cleanup",
+      "attachment_id": "attach-1",
+      "authority_epoch": 0,
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-cleanup-descendants",
+      "event_type": "cleanup",
+      "monotonic_ns": 3001,
+      "observed_result": "clean",
+      "occurred_at_utc": "2026-08-11T03:00:02Z",
+      "policy_epoch": 0,
+      "resource": "descendants",
+      "semantic_digest": "sha256:1a997c4bdc3c0cf40b20f4bdf7463959d9cc5d295a9f8bad54bc622922d23fdf",
+      "source_id": "fixture-policy-observer",
+      "workload_identity": "fixture-workload"
+    },
+    {
+      "action": "verify-cleanup",
+      "attachment_id": "attach-1",
+      "authority_epoch": 0,
+      "event_id": "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-cleanup-filesystem-residue",
+      "event_type": "cleanup",
+      "monotonic_ns": 3002,
+      "observed_result": "clean",
+      "occurred_at_utc": "2026-08-11T03:00:03Z",
+      "policy_epoch": 0,
+      "resource": "filesystem_residue",
+      "semantic_digest": "sha256:f3034fca6fc5f0fff4622a8415cb3b3dc7d3cd3fc14d3e2b7027c75c50e75f35",
+      "source_id": "fixture-policy-observer",
+      "workload_identity": "fixture-workload"
+    }
+  ],
+  "environment_fingerprint": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+  "evidence_artifact_digest": "sha256:65a1d381a01ccdbe1cc27d9effdaad8b76867b3f3a42ead09501dfb6ba461e59",
+  "key_id": "fixture-receipt-cleanup-key-v1",
+  "kind": "CleanupAttestation",
+  "observation_window": {
+    "closed_at_monotonic_ns": 3002,
+    "closed_at_utc": "2026-08-11T03:00:03Z",
+    "opened_at_monotonic_ns": 3001,
+    "opened_at_utc": "2026-08-11T03:00:02Z"
+  },
+  "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
+  "requirement_results": [
+    {
+      "dimension": "descendants",
+      "event_ids": [
+        "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-cleanup-descendants"
+      ],
+      "requirement_id": "cleanup-descendants",
+      "result_set_digest": "sha256:6a872d708e16961b6e9322a6dcb8f1561a9cf53a167ab11c80aeeccdb5c71358",
+      "state": "clean"
+    },
+    {
+      "dimension": "filesystem_residue",
+      "event_ids": [
+        "sha256:69b0165f879b7296f141a05f29dc638843edc8c31bc7657c121709eadaf36679:event-cleanup-filesystem-residue"
+      ],
+      "requirement_id": "cleanup-filesystem-residue",
+      "result_set_digest": "sha256:c760904097a49f252acc56205618fd703c7d16e33f1c2dcf2e627421d016b2dd",
+      "state": "clean"
+    }
+  ],
+  "run_id": "pass-sensitive-read-denied-001",
+  "signature_b64": "UKJLzDXvy2t88pLyIJyd+4ZHaQ0gg5W8m1fq1grz0sAHYtjU529zXnkl/C9ehyKqnASNvqD7W5tG9qPH2Qp+yWxaSejDF+eFq6h8hnSR1EkRrx7Rbvew9VF8kAJzxn0E",
+  "test_case_digest": "sha256:f77b7732fa28a82c897ead9f8b0c969a851cba26e28de67b3bed87aee5201f2b",
+  "trust_epoch": 1
+}

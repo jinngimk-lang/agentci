@@ -15,7 +15,13 @@ from scripts import lifecycle_attestation as lifecycle_attestation_module
 from scripts import runtime_environment_attestation as runtime_environment_attestation_module
 from scripts import validate_sandbox_evidence as validator
 
-from .resource_loader import INSTALLED_ROOT, SOURCE_ROOT
+from .receipt import (
+    ReceiptBundleError,
+    assemble_receipt,
+    load_receipt_bundle,
+    write_receipt_atomic,
+)
+from .resource_loader import INSTALLED_ROOT, SOURCE_ROOT, canonical_resource_json
 
 
 @dataclass(frozen=True)
@@ -77,6 +83,7 @@ def verify_evidence_file(
     *,
     include_digest: bool = False,
     receipt_path: Path | None = None,
+    receipt_bundle_path: Path | None = None,
 ) -> VerificationResult:
     """Validate one EvidenceEnvelope without treating verdict FAIL as tool failure.
 
@@ -100,6 +107,54 @@ def verify_evidence_file(
 
     expected = validator.expected_verdict(document)
     errors = tuple(validator.validate(document))
+    receipt_written = False if receipt_path is not None else None
+    receipt_errors: tuple[str, ...] | None = None
+    if receipt_path is not None:
+        if receipt_bundle_path is None:
+            receipt_errors = _unavailable_receipt_binding_errors(document)
+        elif errors:
+            receipt_errors = ('E_RECEIPT_EVIDENCE_INVALID',)
+        else:
+            mandatory_sources = tuple(
+                source['source_id']
+                for source in document.get('telemetry', [])
+                if isinstance(source, dict)
+                and source.get('coverage') == 'mandatory'
+                and isinstance(source.get('source_id'), str)
+            )
+            try:
+                bundle = load_receipt_bundle(receipt_bundle_path, mandatory_sources=mandatory_sources)
+                case_id = document['case_id']
+                run_id = document['run_id']
+                assembled = assemble_receipt(
+                    document,
+                    test_case=canonical_resource_json(
+                        f'examples/sandbox/testcases/{case_id}.json',
+                        f'testcases/{case_id}.json',
+                    ),
+                    schema_document=canonical_resource_json(
+                        'schemas/sandbox-certification-v0alpha1.schema.json',
+                        'schema/sandbox-certification-v0alpha1.schema.json',
+                    ),
+                    runtime_attestation=canonical_resource_json(
+                        f'examples/sandbox/runtime-environment-attestations/{run_id}.json',
+                        f'runtime-environment-attestations/{run_id}.json',
+                    ),
+                    execution_attestation=canonical_resource_json(
+                        f'examples/sandbox/execution-attestations/{run_id}.json',
+                        f'execution-attestations/{run_id}.json',
+                    ),
+                    observer_attestations=bundle['observer_attestations'],
+                    cleanup_attestation=bundle['cleanup_attestation'],
+                )
+                receipt_errors = assembled.error_codes
+                if assembled.receipt_valid and assembled.manifest is not None:
+                    write_receipt_atomic(receipt_path, assembled.manifest)
+                    receipt_written = True
+            except ReceiptBundleError as exc:
+                receipt_errors = (exc.code,)
+            except (json.JSONDecodeError, ValueError):
+                receipt_errors = ('E_RECEIPT_BUNDLE_INVALID',)
     return VerificationResult(
         valid=not errors,
         run_id=document.get('run_id') if isinstance(document.get('run_id'), str) else None,
@@ -107,7 +162,7 @@ def verify_evidence_file(
         expected_verdict=expected,
         errors=errors,
         artifact_digest=validator.artifact_digest(document) if include_digest else None,
-        receipt_written=False if receipt_path is not None else None,
+        receipt_written=receipt_written,
         receipt_path=str(receipt_path) if receipt_path is not None else None,
-        receipt_errors=_unavailable_receipt_binding_errors(document) if receipt_path is not None else None,
+        receipt_errors=receipt_errors,
     )

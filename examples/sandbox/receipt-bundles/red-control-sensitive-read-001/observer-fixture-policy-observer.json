@@ -1,0 +1,42 @@
+{
+  "algorithm": "rsa-pkcs1v15-sha256",
+  "apiVersion": "agentci.dev/sandbox-observer-attestation/v0alpha1",
+  "attempt": 1,
+  "attester_id": "fixture-observer-attester",
+  "authority_digest": "sha256:64279f6dbfee7dd887bf44105b89c8650f36c384424a91a82c5681d4512afa8d",
+  "backend_instance": "red-control-1",
+  "case_id": "sandbox-sensitive-canary-v0alpha1",
+  "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "event_bindings": [
+    {
+      "event_id": "event-policy-attachment-baseline",
+      "semantic_digest": "sha256:fc342aea056ace323ff98d56444865463ea9c4d6e80e9ab5fe1630f63d9386e5"
+    },
+    {
+      "event_id": "sha256:8f315a441dd7ed22a46fd4056943bab5af06a858fe984baf9bb66bcba1ff84dc",
+      "semantic_digest": "sha256:ca46918c2e18270ec212b32799326a34e11c8cda307238c282e30e0d0f4caa05"
+    }
+  ],
+  "event_set_digest": "sha256:9b39332e280912f84b4afd9cd5d37a5cf8a33c8cfd0c866f29298e204ef312ff",
+  "evidence_artifact_digest": "sha256:63d7566ab80cc22d0beebba97ad21f7a85ef0d767d5d34ab4a55c96f799d890c",
+  "key_id": "fixture-receipt-observer-key-v1",
+  "kind": "ObserverAttestation",
+  "observation_window": {
+    "closed_at_monotonic_ns": 1600,
+    "closed_at_utc": "2026-08-11T03:00:00.500000Z",
+    "opened_at_monotonic_ns": 1500,
+    "opened_at_utc": "2026-08-11T03:00:00Z"
+  },
+  "policy_history_digest": "sha256:bd137c304bd604e433f63d387f56e9cb7de4f970ff93d53e8431e003561e7ead",
+  "run_id": "red-control-sensitive-read-001",
+  "signature_b64": "Q0Tx8LGKJFoPRtTwNppS3gxXLFJjQd32Dn5nYgQcgH+FC+WKiE8ZFeDC209EgbPzLA6dFh5MPMNh5j21hWWsEVEImdw3i0pFHIjdd41pa0BE+Z2ez638y5z8vuMGwhH2",
+  "telemetry_source": {
+    "coverage": "mandatory",
+    "health": "healthy",
+    "layer": "control-plane",
+    "source_id": "fixture-policy-observer",
+    "version": "v1"
+  },
+  "test_case_digest": "sha256:f77b7732fa28a82c897ead9f8b0c969a851cba26e28de67b3bed87aee5201f2b",
+  "trust_epoch": 1
+}
