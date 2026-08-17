@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 11,
+  "count": 20,
+  "cumulative_repository_audited": 257,
+  "session_confirmed_total_at_write": 304,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/langchain-ai/langgraph/issues/8582#issuecomment-5312998957",
+    "https://github.com/langchain-ai/langgraph/issues/8551#issuecomment-5313000521",
+    "https://github.com/langchain-ai/langgraph/issues/8443#issuecomment-5313002037",
+    "https://github.com/langchain-ai/langgraph/issues/8470#issuecomment-5313004058",
+    "https://github.com/langchain-ai/langgraph/issues/8448#issuecomment-5313006045",
+    "https://github.com/langchain-ai/langgraph/issues/8550#issuecomment-5313007899",
+    "https://github.com/langchain-ai/langgraph/issues/8477#issuecomment-5313009943",
+    "https://github.com/langchain-ai/langgraph/issues/7910#issuecomment-5313011454",
+    "https://github.com/langchain-ai/langgraph/issues/8606#issuecomment-5313013095",
+    "https://github.com/langchain-ai/langgraph/issues/6929#issuecomment-5313014881",
+    "https://github.com/langchain-ai/langgraph/issues/6735#issuecomment-5313016393",
+    "https://github.com/langchain-ai/langgraph/issues/8549#issuecomment-5313018023",
+    "https://github.com/langchain-ai/langgraph/issues/3716#issuecomment-5313020127",
+    "https://github.com/langchain-ai/langgraph/issues/6521#issuecomment-5313021714",
+    "https://github.com/langchain-ai/langgraph/issues/8570#issuecomment-5313023287",
+    "https://github.com/langchain-ai/langgraph/issues/8408#issuecomment-5313024994",
+    "https://github.com/browser-use/browser-use/issues/4790#issuecomment-5313026652",
+    "https://github.com/browser-use/browser-use/issues/4803#issuecomment-5313028292",
+    "https://github.com/browser-use/browser-use/issues/4312#issuecomment-5313029974",
+    "https://github.com/e2b-dev/E2B/issues/465#issuecomment-5313032419"
+  ]
+}
