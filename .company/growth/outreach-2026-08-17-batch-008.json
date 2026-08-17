@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 8,
+  "count": 20,
+  "cumulative_repository_audited": 197,
+  "session_confirmed_total_at_write": 244,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/crewAIInc/crewAI/issues/7002#issuecomment-5312863426",
+    "https://github.com/crewAIInc/crewAI/issues/6733#issuecomment-5312864799",
+    "https://github.com/crewAIInc/crewAI/issues/6766#issuecomment-5312866305",
+    "https://github.com/crewAIInc/crewAI/issues/6789#issuecomment-5312867850",
+    "https://github.com/crewAIInc/crewAI/issues/6774#issuecomment-5312869117",
+    "https://github.com/crewAIInc/crewAI/issues/6736#issuecomment-5312870727",
+    "https://github.com/crewAIInc/crewAI/issues/6735#issuecomment-5312872016",
+    "https://github.com/crewAIInc/crewAI/issues/6747#issuecomment-5312873447",
+    "https://github.com/crewAIInc/crewAI/issues/6745#issuecomment-5312874798",
+    "https://github.com/crewAIInc/crewAI/issues/6731#issuecomment-5312876178",
+    "https://github.com/openclaw/openclaw/issues/122073#issuecomment-5312877948",
+    "https://github.com/openclaw/openclaw/issues/124987#issuecomment-5312879699",
+    "https://github.com/openclaw/openclaw/issues/120616#issuecomment-5312881411",
+    "https://github.com/openclaw/openclaw/issues/110702#issuecomment-5312883371",
+    "https://github.com/openclaw/openclaw/issues/123747#issuecomment-5312884840",
+    "https://github.com/openclaw/openclaw/issues/122500#issuecomment-5312886734",
+    "https://github.com/openclaw/openclaw/issues/122693#issuecomment-5312888190",
+    "https://github.com/openclaw/openclaw/issues/124691#issuecomment-5312889898",
+    "https://github.com/openclaw/openclaw/issues/114373#issuecomment-5312891086",
+    "https://github.com/openclaw/openclaw/issues/121821#issuecomment-5312892447"
+  ]
+}
