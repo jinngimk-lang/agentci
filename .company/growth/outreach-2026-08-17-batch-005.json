@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 5,
+  "count": 20,
+  "cumulative_repository_audited": 137,
+  "session_confirmed_total_at_write": 184,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/langchain-ai/langgraph/issues/8558#issuecomment-5312714880",
+    "https://github.com/langchain-ai/langgraph/issues/8608#issuecomment-5312716177",
+    "https://github.com/langchain-ai/langgraph/issues/8629#issuecomment-5312717629",
+    "https://github.com/langchain-ai/langgraph/issues/8572#issuecomment-5312718880",
+    "https://github.com/langchain-ai/langgraph/issues/8613#issuecomment-5312720032",
+    "https://github.com/langchain-ai/langgraph/issues/8579#issuecomment-5312721304",
+    "https://github.com/langchain-ai/langgraph/issues/8590#issuecomment-5312726175",
+    "https://github.com/langchain-ai/langgraph/issues/8589#issuecomment-5312727528",
+    "https://github.com/crewAIInc/crewAI/issues/6859#issuecomment-5312731694",
+    "https://github.com/crewAIInc/crewAI/issues/6984#issuecomment-5312733101",
+    "https://github.com/crewAIInc/crewAI/issues/6414#issuecomment-5312734358",
+    "https://github.com/crewAIInc/crewAI/issues/6262#issuecomment-5312735620",
+    "https://github.com/crewAIInc/crewAI/issues/5155#issuecomment-5312737224",
+    "https://github.com/crewAIInc/crewAI/issues/6072#issuecomment-5312738882",
+    "https://github.com/openclaw/openclaw/issues/116615#issuecomment-5312741433",
+    "https://github.com/openclaw/openclaw/issues/99551#issuecomment-5312742791",
+    "https://github.com/openclaw/openclaw/issues/54895#issuecomment-5312744487",
+    "https://github.com/openclaw/openclaw/issues/110697#issuecomment-5312755601",
+    "https://github.com/openclaw/openclaw/issues/76962#issuecomment-5312757384",
+    "https://github.com/openclaw/openclaw/issues/117110#issuecomment-5312759656"
+  ]
+}
