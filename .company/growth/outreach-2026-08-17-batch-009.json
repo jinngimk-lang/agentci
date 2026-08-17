@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 9,
+  "count": 20,
+  "cumulative_repository_audited": 217,
+  "session_confirmed_total_at_write": 264,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/crewAIInc/crewAI/issues/6742#issuecomment-5312901064",
+    "https://github.com/crewAIInc/crewAI/issues/6704#issuecomment-5312902446",
+    "https://github.com/crewAIInc/crewAI/issues/6650#issuecomment-5312903751",
+    "https://github.com/openclaw/openclaw/issues/118018#issuecomment-5312905227",
+    "https://github.com/openclaw/openclaw/issues/118625#issuecomment-5312906655",
+    "https://github.com/openclaw/openclaw/issues/57425#issuecomment-5312908193",
+    "https://github.com/openclaw/openclaw/issues/16555#issuecomment-5312909649",
+    "https://github.com/openclaw/openclaw/issues/110771#issuecomment-5312911635",
+    "https://github.com/openclaw/openclaw/issues/48709#issuecomment-5312913156",
+    "https://github.com/pydantic/pydantic-ai/issues/7507#issuecomment-5312918436",
+    "https://github.com/pydantic/pydantic-ai/issues/7305#issuecomment-5312919860",
+    "https://github.com/pydantic/pydantic-ai/issues/7453#issuecomment-5312921656",
+    "https://github.com/pydantic/pydantic-ai/issues/7386#issuecomment-5312923146",
+    "https://github.com/pydantic/pydantic-ai/issues/7212#issuecomment-5312924596",
+    "https://github.com/pydantic/pydantic-ai/issues/7197#issuecomment-5312926737",
+    "https://github.com/pydantic/pydantic-ai/issues/7466#issuecomment-5312928658",
+    "https://github.com/pydantic/pydantic-ai/issues/7470#issuecomment-5312930517",
+    "https://github.com/pydantic/pydantic-ai/issues/7298#issuecomment-5312932128",
+    "https://github.com/pydantic/pydantic-ai/issues/7289#issuecomment-5312933608",
+    "https://github.com/pydantic/pydantic-ai/issues/7237#issuecomment-5312935175"
+  ]
+}
