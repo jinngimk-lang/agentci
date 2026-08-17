@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 7,
+  "count": 20,
+  "cumulative_repository_audited": 177,
+  "session_confirmed_total_at_write": 224,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/openclaw/openclaw/issues/113481#issuecomment-5312816108",
+    "https://github.com/openclaw/openclaw/issues/120290#issuecomment-5312817449",
+    "https://github.com/openclaw/openclaw/issues/87704#issuecomment-5312818676",
+    "https://github.com/openclaw/openclaw/issues/123335#issuecomment-5312820692",
+    "https://github.com/openclaw/openclaw/issues/122758#issuecomment-5312821855",
+    "https://github.com/openclaw/openclaw/issues/122133#issuecomment-5312823791",
+    "https://github.com/openclaw/openclaw/issues/94686#issuecomment-5312825491",
+    "https://github.com/openclaw/openclaw/issues/100537#issuecomment-5312827170",
+    "https://github.com/openclaw/openclaw/issues/124998#issuecomment-5312828540",
+    "https://github.com/openclaw/openclaw/issues/124512#issuecomment-5312830229",
+    "https://github.com/browser-use/browser-use/issues/5363#issuecomment-5312832157",
+    "https://github.com/browser-use/browser-use/issues/5333#issuecomment-5312833755",
+    "https://github.com/browser-use/browser-use/issues/4571#issuecomment-5312835300",
+    "https://github.com/browser-use/browser-use/issues/4688#issuecomment-5312836871",
+    "https://github.com/browser-use/browser-use/issues/4846#issuecomment-5312838339",
+    "https://github.com/browser-use/browser-use/issues/4798#issuecomment-5312839775",
+    "https://github.com/browser-use/browser-use/issues/5195#issuecomment-5312841034",
+    "https://github.com/browser-use/browser-use/issues/4903#issuecomment-5312842653",
+    "https://github.com/browser-use/browser-use/issues/4634#issuecomment-5312844188",
+    "https://github.com/browser-use/browser-use/issues/4579#issuecomment-5312845395"
+  ]
+}
