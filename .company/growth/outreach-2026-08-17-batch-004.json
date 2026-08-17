@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 4,
+  "count": 20,
+  "cumulative_repository_audited": 117,
+  "session_confirmed_total_at_write": 164,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/browser-use/browser-use/issues/5484#issuecomment-5312663173",
+    "https://github.com/browser-use/browser-use/issues/4742#issuecomment-5312664553",
+    "https://github.com/browser-use/browser-use/issues/5415#issuecomment-5312665825",
+    "https://github.com/browser-use/browser-use/issues/5361#issuecomment-5312667367",
+    "https://github.com/browser-use/browser-use/issues/5360#issuecomment-5312668583",
+    "https://github.com/browser-use/browser-use/issues/3912#issuecomment-5312669787",
+    "https://github.com/browser-use/browser-use/issues/5236#issuecomment-5312670964",
+    "https://github.com/pydantic/pydantic-ai/issues/7527#issuecomment-5312675719",
+    "https://github.com/pydantic/pydantic-ai/issues/7525#issuecomment-5312677175",
+    "https://github.com/pydantic/pydantic-ai/issues/7441#issuecomment-5312678640",
+    "https://github.com/pydantic/pydantic-ai/issues/7484#issuecomment-5312680122",
+    "https://github.com/pydantic/pydantic-ai/issues/7477#issuecomment-5312681376",
+    "https://github.com/pydantic/pydantic-ai/issues/7496#issuecomment-5312682889",
+    "https://github.com/pydantic/pydantic-ai/issues/7190#issuecomment-5312684090",
+    "https://github.com/pydantic/pydantic-ai/issues/7284#issuecomment-5312702290",
+    "https://github.com/pydantic/pydantic-ai/issues/7508#issuecomment-5312703824",
+    "https://github.com/pydantic/pydantic-ai/issues/7491#issuecomment-5312705063",
+    "https://github.com/pydantic/pydantic-ai/issues/7101#issuecomment-5312706228",
+    "https://github.com/pydantic/pydantic-ai/issues/7446#issuecomment-5312707618",
+    "https://github.com/pydantic/pydantic-ai/issues/7449#issuecomment-5312708820"
+  ]
+}
