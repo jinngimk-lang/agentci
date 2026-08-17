@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 10,
+  "count": 20,
+  "cumulative_repository_audited": 237,
+  "session_confirmed_total_at_write": 284,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/browser-use/browser-use/issues/5427#issuecomment-5312946035",
+    "https://github.com/browser-use/browser-use/issues/5425#issuecomment-5312947772",
+    "https://github.com/browser-use/browser-use/issues/5128#issuecomment-5312949523",
+    "https://github.com/browser-use/browser-use/issues/5119#issuecomment-5312951009",
+    "https://github.com/browser-use/browser-use/issues/5271#issuecomment-5312952485",
+    "https://github.com/browser-use/browser-use/issues/5252#issuecomment-5312954147",
+    "https://github.com/browser-use/browser-use/issues/5251#issuecomment-5312958312",
+    "https://github.com/browser-use/browser-use/issues/5108#issuecomment-5312959844",
+    "https://github.com/browser-use/browser-use/issues/4219#issuecomment-5312961433",
+    "https://github.com/browser-use/browser-use/issues/4557#issuecomment-5312962942",
+    "https://github.com/e2b-dev/E2B/issues/1643#issuecomment-5312965383",
+    "https://github.com/e2b-dev/E2B/issues/1371#issuecomment-5312967444",
+    "https://github.com/e2b-dev/E2B/issues/1373#issuecomment-5312968926",
+    "https://github.com/e2b-dev/E2B/issues/906#issuecomment-5312971060",
+    "https://github.com/e2b-dev/E2B/issues/670#issuecomment-5312972626",
+    "https://github.com/e2b-dev/E2B/issues/560#issuecomment-5312974275",
+    "https://github.com/pydantic/pydantic-ai/issues/7472#issuecomment-5312976667",
+    "https://github.com/pydantic/pydantic-ai/issues/7191#issuecomment-5312978471",
+    "https://github.com/pydantic/pydantic-ai/issues/7467#issuecomment-5312980046",
+    "https://github.com/pydantic/pydantic-ai/issues/7238#issuecomment-5312981718"
+  ]
+}
