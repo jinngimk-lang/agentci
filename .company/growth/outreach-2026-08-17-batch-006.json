@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-17",
+  "batch": 6,
+  "count": 20,
+  "cumulative_repository_audited": 157,
+  "session_confirmed_total_at_write": 204,
+  "unreconciled_prior_session_delta": 47,
+  "rule": "Only confirmed successful external public GitHub writes are counted. Failed, 403, skipped, self-repo landing-page posts, or drafts are excluded from this batch.",
+  "urls": [
+    "https://github.com/e2b-dev/E2B/issues/1352#issuecomment-5312768661",
+    "https://github.com/pydantic/pydantic-ai/issues/6910#issuecomment-5312770289",
+    "https://github.com/pydantic/pydantic-ai/issues/3274#issuecomment-5312772361",
+    "https://github.com/pydantic/pydantic-ai/issues/5536#issuecomment-5312773951",
+    "https://github.com/pydantic/pydantic-ai/issues/3899#issuecomment-5312775518",
+    "https://github.com/pydantic/pydantic-ai/issues/4580#issuecomment-5312777682",
+    "https://github.com/crewAIInc/crewAI/issues/5057#issuecomment-5312779838",
+    "https://github.com/crewAIInc/crewAI/issues/5556#issuecomment-5312782156",
+    "https://github.com/crewAIInc/crewAI/issues/5930#issuecomment-5312784827",
+    "https://github.com/crewAIInc/crewAI/issues/6043#issuecomment-5312787135",
+    "https://github.com/crewAIInc/crewAI/issues/6635#issuecomment-5312789098",
+    "https://github.com/langchain-ai/langgraph/issues/8620#issuecomment-5312791781",
+    "https://github.com/langchain-ai/langgraph/issues/8618#issuecomment-5312794381",
+    "https://github.com/langchain-ai/langgraph/issues/8074#issuecomment-5312795886",
+    "https://github.com/langchain-ai/langgraph/issues/8612#issuecomment-5312797768",
+    "https://github.com/langchain-ai/langgraph/issues/7259#issuecomment-5312799505",
+    "https://github.com/crewAIInc/crewAI/issues/6244#issuecomment-5312802010",
+    "https://github.com/crewAIInc/crewAI/issues/5817#issuecomment-5312803877",
+    "https://github.com/pydantic/pydantic-ai/issues/6322#issuecomment-5312805965",
+    "https://github.com/openclaw/openclaw/issues/111254#issuecomment-5312807434"
+  ]
+}
