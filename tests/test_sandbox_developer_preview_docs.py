@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,3 +27,34 @@ def test_release_note_states_evidence_validity_is_not_pass():
     assert 'recorded verdict' in text
     assert 'unverified' in text
     assert '0.2.0' in text
+
+
+def test_released_receipt_flow_is_discoverable_from_every_agent_entry_point():
+    """Breaks when the installed strict receipt flow is hidden from a clean agent."""
+    env = os.environ.copy()
+    env['PYTHONPATH'] = os.pathsep.join([str(ROOT / 'src'), str(ROOT)])
+    help_result = subprocess.run(
+        [sys.executable, '-m', 'agentci.cli', 'sandbox', 'verify', '--help'],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert help_result.returncode == 0
+    assert '--receipt' in help_result.stdout
+    assert '--receipt-bundle' in help_result.stdout
+
+    for surface in [
+        ROOT / 'README.md',
+        ROOT / 'llms.txt',
+        ROOT / 'skills' / 'agentci' / 'SKILL.md',
+    ]:
+        text = surface.read_text(encoding='utf-8').lower()
+        assert '--receipt' in text, surface
+        assert '--receipt-bundle' in text, surface
+        assert 'certification_claim' in text, surface
+        assert 'fixture binding manifest' in text, surface
+        assert 'verifier-pinned' in text, surface
+        assert 'provider execution proof' in text, surface
+        assert '```bash\nagentci sandbox replay' not in text, surface

@@ -291,3 +291,7 @@ AGENTS.md                    project-wide agent/skill router
 ## Evidence and public claims
 
 Canonical public technical claims must trace to reproducible evidence. Recruitment and open research can begin early. Security/certification claims come late, after the corresponding evidence actually exists.
+
+## License
+
+AgentCI is licensed under the [Apache License 2.0](LICENSE).

@@ -14,7 +14,7 @@ The 0.2 Developer Preview / Sandbox Alpha exposes:
 ```bash
 agentci test <eval-suite>
 agentci sandbox doctor [--json]
-agentci sandbox verify <evidence.json> [--json] [--print-digest]
+agentci sandbox verify <evidence.json> [--json] [--print-digest] [--receipt <output.json> --receipt-bundle <bundle-dir>]
 ```
 
 Do not infer additional sandbox commands from architecture documents. Future `inspect/test/certify/replay` roadmap surfaces remain design-stage/experimental unless the installed CLI exposes them.
@@ -79,6 +79,19 @@ artifact_digest (when requested)
 The canonical permissive red-control fixture is intentionally expected to be a **valid evidence envelope whose recorded and expected verdict are `FAIL`**. A verifier exit code of `0` means the envelope is valid under the contract; it does not mean a sandbox passed. Tampered/invalid evidence returns non-zero.
 
 The installed verifier ships wheel-safe copies of canonical schema/TestCase/attestation resources and delegates verdict semantics to one canonical validator; do not create a second, divergent verdict engine.
+
+### Strict fixture receipt/replay profile
+
+The released verifier can optionally bind canonical evidence to an explicit signed fixture observer/cleanup bundle:
+
+```bash
+agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
+  --receipt verification-receipt.json \
+  --receipt-bundle examples/sandbox/receipt-bundles/pass-sensitive-read-denied-001 \
+  --json
+```
+
+`--receipt-bundle` requires `--receipt`. The bundle is loaded explicitly and non-recursively. Trust roots are verifier-pinned; keys supplied by the bundle or receipt are not authoritative. The resulting content-addressed receipt is a **fixture binding manifest** for deterministic replay; it is not provider execution proof, provider-native attestation, independent identity, or a security certification. `certification_claim` is always `false`.
 
 ## Active Agent Sandbox Certification program
 
