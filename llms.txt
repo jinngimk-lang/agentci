@@ -84,7 +84,7 @@ agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --jso
 
 The canonical red control is expected to be a structurally valid envelope whose security verdict is `FAIL`. A process exit code of `0` for `sandbox verify` means the envelope is internally valid under the canonical contract; it does **not** mean the sandbox passed or is certified. Invalid/tampered evidence returns non-zero.
 
-Optional strict fixture receipt/replay flow:
+Optional strict fixture receipt-generation flow:
 
 ```bash
 agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
@@ -93,7 +93,9 @@ agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
   --json
 ```
 
-`--receipt-bundle` is accepted only with `--receipt`. The explicit, non-recursive bundle supplies the signed fixture observer and cleanup sidecars that the content-addressed receipt binds for replay. Trust roots are verifier-pinned; keys supplied by the bundle or receipt are not authoritative. The output is a **fixture binding manifest**, not provider execution proof, provider-native attestation, independent approval, or security certification. `certification_claim` is always `false`.
+`--receipt-bundle` is accepted only with `--receipt`. The explicit, non-recursive bundle supplies the signed fixture observer and cleanup sidecars that the content-addressed receipt binds for deterministic manifest revalidation. Trust roots are verifier-pinned; keys supplied by the bundle or receipt are not authoritative. The output is a **fixture binding manifest**, not provider execution proof, provider-native attestation, independent approval, or security certification. `certification_claim` is always `false`.
+
+`Replay` here means deterministic revalidation of the self-contained fixture-binding manifest. It does not rerun a sandbox, provider, workload, or external observer. No `agentci sandbox replay` command is released.
 
 ## Active Sandbox Program
 

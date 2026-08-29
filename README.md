@@ -60,9 +60,11 @@ agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
   --json
 ```
 
-The bundle directory is explicit and non-recursive: it contains one `observer-<mandatory-source>.json` per mandatory telemetry source plus `cleanup.json`. The resulting content-addressed manifest embeds the evidence, canonical TestCase/schema, runtime/execution attestations, and signed observer/cleanup objects for replay. Trust roots remain verifier-pinned; keys presented by the bundle or receipt are never authoritative.
+The bundle directory is explicit and non-recursive: it contains one `observer-<mandatory-source>.json` per mandatory telemetry source plus `cleanup.json`. The resulting content-addressed manifest embeds the evidence, canonical TestCase/schema, runtime/execution attestations, and signed observer/cleanup objects for deterministic manifest revalidation. Trust roots remain verifier-pinned; keys presented by the bundle or receipt are never authoritative.
 
 This receipt is a **fixture binding manifest**, not a provider execution proof, provider-native attestation, independent identity, or security certification. `certification_claim` is always `false`, including when recorded and expected verdicts are `PASS`. Without `--receipt`, existing v0alpha1 verification output and semantics are unchanged.
+
+`Replay` here means deterministic revalidation of the self-contained fixture-binding manifest. It does not rerun a sandbox, provider, workload, or external observer. No `agentci sandbox replay` command is released.
 
 No sandbox backend is currently claimed as certified or secure by AgentCI. Real matched cross-backend execution/certification remains experimental/`UNVERIFIED`.
 
@@ -294,4 +296,4 @@ Canonical public technical claims must trace to reproducible evidence. Recruitme
 
 ## License
 
-AgentCI is licensed under the [Apache License 2.0](LICENSE).
+AgentCI original work is licensed under the [Apache License 2.0](LICENSE). Third-party material remains subject to the licenses and attributions in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and the packaged per-skill `NOTICE.md` files.

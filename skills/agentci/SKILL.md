@@ -80,7 +80,7 @@ The canonical permissive red-control fixture is intentionally expected to be a *
 
 The installed verifier ships wheel-safe copies of canonical schema/TestCase/attestation resources and delegates verdict semantics to one canonical validator; do not create a second, divergent verdict engine.
 
-### Strict fixture receipt/replay profile
+### Strict fixture receipt profile
 
 The released verifier can optionally bind canonical evidence to an explicit signed fixture observer/cleanup bundle:
 
@@ -91,7 +91,9 @@ agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
   --json
 ```
 
-`--receipt-bundle` requires `--receipt`. The bundle is loaded explicitly and non-recursively. Trust roots are verifier-pinned; keys supplied by the bundle or receipt are not authoritative. The resulting content-addressed receipt is a **fixture binding manifest** for deterministic replay; it is not provider execution proof, provider-native attestation, independent identity, or a security certification. `certification_claim` is always `false`.
+`--receipt-bundle` requires `--receipt`. The bundle is loaded explicitly and non-recursively. Trust roots are verifier-pinned; keys supplied by the bundle or receipt are not authoritative. The resulting content-addressed receipt is a **fixture binding manifest** for deterministic manifest revalidation; it is not provider execution proof, provider-native attestation, independent identity, or a security certification. `certification_claim` is always `false`.
+
+`Replay` here means deterministic revalidation of the self-contained fixture-binding manifest. It does not rerun a sandbox, provider, workload, or external observer. No `agentci sandbox replay` command is released.
 
 ## Active Agent Sandbox Certification program
 

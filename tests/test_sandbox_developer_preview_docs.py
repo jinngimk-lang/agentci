@@ -58,3 +58,23 @@ def test_released_receipt_flow_is_discoverable_from_every_agent_entry_point():
         assert 'verifier-pinned' in text, surface
         assert 'provider execution proof' in text, surface
         assert '```bash\nagentci sandbox replay' not in text, surface
+
+
+def test_fixture_revalidation_cannot_be_misread_as_backend_reexecution():
+    for surface in [
+        ROOT / 'README.md',
+        ROOT / 'llms.txt',
+        ROOT / 'skills' / 'agentci' / 'SKILL.md',
+        ROOT / 'docs' / 'releases' / '0.2.0-developer-preview.md',
+    ]:
+        text = surface.read_text(encoding='utf-8').lower()
+        assert 'does not rerun a sandbox, provider, workload, or external observer' in text, surface
+        assert 'no `agentci sandbox replay` command is released' in text, surface
+        assert 'receipt/replay' not in text, surface
+
+
+def test_public_license_scope_preserves_third_party_terms():
+    readme = (ROOT / 'README.md').read_text(encoding='utf-8').lower()
+    assert 'agentci original work' in readme
+    assert 'third_party_notices.md' in readme
+    assert 'notice.md' in readme
