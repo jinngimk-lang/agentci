@@ -1,13 +1,33 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentci-v0"
 version = "0.2.0"
 description = "Evidence-first reliability and sandbox verification for AI agent workflows"
+readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = [
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
+  "skills/agent-precision/NOTICE.md",
+  "skills/capability-routing-reach/NOTICE.md",
+]
+keywords = [
+  "ai-agents",
+  "continuous-integration",
+  "sandbox-verification",
+  "security-testing",
+  "reproducible-evidence",
+]
 dependencies = ["PyYAML>=6.0", "jsonschema[format]>=4.23"]
+
+[project.urls]
+Repository = "https://github.com/jinngimk-lang/agentci"
+Issues = "https://github.com/jinngimk-lang/agentci/issues"
+Documentation = "https://github.com/jinngimk-lang/agentci#readme"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

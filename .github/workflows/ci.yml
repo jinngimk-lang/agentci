@@ -40,19 +40,32 @@ jobs:
           rm -rf /tmp/agentci-wheel /tmp/agentci-venv /tmp/agentci-smoke
           mkdir -p /tmp/agentci-wheel /tmp/agentci-smoke
           python -m pip wheel . --no-deps -w /tmp/agentci-wheel
-          python -m venv --system-site-packages /tmp/agentci-venv
-          /tmp/agentci-venv/bin/python -m pip install --no-deps /tmp/agentci-wheel/*.whl
+          python -m venv /tmp/agentci-venv
+          /tmp/agentci-venv/bin/python -m pip install /tmp/agentci-wheel/*.whl
           cd /tmp/agentci-smoke
           /tmp/agentci-venv/bin/agentci sandbox doctor --json > doctor.json
           /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" --json --print-digest > verify.json
+          /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-pass-evidence.json" \
+            --receipt pass-receipt.json \
+            --receipt-bundle /tmp/agentci-venv/share/agentci/sandbox/receipt-bundles/pass-sensitive-read-denied-001 \
+            --json --print-digest > pass-receipt-result.json
+          /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" \
+            --receipt red-receipt.json \
+            --receipt-bundle /tmp/agentci-venv/share/agentci/sandbox/receipt-bundles/red-control-sensitive-read-001 \
+            --json --print-digest > red-receipt-result.json
           /tmp/agentci-venv/bin/python - <<'PY'
           import json
+          from importlib.metadata import distribution
+          import os
           from pathlib import Path
           import sys
+          from agentci.sandbox.receipt import validate_receipt_manifest
           from scripts import validate_sandbox_authority as authority_validator
 
           doctor = json.load(open('doctor.json', encoding='utf-8'))
           verify = json.load(open('verify.json', encoding='utf-8'))
+          pass_result = json.load(open('pass-receipt-result.json', encoding='utf-8'))
+          red_result = json.load(open('red-receipt-result.json', encoding='utf-8'))
           resource_root = Path(sys.prefix) / 'share' / 'agentci' / 'sandbox'
           lifecycle_sidecar = resource_root / 'lifecycle-attestations' / 'red-control-sensitive-read-001-11.json'
           authority_schema = resource_root / 'authority-schema' / 'sandbox-authority-v0alpha1.schema.json'
@@ -64,4 +77,45 @@ jobs:
           assert lifecycle_sidecar.is_file()
           assert authority_schema.is_file()
           assert authority_validator.SCHEMA_PATH == authority_schema
+
+          for result, verdict in ((pass_result, 'PASS'), (red_result, 'FAIL')):
+              assert result['valid'] is True
+              assert result['recorded_verdict'] == result['expected_verdict'] == verdict
+              assert result['receipt_valid'] is True
+              assert result['receipt_written'] is True
+              assert result['certification_claim'] is False
+              assert result['artifact_digest'].startswith('sha256:')
+
+          for receipt_name in ('pass-receipt.json', 'red-receipt.json'):
+              receipt = json.load(open(receipt_name, encoding='utf-8'))
+              assert receipt['certification_claim'] is False
+              assert validate_receipt_manifest(receipt).valid is True
+
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
+          dist = distribution('agentci-v0')
+          assert dist.metadata['License-Expression'] == 'Apache-2.0'
+          license_files = set(dist.metadata.get_all('License-File') or [])
+          required_notices = {
+              'LICENSE',
+              'THIRD_PARTY_NOTICES.md',
+              'skills/agent-precision/NOTICE.md',
+              'skills/capability-routing-reach/NOTICE.md',
+          }
+          assert required_notices <= license_files
+          installed_files = {str(path).replace('\\', '/'): path for path in dist.files or []}
+          for relative_path in required_notices:
+              suffix = f'.dist-info/licenses/{relative_path}'
+              matches = [path for name, path in installed_files.items() if name.endswith(suffix)]
+              assert len(matches) == 1, (relative_path, installed_files)
+              installed = Path(dist.locate_file(matches[0]))
+              assert installed.read_bytes() == (workspace / relative_path).read_bytes()
+
+          for bundle_name in ('pass-sensitive-read-denied-001', 'red-control-sensitive-read-001'):
+              installed_bundle = resource_root / 'receipt-bundles' / bundle_name
+              source_bundle = workspace / 'examples' / 'sandbox' / 'receipt-bundles' / bundle_name
+              assert sorted(path.name for path in installed_bundle.iterdir()) == sorted(
+                  path.name for path in source_bundle.iterdir()
+              )
+              for source in source_bundle.iterdir():
+                  assert (installed_bundle / source.name).read_bytes() == source.read_bytes()
           PY
