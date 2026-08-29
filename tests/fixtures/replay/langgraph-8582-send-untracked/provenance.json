@@ -1,0 +1,23 @@
+{
+  "format_version": "agentci-replay-provenance-v0alpha1",
+  "case_id": "langgraph-8582-send-untracked",
+  "source": {
+    "url": "https://github.com/langchain-ai/langgraph/issues/8582",
+    "repository": "langchain-ai/langgraph",
+    "issue_number": 8582,
+    "reporter": "Hello-world-Prakash",
+    "observed_commit": "d56666f7f",
+    "reported_at": "2026-08-10"
+  },
+  "capture": {
+    "captured_at": "2026-08-29",
+    "upstream_state": "open",
+    "upstream_contract": "UNCONFIRMED",
+    "linked_fix_pr": null
+  },
+  "agentci_reproduction_status": "UNVERIFIED",
+  "credit": {
+    "contributor": "Hello-world-Prakash",
+    "contribution": "Original reduced LangGraph report and proposed AgentCI replay-fidelity fixture"
+  }
+}
