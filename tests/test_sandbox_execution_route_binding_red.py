@@ -1,9 +1,16 @@
+import base64
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+import hashlib
+import json
+import math
+import secrets
+from typing import Any, Mapping
 
 import pytest
 
 from agentci.sandbox.execution_route import (
+    ALGORITHM,
     ExecutionAttemptBinding,
     ExecutionContract,
     ExecutionRouteObservation,
@@ -18,6 +25,110 @@ from agentci.sandbox.execution_route import (
 
 
 NOW = datetime(2026, 8, 29, 7, 0, tzinfo=timezone.utc)
+AUTHORITY_ID = "external-route-authority"
+KEY_ID = "route-authority-test-key"
+TRUST_EPOCH = 1
+_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def _canonical_bytes(value: object) -> bytes:
+    def default(item: object) -> object:
+        if isinstance(item, datetime):
+            return item.isoformat()
+        raise TypeError(type(item).__name__)
+
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+        default=default,
+    ).encode()
+
+
+def _probable_prime(candidate: int) -> bool:
+    if candidate < 2:
+        return False
+    for prime in (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37):
+        if candidate % prime == 0:
+            return candidate == prime
+    exponent, shifts = candidate - 1, 0
+    while exponent % 2 == 0:
+        exponent //= 2
+        shifts += 1
+    for base in (2, 3, 5, 7, 11, 13, 17):
+        witness = pow(base, exponent, candidate)
+        if witness in (1, candidate - 1):
+            continue
+        for _ in range(shifts - 1):
+            witness = pow(witness, 2, candidate)
+            if witness == candidate - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def _prime(bits: int = 384) -> int:
+    while True:
+        candidate = secrets.randbits(bits) | (1 << (bits - 1)) | 1
+        if _probable_prime(candidate):
+            return candidate
+
+
+def _keypair() -> tuple[dict[str, object], tuple[int, int]]:
+    exponent = 65537
+    while True:
+        p, q = _prime(), _prime()
+        if p != q and math.gcd(exponent, (p - 1) * (q - 1)) == 1:
+            break
+    modulus = p * q
+    private_exponent = pow(exponent, -1, (p - 1) * (q - 1))
+    trust = {
+        "algorithm": ALGORITHM,
+        "key_id": KEY_ID,
+        "trust_epoch": TRUST_EPOCH,
+        "modulus_hex": format(modulus, "x"),
+        "exponent": exponent,
+    }
+    return trust, (modulus, private_exponent)
+
+
+_TRUST, _PRIVATE_KEY = _keypair()
+TEST_TRUSTED_AUTHORITIES: Mapping[str, Mapping[str, object]] = {AUTHORITY_ID: _TRUST}
+
+
+def _resign_authentication(
+    authentication: ObservationAuthentication,
+    private_key: tuple[int, int] = _PRIVATE_KEY,
+) -> ObservationAuthentication:
+    modulus, private_exponent = private_key
+    size = (modulus.bit_length() + 7) // 8
+    digest_info = _DIGEST_INFO_PREFIX + hashlib.sha256(
+        _canonical_bytes(authentication.signed_payload)
+    ).digest()
+    padding = size - len(digest_info) - 3
+    assert padding >= 8
+    encoded = b"\x00\x01" + b"\xff" * padding + b"\x00" + digest_info
+    signature = pow(int.from_bytes(encoded, "big"), private_exponent, modulus).to_bytes(size, "big")
+    return replace(authentication, signature_b64=base64.b64encode(signature).decode())
+
+
+def _authentication_for(
+    observation: ExecutionRouteObservation,
+    **changes: Any,
+) -> ObservationAuthentication:
+    authentication = ObservationAuthentication(
+        subject_digest=observation.digest,
+        authority_id=AUTHORITY_ID,
+        key_id=KEY_ID,
+        trust_epoch=TRUST_EPOCH,
+        valid_from_utc=NOW - timedelta(minutes=2),
+        valid_until_utc=NOW + timedelta(minutes=2),
+        signature_b64="",
+    )
+    return _resign_authentication(replace(authentication, **changes))
 
 
 def _route(**changes: object) -> RouteIdentity:
@@ -77,13 +188,7 @@ def _case() -> tuple[
         monotonic_ns=150,
         observer_source_id="external-observer-001",
     )
-    authentication = ObservationAuthentication(
-        authenticated=True,
-        subject_digest=observation.digest,
-        authority_id="external-route-authority",
-        valid_from_utc=NOW - timedelta(minutes=2),
-        valid_until_utc=NOW + timedelta(minutes=2),
-    )
+    authentication = _authentication_for(observation)
     return contract, attempt, observation, authentication
 
 
@@ -95,6 +200,7 @@ def _evaluate(
     authentications: dict[str, ObservationAuthentication] | None = None,
     readiness: ReadinessState = ReadinessState.ACTIVE,
     evaluated_at_utc: datetime = NOW,
+    trusted_authorities: Mapping[str, Mapping[str, object]] = TEST_TRUSTED_AUTHORITIES,
 ):
     base_contract, base_attempt, observation, authentication = _case()
     active_contract = contract or base_contract
@@ -112,6 +218,7 @@ def _evaluate(
         active_authentications,
         readiness=readiness,
         evaluated_at_utc=evaluated_at_utc,
+        trusted_authorities=trusted_authorities,
     )
 
 
@@ -121,7 +228,8 @@ def test_exact_authenticated_completed_route_is_only_eligible() -> None:
     assert result.gate_state is RouteGateState.ELIGIBLE
     assert result.route_binding_state is RouteBindingState.MATCH
     assert result.reason_codes == ()
-    assert result.authority_id == "external-route-authority"
+    assert result.authority_id == AUTHORITY_ID
+    assert result.requested_route == result.observed_route == _route()
     for forbidden in ("verdict", "backend_verdict", "passed", "certified", "secure"):
         assert not hasattr(result, forbidden)
 
@@ -137,7 +245,7 @@ def test_readiness_cannot_replace_an_execution_observation() -> None:
 def test_two_observations_are_ambiguous_even_when_each_looks_exact() -> None:
     contract, attempt, observation, authentication = _case()
     second = replace(observation, observation_id="observation-002")
-    second_auth = replace(authentication, subject_digest=second.digest)
+    second_auth = _authentication_for(second)
 
     result = _evaluate(
         contract=contract,
@@ -158,11 +266,14 @@ def test_two_observations_are_ambiguous_even_when_each_looks_exact() -> None:
     ("auth_mutation", "reason"),
     [
         (None, "observation-not-authenticated"),
-        ({"authenticated": False}, "observation-authentication-invalid"),
+        ({"signature_b64": "AA=="}, "observation-authentication-invalid"),
         ({"subject_digest": "sha256:" + "0" * 64}, "observation-authentication-subject-mismatch"),
         ({"valid_from_utc": NOW + timedelta(seconds=1)}, "observation-authentication-not-yet-valid"),
         ({"valid_until_utc": NOW - timedelta(seconds=1)}, "observation-authentication-expired"),
         ({"authority_id": ""}, "observation-authentication-invalid"),
+        ({"algorithm": "caller-defined"}, "observation-authentication-invalid"),
+        ({"key_id": "untrusted-key"}, "observation-authentication-invalid"),
+        ({"trust_epoch": 2}, "observation-authentication-invalid"),
     ],
 )
 def test_authentication_failures_never_become_eligible(auth_mutation, reason: str) -> None:
@@ -170,8 +281,11 @@ def test_authentication_failures_never_become_eligible(auth_mutation, reason: st
     if auth_mutation is None:
         authentications = {}
     else:
+        changed = replace(authentication, **auth_mutation)
+        if "signature_b64" not in auth_mutation:
+            changed = _resign_authentication(changed)
         authentications = {
-            observation.observation_id: replace(authentication, **auth_mutation)
+            observation.observation_id: changed
         }
 
     result = _evaluate(observations=[observation], authentications=authentications)
@@ -199,13 +313,7 @@ def test_authentication_failures_never_become_eligible(auth_mutation, reason: st
 def test_stale_or_wrong_attempt_context_is_unverified(field: str, value: object, reason: str) -> None:
     _, _, observation, _ = _case()
     changed = replace(observation, **{field: value})
-    authentication = ObservationAuthentication(
-        authenticated=True,
-        subject_digest=changed.digest,
-        authority_id="external-route-authority",
-        valid_from_utc=NOW - timedelta(minutes=2),
-        valid_until_utc=NOW + timedelta(minutes=2),
-    )
+    authentication = _authentication_for(changed)
 
     result = _evaluate(
         observations=[changed],
@@ -230,13 +338,7 @@ def test_stale_or_wrong_attempt_context_is_unverified(field: str, value: object,
 def test_non_completed_execution_is_unverified(state: ExecutionState | str, reason: str) -> None:
     _, _, observation, _ = _case()
     changed = replace(observation, execution_state=state)
-    authentication = ObservationAuthentication(
-        authenticated=True,
-        subject_digest=changed.digest,
-        authority_id="external-route-authority",
-        valid_from_utc=NOW - timedelta(minutes=2),
-        valid_until_utc=NOW + timedelta(minutes=2),
-    )
+    authentication = _authentication_for(changed)
 
     result = _evaluate(
         observations=[changed],
@@ -266,13 +368,7 @@ def test_non_completed_execution_is_unverified(state: ExecutionState | str, reas
 def test_every_route_identity_field_requires_exact_match(field: str, value: str, reason: str) -> None:
     _, _, observation, _ = _case()
     changed = replace(observation, effective_route=replace(observation.effective_route, **{field: value}))
-    authentication = ObservationAuthentication(
-        authenticated=True,
-        subject_digest=changed.digest,
-        authority_id="external-route-authority",
-        valid_from_utc=NOW - timedelta(minutes=2),
-        valid_until_utc=NOW + timedelta(minutes=2),
-    )
+    authentication = _authentication_for(changed)
 
     result = _evaluate(
         observations=[changed],
@@ -298,13 +394,7 @@ def test_fallback_and_degraded_routes_are_unverified_even_when_fields_match(
 ) -> None:
     _, _, observation, _ = _case()
     changed = replace(observation, **{field: True})
-    authentication = ObservationAuthentication(
-        authenticated=True,
-        subject_digest=changed.digest,
-        authority_id="external-route-authority",
-        valid_from_utc=NOW - timedelta(minutes=2),
-        valid_until_utc=NOW + timedelta(minutes=2),
-    )
+    authentication = _authentication_for(changed)
 
     result = _evaluate(
         observations=[changed],
@@ -351,7 +441,50 @@ def test_direct_api_objects_cannot_bypass_document_integrity(subject: str, chang
         attempt = replace(attempt, **changes)
     else:
         observation = replace(observation, **changes)
-        authentication = replace(authentication, subject_digest=observation.digest)
+        authentication = _authentication_for(observation)
+
+    result = evaluate_execution_route(
+        contract,
+        attempt,
+        [observation],
+        {observation.observation_id: authentication},
+        readiness=ReadinessState.ACTIVE,
+        evaluated_at_utc=NOW,
+        trusted_authorities=TEST_TRUSTED_AUTHORITIES,
+    )
+
+    assert result.gate_state is RouteGateState.UNVERIFIED
+    assert reason in result.reason_codes
+
+
+def test_caller_forged_authentication_object_is_not_external_authority() -> None:
+    contract, attempt, observation, _ = _case()
+    forged = ObservationAuthentication(
+        subject_digest=observation.digest,
+        authority_id="caller-asserted-authority",
+        key_id="caller-asserted-key",
+        trust_epoch=1,
+        valid_from_utc=NOW - timedelta(minutes=1),
+        valid_until_utc=NOW + timedelta(minutes=1),
+        signature_b64="AA==",
+    )
+
+    result = evaluate_execution_route(
+        contract,
+        attempt,
+        [observation],
+        {observation.observation_id: forged},
+        readiness=ReadinessState.ACTIVE,
+        evaluated_at_utc=NOW,
+    )
+
+    assert result.gate_state is RouteGateState.UNVERIFIED
+    assert result.route_binding_state is RouteBindingState.UNVERIFIED
+    assert "observation-authentication-invalid" in result.reason_codes
+
+
+def test_even_a_valid_signature_requires_verifier_pinned_trust_policy() -> None:
+    contract, attempt, observation, authentication = _case()
 
     result = evaluate_execution_route(
         contract,
@@ -363,4 +496,25 @@ def test_direct_api_objects_cannot_bypass_document_integrity(subject: str, chang
     )
 
     assert result.gate_state is RouteGateState.UNVERIFIED
-    assert reason in result.reason_codes
+    assert result.route_binding_state is RouteBindingState.UNVERIFIED
+    assert "observation-authentication-invalid" in result.reason_codes
+
+
+def test_malformed_direct_route_object_fails_closed_instead_of_raising() -> None:
+    contract, attempt, observation, _ = _case()
+    malformed = replace(observation, effective_route=None)
+    authentication = _authentication_for(malformed)
+
+    result = evaluate_execution_route(
+        contract,
+        attempt,
+        [malformed],
+        {malformed.observation_id: authentication},
+        readiness=ReadinessState.ACTIVE,
+        evaluated_at_utc=NOW,
+        trusted_authorities=TEST_TRUSTED_AUTHORITIES,
+    )
+
+    assert result.gate_state is RouteGateState.UNVERIFIED
+    assert result.route_binding_state is RouteBindingState.MISMATCH
+    assert "route-observation-incomplete" in result.reason_codes

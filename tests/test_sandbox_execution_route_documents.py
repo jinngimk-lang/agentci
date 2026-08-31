@@ -178,3 +178,14 @@ def test_agent_discovery_surfaces_expose_the_truth_bounded_route_gate(relative_p
     assert "eligible is not pass" in text
     assert "does not execute a backend" in text
     assert "s1 remains unverified" in text
+
+
+def test_route_design_and_plan_match_the_public_implementation_names() -> None:
+    design = (ROOT / "docs/architecture/s1-execution-route-binding.md").read_text(encoding="utf-8")
+    plan = (ROOT / "docs/operations/s1-execution-route-binding-plan.md").read_text(encoding="utf-8")
+
+    assert "RouteGateStatus" not in design
+    assert "all six route identity fields" not in design
+    assert "requested route and the single observed route" in design
+    assert "src/agentci/sandbox/execution_route.py" in plan
+    assert "src/agentci/sandbox/route_binding.py" not in plan

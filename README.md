@@ -10,7 +10,7 @@ AgentCI is open source and intentionally adversarial: builders, runtime experts,
 
 ## Main-only S1 route-binding gate (`0.3.0.dev0`)
 
-Development on `main` after the `v0.2.0` tag includes the first falsifiable S1 primitive: a provider-neutral execution contract and route-binding eligibility gate. It requires one completed external observation to match the requested target, route, version, build, mode, adapter, contract, attempt nonce, environment, policy, and UTC/monotonic observation window exactly.
+Development after the `v0.2.0` tag includes the first falsifiable S1 primitive: a provider-neutral execution contract and route-binding eligibility gate. It requires one completed external observation to match the requested target, route, version, build, mode, adapter, contract, attempt nonce, environment, policy, and UTC/monotonic observation window exactly. Observation authentication is signature-verified against verifier-supplied pinned trust; the default trust policy is empty and no S1 authority keys ship with AgentCI.
 
 Missing, unauthenticated, ambiguous, stale, fallback, degraded, or mismatched observations return `UNVERIFIED`. **ELIGIBLE is not PASS**: it means only that later semantic evidence evaluation may continue. The gate does not execute a backend and does not claim isolation, containment, security, or certification. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
 

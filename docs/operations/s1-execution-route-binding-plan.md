@@ -9,7 +9,7 @@ Base: `main@389c30bab30e2db230574eba9b8e5e23e32c09b3`
 Files:
 
 - add `tests/test_sandbox_execution_route_binding_red.py`
-- add a deliberately permissive importable skeleton at `src/agentci/sandbox/route_binding.py`
+- add a deliberately permissive importable skeleton at `src/agentci/sandbox/execution_route.py`
 
 Write exact-match and adversarial tests for missing, ambiguous, stale, fallback, degraded, unauthenticated, subject-mismatched, attempt/context-mismatched, and route-field mutation cases. Run the targeted file and preserve a semantic failure against the permissive evaluator; an import error is not sufficient RED evidence.
 
@@ -17,10 +17,10 @@ Write exact-match and adversarial tests for missing, ambiguous, stale, fallback,
 
 Files:
 
-- modify `src/agentci/sandbox/route_binding.py`
+- modify `src/agentci/sandbox/execution_route.py`
 - modify `src/agentci/sandbox/__init__.py`
 
-Implement immutable route, contract, attempt, observation, authentication, and result types; canonical contract/observation digest binding; exact route comparison; UTC/monotonic window, execution, fallback/degraded, and context checks; deterministic reason ordering; and `ELIGIBLE`/`UNVERIFIED` only. Keep readiness diagnostic and provider names out of control flow.
+Implement immutable route, contract, attempt, observation, authentication, and result types; canonical contract/observation digest binding; verifier-pinned signature authentication with an empty default trust policy; exact route comparison; UTC/monotonic window, execution, fallback/degraded, and context checks; deterministic reason ordering; and `ELIGIBLE`/`UNVERIFIED` only. Keep readiness diagnostic and provider names out of control flow.
 
 Run the targeted tests until GREEN. Do not weaken a red case to obtain success.
 

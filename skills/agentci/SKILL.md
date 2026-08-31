@@ -23,7 +23,7 @@ No backend is currently certified by AgentCI.
 
 ### Main-only development API
 
-`main` after `v0.2.0` is versioned `0.3.0.dev0` and contains the first S1 falsifiable route gate, `S1-EXEC-ROUTE-001`. It compares an externally authenticated completed execution observation with an exact provider-neutral contract and attempt binding. Missing, ambiguous, stale, fallback, degraded, context-mismatched, or route-mismatched evidence remains `UNVERIFIED`.
+Development after `v0.2.0` is versioned `0.3.0.dev0` and contains the first S1 falsifiable route gate, `S1-EXEC-ROUTE-001`. It compares a signature-authenticated completed execution observation with an exact provider-neutral contract and attempt binding. Signatures are verified against verifier-supplied pinned authority/key/epoch policy; the default trust policy is empty, so caller-asserted trust fails closed. Missing, ambiguous, stale, fallback, degraded, context-mismatched, or route-mismatched evidence remains `UNVERIFIED`.
 
 **ELIGIBLE is not PASS.** The gate only allows later semantic evidence evaluation to continue. It does not execute a backend and exposes no backend verdict, isolation, containment, security, or certification field. There is no S1 execution CLI. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
 

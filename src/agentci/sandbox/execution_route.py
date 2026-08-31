@@ -6,11 +6,13 @@ not a sandbox verdict, containment result, or certification.
 """
 from __future__ import annotations
 
+import base64
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 import hashlib
 import json
+from types import MappingProxyType
 from typing import Mapping, Sequence
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -21,6 +23,14 @@ from .resource_loader import canonical_resource_json
 API_VERSION = "agentci.dev/sandbox-execution/v0alpha1"
 CONTRACT_KIND = "ExecutionContract"
 OBSERVATION_KIND = "ExecutionRouteObservation"
+AUTHENTICATION_API_VERSION = "agentci.dev/sandbox-route-authentication/v0alpha1"
+AUTHENTICATION_KIND = "ObservationAuthentication"
+ALGORITHM = "rsa-pkcs1v15-sha256"
+_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+# Trust roots are verifier-owned policy, never workload or observation data.
+# AgentCI intentionally ships no real S1 route authority in this first slice.
+TRUSTED_ROUTE_AUTHORITIES: Mapping[str, Mapping[str, object]] = MappingProxyType({})
 
 
 class ReadinessState(str, Enum):
@@ -138,11 +148,28 @@ class ExecutionRouteObservation:
 
 @dataclass(frozen=True)
 class ObservationAuthentication:
-    authenticated: bool
     subject_digest: str
     authority_id: str
+    key_id: str
+    trust_epoch: int
     valid_from_utc: datetime
     valid_until_utc: datetime
+    signature_b64: str
+    algorithm: str = ALGORITHM
+
+    @property
+    def signed_payload(self) -> dict[str, object]:
+        return {
+            "apiVersion": AUTHENTICATION_API_VERSION,
+            "kind": AUTHENTICATION_KIND,
+            "algorithm": self.algorithm,
+            "subject_digest": self.subject_digest,
+            "authority_id": self.authority_id,
+            "key_id": self.key_id,
+            "trust_epoch": self.trust_epoch,
+            "valid_from_utc": self.valid_from_utc,
+            "valid_until_utc": self.valid_until_utc,
+        }
 
 
 @dataclass(frozen=True)
@@ -155,6 +182,8 @@ class RouteGateResult:
     contract_digest: str
     observation_id: str | None
     authority_id: str | None
+    requested_route: RouteIdentity | None
+    observed_route: RouteIdentity | None
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -279,7 +308,9 @@ def _natural_number(value: object, *, minimum: int = 0) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= minimum
 
 
-def _route_complete(route: RouteIdentity) -> bool:
+def _route_complete(route: object) -> bool:
+    if not isinstance(route, RouteIdentity):
+        return False
     return (
         all(_nonempty(value) for value in asdict(route).values())
         and _digest_string(route.route_build_digest)
@@ -287,7 +318,9 @@ def _route_complete(route: RouteIdentity) -> bool:
     )
 
 
-def _route_mismatch_reasons(requested: RouteIdentity, observed: RouteIdentity) -> tuple[str, ...]:
+def _route_mismatch_reasons(requested: object, observed: object) -> tuple[str, ...]:
+    if not isinstance(requested, RouteIdentity) or not isinstance(observed, RouteIdentity):
+        return ()
     reasons: list[str] = []
     if observed.target_id != requested.target_id:
         reasons.append("target-mismatch")
@@ -304,6 +337,80 @@ def _route_mismatch_reasons(requested: RouteIdentity, observed: RouteIdentity) -
     return tuple(reasons)
 
 
+def _safe_contract_digest(contract: object) -> str:
+    if not isinstance(contract, ExecutionContract):
+        return ""
+    try:
+        return contract.digest
+    except (AttributeError, TypeError, ValueError):
+        return ""
+
+
+def _safe_observation_digest(observation: object) -> str:
+    if not isinstance(observation, ExecutionRouteObservation):
+        return ""
+    try:
+        return observation.digest
+    except (AttributeError, TypeError, ValueError):
+        return ""
+
+
+def _verify_payload_signature(
+    payload: Mapping[str, object],
+    signature_b64: object,
+    trust: object,
+) -> bool:
+    if not isinstance(trust, Mapping):
+        return False
+    try:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(trust["modulus_hex"], 16)
+        exponent = int(trust["exponent"])
+        encoded_payload = _canonical_bytes(dict(payload))
+    except (KeyError, TypeError, ValueError):
+        return False
+    if modulus <= 0 or exponent <= 1:
+        return False
+    size = (modulus.bit_length() + 7) // 8
+    if len(signature) != size:
+        return False
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(size, "big")
+    digest_info = _DIGEST_INFO_PREFIX + hashlib.sha256(encoded_payload).digest()
+    padding = size - len(digest_info) - 3
+    if padding < 8:
+        return False
+    return encoded == b"\x00\x01" + b"\xff" * padding + b"\x00" + digest_info
+
+
+def _authentication_signature_valid(
+    authentication: object,
+    trusted_authorities: Mapping[str, Mapping[str, object]],
+) -> bool:
+    if not isinstance(authentication, ObservationAuthentication):
+        return False
+    if (
+        authentication.algorithm != ALGORITHM
+        or not _nonempty(authentication.authority_id)
+        or not _nonempty(authentication.key_id)
+        or not _natural_number(authentication.trust_epoch, minimum=1)
+    ):
+        return False
+    trust = trusted_authorities.get(authentication.authority_id)
+    if not isinstance(trust, Mapping):
+        return False
+    if (
+        trust.get("algorithm") != authentication.algorithm
+        or trust.get("key_id") != authentication.key_id
+        or trust.get("trust_epoch") != authentication.trust_epoch
+    ):
+        return False
+    return _verify_payload_signature(
+        authentication.signed_payload,
+        authentication.signature_b64,
+        trust,
+    )
+
+
 def evaluate_execution_route(
     contract: ExecutionContract,
     attempt: ExecutionAttemptBinding,
@@ -312,14 +419,26 @@ def evaluate_execution_route(
     *,
     readiness: ReadinessState = ReadinessState.UNVERIFIED,
     evaluated_at_utc: datetime,
+    trusted_authorities: Mapping[str, Mapping[str, object]] | None = None,
 ) -> RouteGateResult:
     """Evaluate exact route binding and fail closed to ``UNVERIFIED``.
 
-    ``authentications`` is produced by an external trust-verification boundary;
-    no field inside an observation is allowed to authenticate that observation.
+    Authentication signatures are checked here against verifier-supplied trust
+    policy.  The default policy is empty: neither an observation nor an
+    authentication object can declare its own authority.
     """
     effective_readiness = readiness if isinstance(readiness, ReadinessState) else ReadinessState.UNVERIFIED
-    contract_digest = contract.digest
+    trust_policy = (
+        trusted_authorities
+        if isinstance(trusted_authorities, Mapping)
+        else TRUSTED_ROUTE_AUTHORITIES
+    )
+    contract_digest = _safe_contract_digest(contract)
+    requested_route = (
+        contract.requested_route
+        if isinstance(contract, ExecutionContract) and isinstance(contract.requested_route, RouteIdentity)
+        else None
+    )
 
     if not observations:
         return RouteGateResult(
@@ -331,6 +450,8 @@ def evaluate_execution_route(
             contract_digest=contract_digest,
             observation_id=None,
             authority_id=None,
+            requested_route=requested_route,
+            observed_route=None,
         )
 
     if len(observations) != 1:
@@ -343,9 +464,53 @@ def evaluate_execution_route(
             contract_digest=contract_digest,
             observation_id=None,
             authority_id=None,
+            requested_route=requested_route,
+            observed_route=None,
         )
 
     observation = observations[0]
+    if not isinstance(observation, ExecutionRouteObservation):
+        return RouteGateResult(
+            gate_state=RouteGateState.UNVERIFIED,
+            route_binding_state=RouteBindingState.MISMATCH,
+            execution_state=ExecutionState.UNVERIFIED,
+            readiness_state=effective_readiness,
+            reason_codes=("route-observation-incomplete",),
+            contract_digest=contract_digest,
+            observation_id=None,
+            authority_id=None,
+            requested_route=requested_route,
+            observed_route=None,
+        )
+    observed_route = (
+        observation.effective_route
+        if isinstance(observation.effective_route, RouteIdentity)
+        else None
+    )
+    if not isinstance(contract, ExecutionContract) or not isinstance(attempt, ExecutionAttemptBinding):
+        reason = (
+            "execution-contract-invalid"
+            if not isinstance(contract, ExecutionContract)
+            else "attempt-binding-invalid"
+        )
+        return RouteGateResult(
+            gate_state=RouteGateState.UNVERIFIED,
+            route_binding_state=RouteBindingState.STALE,
+            execution_state=(
+                observation.execution_state
+                if isinstance(observation.execution_state, (ExecutionState, str))
+                else ExecutionState.UNVERIFIED
+            ),
+            readiness_state=effective_readiness,
+            reason_codes=(reason,),
+            contract_digest=contract_digest,
+            observation_id=(
+                observation.observation_id if _nonempty(observation.observation_id) else None
+            ),
+            authority_id=None,
+            requested_route=requested_route,
+            observed_route=observed_route,
+        )
     reasons: list[str] = []
     authentication_reasons: list[str] = []
     stale_reasons: list[str] = []
@@ -383,13 +548,19 @@ def evaluate_execution_route(
     ):
         stale_reasons.append("attempt-window-invalid")
 
-    authentication = authentications.get(observation.observation_id)
+    authentication = (
+        authentications.get(observation.observation_id)
+        if isinstance(authentications, Mapping)
+        else None
+    )
     if authentication is None:
         authentication_reasons.append("observation-not-authenticated")
+    elif not isinstance(authentication, ObservationAuthentication):
+        authentication_reasons.append("observation-authentication-invalid")
     else:
-        if authentication.authenticated is not True or not _nonempty(authentication.authority_id):
+        if not _authentication_signature_valid(authentication, trust_policy):
             authentication_reasons.append("observation-authentication-invalid")
-        if authentication.subject_digest != observation.digest:
+        if authentication.subject_digest != _safe_observation_digest(observation):
             authentication_reasons.append("observation-authentication-subject-mismatch")
         if (
             not _aware(evaluated_at_utc)
@@ -436,7 +607,14 @@ def evaluate_execution_route(
     elif _aware(attempt.window_started_at_utc) and _aware(attempt.window_finished_at_utc):
         if not attempt.window_started_at_utc <= observation.observed_at_utc <= attempt.window_finished_at_utc:
             stale_reasons.append("observation-outside-window")
-    if not attempt.window_started_monotonic_ns <= observation.monotonic_ns <= attempt.window_finished_monotonic_ns:
+    if (
+        _natural_number(attempt.window_started_monotonic_ns)
+        and _natural_number(attempt.window_finished_monotonic_ns)
+        and _natural_number(observation.monotonic_ns)
+        and not attempt.window_started_monotonic_ns
+        <= observation.monotonic_ns
+        <= attempt.window_finished_monotonic_ns
+    ):
         stale_reasons.append("observation-outside-window")
 
     if observation.execution_state != ExecutionState.COMPLETED:
@@ -479,6 +657,8 @@ def evaluate_execution_route(
             contract_digest=contract_digest,
             observation_id=observation.observation_id,
             authority_id=authentication.authority_id if authentication else None,
+            requested_route=requested_route,
+            observed_route=observed_route,
         )
 
     if authentication_reasons:
@@ -503,4 +683,6 @@ def evaluate_execution_route(
         contract_digest=contract_digest,
         observation_id=observation.observation_id,
         authority_id=None,
+        requested_route=requested_route,
+        observed_route=observed_route,
     )

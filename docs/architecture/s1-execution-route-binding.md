@@ -1,6 +1,6 @@
 # S1 Execution Route Binding
 
-Status: approved first S1 falsifiable slice. This document specifies a route-binding eligibility gate; it does not certify a backend or claim real backend execution is already implemented.
+Status: candidate first S1 falsifiable slice under exact-head review. This document specifies a route-binding eligibility gate; it does not certify a backend or claim real backend execution is already implemented.
 
 ## Claim under test
 
@@ -12,16 +12,16 @@ This slice deletes provider-specific selection syntax from the common path while
 
 ## Trust and state boundaries
 
-The route gate keeps five states separate:
+The route gate keeps six states separate:
 
 1. `ExecutionContract` records the frozen authorized route request.
 2. `ExecutionAttemptBinding` binds one run, case, attempt nonce, environment, policy, and observation window to that contract.
 3. `ExecutionRouteObservation` records what an external observer says executed.
-4. `ObservationAuthentication` records an external authority's authentication of the exact observation digest and its validity interval.
+4. `ObservationAuthentication` carries an external authority's signature over the exact observation digest, key/epoch identity, and validity interval. The evaluator verifies it against verifier-pinned trust policy; the object cannot declare its own trust.
 5. `RouteBindingState` records whether the requested and observed route facts match.
-6. `RouteGateStatus` is only `ELIGIBLE` or `UNVERIFIED`.
+6. `RouteGateState` is only `ELIGIBLE` or `UNVERIFIED`.
 
-Readiness remains diagnostic input. It is reported but cannot upgrade missing execution evidence. Observation is not authority: route fields inside an observation cannot authenticate themselves, and keys or authority claims embedded in workload output are not accepted by this gate.
+Readiness remains diagnostic input. It is reported but cannot upgrade missing execution evidence. Observation is not authority: route fields inside an observation cannot authenticate themselves, and keys or authority claims embedded in workload output are not accepted by this gate. The shipped trust policy is empty; callers must explicitly supply pinned authority id, algorithm, key id, trust epoch, and public key material before a signature can be accepted.
 
 ## Canonical route identity
 
@@ -47,10 +47,10 @@ The result is `ELIGIBLE` only when all of the following hold at the evaluation t
 - the observation falls inside both the UTC and monotonic windows of the attempt;
 - execution state is `COMPLETED`;
 - route resolution is `EXACT`, not fallback or degraded;
-- all six route identity fields exactly match the contract;
-- external authentication is present and marked authenticated;
+- all eight route identity fields exactly match the contract;
+- external authentication is present and its signature verifies against verifier-pinned trust policy;
 - authentication binds the canonical digest of this observation;
-- authentication is inside its validity interval and names a non-empty external authority.
+- authentication is inside its validity interval and matches the pinned authority, key, algorithm, and trust epoch.
 
 Every other state returns `UNVERIFIED` with deterministic reason codes. Multiple defects may be reported together. Unknown values fail closed.
 
@@ -72,6 +72,8 @@ It deliberately exposes no `PASS`, backend verdict, `certified`, `secure`, isola
 
 - readiness alone with no observation;
 - missing authentication;
+- a correctly signed authentication evaluated without pinned verifier trust;
+- a caller-asserted authority or signature not present in verifier trust policy;
 - authentication for a different observation digest;
 - unauthenticated or expired authentication;
 - not-yet-valid authentication;
@@ -88,7 +90,7 @@ It deliberately exposes no `PASS`, backend verdict, `certified`, `secure`, isola
 
 - no real bubblewrap, Podman, gVisor, or provider adapter;
 - no execution CLI;
-- no cryptographic signature implementation or key custody;
+- no real authority key custody, rotation service, or shipped S1 trust roots;
 - no S0 evidence-schema rewrite;
 - no containment, network, credential, resource, cleanup, or lifecycle verdict;
 - no backend selection or automatic fallback.
