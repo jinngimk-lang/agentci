@@ -41,3 +41,17 @@ def test_showcase_catalog_validator_rejects_missing_local_resource(tmp_path: Pat
     errors = validator(catalog, repository_root=tmp_path)
 
     assert errors == ['missing-resource: repository_path does not exist: examples/missing.json']
+
+
+def test_showcase_catalog_validator_rejects_duplicate_ids(tmp_path: Path):
+    catalog = {
+        'schema_version': 'agentci.showcase.v1',
+        'items': [
+            {'id': 'duplicate', 'repository_path': None},
+            {'id': 'duplicate', 'repository_path': None},
+        ],
+    }
+
+    errors = showcase_module.validate_showcase_catalog(catalog, repository_root=tmp_path)
+
+    assert errors == ['duplicate: duplicate showcase id']
