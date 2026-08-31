@@ -75,3 +75,21 @@ def test_showcase_list_json_exposes_truth_bounded_entries():
         '--print-digest',
     ]
     assert red_control['certification_claim'] is False
+
+
+def test_showcase_show_json_returns_exact_entry():
+    result = run_cli('showcase', 'show', 'sandbox-doctor', '--json')
+
+    assert result.returncode == 0, result.stderr
+    item = json.loads(result.stdout)
+    assert item['id'] == 'sandbox-doctor'
+    assert item['evidence_maturity'] == 'released-capability'
+    assert item['released_command'] == ['agentci', 'sandbox', 'doctor', '--json']
+    assert item['certification_claim'] is False
+
+
+def test_showcase_show_unknown_id_fails_clearly():
+    result = run_cli('showcase', 'show', 'missing-case', '--json')
+
+    assert result.returncode == 2
+    assert 'unknown showcase id: missing-case' in result.stderr.lower()
