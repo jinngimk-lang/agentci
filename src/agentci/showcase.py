@@ -40,10 +40,18 @@ def validate_showcase_catalog(
     repository_root: Path = SOURCE_ROOT,
 ) -> list[str]:
     errors: list[str] = []
+    seen_ids: set[str] = set()
+
     for item in catalog.get('items', []):
+        item_id = item.get('id', '<unknown>')
+        if item_id in seen_ids:
+            errors.append(f'{item_id}: duplicate showcase id')
+        else:
+            seen_ids.add(item_id)
+
         repository_path = item.get('repository_path')
         if repository_path and not (repository_root / repository_path).is_file():
             errors.append(
-                f"{item.get('id', '<unknown>')}: repository_path does not exist: {repository_path}"
+                f'{item_id}: repository_path does not exist: {repository_path}'
             )
     return errors
