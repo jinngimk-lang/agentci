@@ -11,9 +11,26 @@ from .sandbox import collect_readiness_report
 from .showcase import load_showcase_catalog
 
 
+_STARTER_CONFIG = """suite: starter
+cases:
+  - id: first-check
+    input: "Verify a deterministic result"
+    actual:
+      success: true
+      latency_ms: 100
+      cost_usd: 0.0
+    expected:
+      success: true
+      max_latency_ms: 1000
+      max_cost_usd: 0.01
+"""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog='agentci')
     subparsers = parser.add_subparsers(dest='command', required=True)
+    init_parser = subparsers.add_parser('init', help='create a minimal runnable AgentCI eval config')
+    init_parser.add_argument('path', nargs='?', type=Path, default=Path('agentci.yaml'))
     test_parser = subparsers.add_parser('test', help='run a deterministic eval suite')
     test_parser.add_argument('path', type=Path)
     test_parser.add_argument('--output-dir', type=Path, default=Path('artifacts'))
@@ -49,6 +66,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
+        if args.command == 'init':
+            with args.path.open('x', encoding='utf-8') as starter_file:
+                starter_file.write(_STARTER_CONFIG)
+            print(f'Created: {args.path}')
+            print(f'Next: agentci test {args.path}')
+            return 0
         if args.command == 'test':
             result = run_suite(args.path, args.output_dir)
             print(
