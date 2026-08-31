@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agentci import showcase as showcase_module
 from agentci.showcase import load_showcase_catalog
 
 
@@ -21,3 +22,22 @@ def test_showcase_catalog_uses_same_canonical_bytes_for_installed_fallback(tmp_p
     )
 
     assert catalog == json.loads(repository_text)
+
+
+def test_showcase_catalog_validator_rejects_missing_local_resource(tmp_path: Path):
+    validator = getattr(showcase_module, 'validate_showcase_catalog', None)
+    assert validator is not None, 'validate_showcase_catalog must exist'
+
+    catalog = {
+        'schema_version': 'agentci.showcase.v1',
+        'items': [
+            {
+                'id': 'missing-resource',
+                'repository_path': 'examples/missing.json',
+            }
+        ],
+    }
+
+    errors = validator(catalog, repository_root=tmp_path)
+
+    assert errors == ['missing-resource: repository_path does not exist: examples/missing.json']
