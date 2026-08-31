@@ -44,6 +44,7 @@ jobs:
           /tmp/agentci-venv/bin/python -m pip install /tmp/agentci-wheel/*.whl
           cd /tmp/agentci-smoke
           /tmp/agentci-venv/bin/agentci sandbox doctor --json > doctor.json
+          /tmp/agentci-venv/bin/agentci showcase list --json > showcase.json
           /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" --json --print-digest > verify.json
           /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-pass-evidence.json" \
             --receipt pass-receipt.json \
@@ -63,6 +64,7 @@ jobs:
           from scripts import validate_sandbox_authority as authority_validator
 
           doctor = json.load(open('doctor.json', encoding='utf-8'))
+          showcase = json.load(open('showcase.json', encoding='utf-8'))
           verify = json.load(open('verify.json', encoding='utf-8'))
           pass_result = json.load(open('pass-receipt-result.json', encoding='utf-8'))
           red_result = json.load(open('red-receipt-result.json', encoding='utf-8'))
@@ -70,6 +72,11 @@ jobs:
           lifecycle_sidecar = resource_root / 'lifecycle-attestations' / 'red-control-sensitive-read-001-11.json'
           authority_schema = resource_root / 'authority-schema' / 'sandbox-authority-v0alpha1.schema.json'
           assert doctor['state'] in {'ready', 'not-ready'}
+          assert showcase['schema_version'] == 'agentci.showcase.v1'
+          assert {item['id'] for item in showcase['items']} >= {
+              'sandbox-doctor',
+              'sandbox-sensitive-read-red-control',
+          }
           assert verify['valid'] is True
           assert verify['recorded_verdict'] == verify['expected_verdict'] == 'FAIL'
           assert verify['certification_claim'] is False
