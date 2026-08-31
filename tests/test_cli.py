@@ -77,6 +77,16 @@ def test_showcase_list_json_exposes_truth_bounded_entries():
     assert red_control['certification_claim'] is False
 
 
+def test_showcase_list_human_output_is_truth_bounded():
+    result = run_cli('showcase', 'list')
+
+    assert result.returncode == 0, result.stderr
+    assert 'sandbox-doctor [released-capability]' in result.stdout
+    assert 'sandbox-sensitive-read-red-control [fixture]' in result.stdout
+    assert 'Truth boundary:' in result.stdout
+    assert 'does not certify' in result.stdout
+
+
 def test_showcase_show_json_returns_exact_entry():
     result = run_cli('showcase', 'show', 'sandbox-doctor', '--json')
 
