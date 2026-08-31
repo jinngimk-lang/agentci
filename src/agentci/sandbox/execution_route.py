@@ -214,7 +214,7 @@ def parse_execution_contract(raw: Mapping[str, object]) -> ExecutionContract:
     if not _valid_document(
         raw,
         "sandbox-execution-contract-v0alpha1.schema.json",
-        "execution-contract-schema",
+        "contract-schema",
     ):
         raise ExecutionRouteDocumentError("execution-contract-invalid")
     requested = raw["requested_route"]
@@ -237,7 +237,7 @@ def parse_execution_route_observation(raw: Mapping[str, object]) -> ExecutionRou
     if not _valid_document(
         raw,
         "sandbox-execution-route-observation-v0alpha1.schema.json",
-        "execution-route-observation-schema",
+        "route-schema",
     ):
         raise ExecutionRouteDocumentError("route-observation-invalid")
     effective_route = raw["effective_route"]
