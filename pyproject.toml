@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentci-v0"
-version = "0.2.0"
+version = "0.3.0.dev0"
 description = "Evidence-first reliability and sandbox verification for AI agent workflows"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -44,6 +44,8 @@ package-dir = {"" = "src", "scripts" = "scripts"}
 "share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
 "share/agentci/sandbox/receipt-schema" = ["schemas/sandbox-receipt-v0alpha1.schema.json"]
 "share/agentci/sandbox/authority-schema" = ["schemas/sandbox-authority-v0alpha1.schema.json"]
+"share/agentci/sandbox/contract-schema" = ["schemas/sandbox-execution-contract-v0alpha1.schema.json"]
+"share/agentci/sandbox/route-schema" = ["schemas/sandbox-execution-route-observation-v0alpha1.schema.json"]
 "share/agentci/sandbox/testcases" = ["examples/sandbox/testcases/*.json"]
 "share/agentci/sandbox/execution-attestations" = ["examples/sandbox/execution-attestations/*.json"]
 "share/agentci/sandbox/lifecycle-attestations" = ["examples/sandbox/lifecycle-attestations/*.json"]

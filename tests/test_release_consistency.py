@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_python_version_matches_distribution_version():
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
-    assert agentci.__version__ == pyproject['project']['version'] == '0.2.0'
+    assert agentci.__version__ == pyproject['project']['version'] == '0.3.0.dev0'
 
 
 def test_external_verifier_documents_clean_wheel_verify_gate():

@@ -21,6 +21,14 @@ Do not infer additional sandbox commands from architecture documents. Future `in
 
 No backend is currently certified by AgentCI.
 
+### Main-only development API
+
+Development after `v0.2.0` is versioned `0.3.0.dev0` and contains the first S1 falsifiable route gate, `S1-EXEC-ROUTE-001`. It compares a signature-authenticated completed execution observation with an exact provider-neutral contract and attempt binding. Signatures are verified against verifier-supplied pinned authority/key/epoch policy; the default trust policy is empty, so caller-asserted trust fails closed. Missing, ambiguous, stale, fallback, degraded, context-mismatched, or route-mismatched evidence remains `UNVERIFIED`.
+
+**ELIGIBLE is not PASS.** The gate only allows later semantic evidence evaluation to continue. It does not execute a backend and exposes no backend verdict, isolation, containment, security, or certification field. There is no S1 execution CLI. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
+
+Use `docs/architecture/s1-execution-route-binding.md` for the contract boundary and `src/agentci/sandbox/execution_route.py` for the development API. Do not infer backend execution from the presence of these schemas.
+
 ## When to use
 
 Use AgentCI to:
