@@ -424,6 +424,11 @@ def test_naive_evaluation_time_fails_closed_instead_of_raising() -> None:
             {"window_finished_monotonic_ns": 99},
             "attempt-window-invalid",
         ),
+        (
+            "attempt",
+            {"window_started_monotonic_ns": None},
+            "attempt-binding-invalid",
+        ),
         ("observation", {"observation_id": ""}, "route-observation-incomplete"),
         ("observation", {"observer_source_id": ""}, "route-observation-incomplete"),
         (
@@ -518,3 +523,40 @@ def test_malformed_direct_route_object_fails_closed_instead_of_raising() -> None
     assert result.gate_state is RouteGateState.UNVERIFIED
     assert result.route_binding_state is RouteBindingState.MISMATCH
     assert "route-observation-incomplete" in result.reason_codes
+
+
+def test_unhashable_direct_observation_id_fails_closed_instead_of_raising() -> None:
+    contract, attempt, observation, _ = _case()
+    malformed = replace(observation, observation_id=[])
+
+    result = evaluate_execution_route(
+        contract,
+        attempt,
+        [malformed],
+        {},
+        readiness=ReadinessState.ACTIVE,
+        evaluated_at_utc=NOW,
+        trusted_authorities=TEST_TRUSTED_AUTHORITIES,
+    )
+
+    assert result.gate_state is RouteGateState.UNVERIFIED
+    assert "observation-not-authenticated" in result.reason_codes
+    assert "route-observation-incomplete" in result.reason_codes
+
+
+def test_non_sequence_observation_input_fails_closed_instead_of_raising() -> None:
+    contract, attempt, _, _ = _case()
+
+    result = evaluate_execution_route(
+        contract,
+        attempt,
+        1,
+        {},
+        readiness=ReadinessState.ACTIVE,
+        evaluated_at_utc=NOW,
+        trusted_authorities=TEST_TRUSTED_AUTHORITIES,
+    )
+
+    assert result.gate_state is RouteGateState.UNVERIFIED
+    assert result.route_binding_state is RouteBindingState.MISMATCH
+    assert result.reason_codes == ("route-observation-incomplete",)

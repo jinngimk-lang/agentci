@@ -440,6 +440,23 @@ def evaluate_execution_route(
         else None
     )
 
+    if not isinstance(observations, Sequence) or isinstance(
+        observations,
+        (str, bytes, bytearray),
+    ):
+        return RouteGateResult(
+            gate_state=RouteGateState.UNVERIFIED,
+            route_binding_state=RouteBindingState.MISMATCH,
+            execution_state=ExecutionState.UNVERIFIED,
+            readiness_state=effective_readiness,
+            reason_codes=("route-observation-incomplete",),
+            contract_digest=contract_digest,
+            observation_id=None,
+            authority_id=None,
+            requested_route=requested_route,
+            observed_route=None,
+        )
+
     if not observations:
         return RouteGateResult(
             gate_state=RouteGateState.UNVERIFIED,
@@ -540,17 +557,22 @@ def evaluate_execution_route(
         stale_reasons.append("attempt-binding-invalid")
     if attempt.contract_digest != contract_digest or attempt.case_id != contract.case_id:
         stale_reasons.append("contract-binding-mismatch")
-    if (
-        not _aware(attempt.window_started_at_utc)
-        or not _aware(attempt.window_finished_at_utc)
-        or attempt.window_started_at_utc > attempt.window_finished_at_utc
-        or attempt.window_started_monotonic_ns > attempt.window_finished_monotonic_ns
-    ):
+    utc_window_valid = (
+        _aware(attempt.window_started_at_utc)
+        and _aware(attempt.window_finished_at_utc)
+        and attempt.window_started_at_utc <= attempt.window_finished_at_utc
+    )
+    monotonic_window_valid = (
+        _natural_number(attempt.window_started_monotonic_ns)
+        and _natural_number(attempt.window_finished_monotonic_ns)
+        and attempt.window_started_monotonic_ns <= attempt.window_finished_monotonic_ns
+    )
+    if not utc_window_valid or not monotonic_window_valid:
         stale_reasons.append("attempt-window-invalid")
 
     authentication = (
         authentications.get(observation.observation_id)
-        if isinstance(authentications, Mapping)
+        if isinstance(authentications, Mapping) and _nonempty(observation.observation_id)
         else None
     )
     if authentication is None:
