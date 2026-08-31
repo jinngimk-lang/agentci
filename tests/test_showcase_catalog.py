@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from agentci import showcase as showcase_module
+from agentci.cli import build_parser
 from agentci.showcase import load_showcase_catalog
 
 
@@ -73,3 +74,19 @@ def test_showcase_catalog_validator_rejects_fixture_certification_claim(tmp_path
     errors = showcase_module.validate_showcase_catalog(catalog, repository_root=tmp_path)
 
     assert errors == ['fixture-claim: fixture entries cannot claim certification']
+
+
+def test_canonical_showcase_catalog_satisfies_truth_contract():
+    catalog = load_showcase_catalog(repository_root=ROOT)
+
+    assert showcase_module.validate_showcase_catalog(catalog, repository_root=ROOT) == []
+
+
+def test_canonical_showcase_commands_are_represented_by_current_cli():
+    catalog = load_showcase_catalog(repository_root=ROOT)
+
+    for item in catalog['items']:
+        command = item['released_command']
+        assert command[0] == 'agentci', item['id']
+        parsed = build_parser().parse_args(command[1:])
+        assert parsed.command in {'test', 'sandbox', 'showcase'}, item['id']
