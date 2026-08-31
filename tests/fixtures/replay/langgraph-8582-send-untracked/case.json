@@ -1,0 +1,84 @@
+{
+  "format_version": "agentci-replay-fidelity-case-v0alpha1",
+  "case_id": "langgraph-8582-send-untracked",
+  "claim_under_test": "A failed dynamic task must not be accepted as a faithful retry when a material input dependency present at dispatch is absent after checkpoint recovery.",
+  "target": {
+    "framework": "LangGraph",
+    "operation": "failed dynamic Send resume from InMemorySaver checkpoint",
+    "observed_commit": "d56666f7f"
+  },
+  "task_identity": {
+    "logical_task_ref": "case:langgraph-8582:send-worker:0",
+    "logical_task_ref_scope": "case-local",
+    "runtime_task_id": null,
+    "runtime_task_id_status": "unavailable",
+    "worker": "worker",
+    "dispatch": "Send"
+  },
+  "intentional_first_failure": "ValueError: intentional-worker-failure",
+  "initial_input_shape": {
+    "descriptor": [
+      {
+        "name": "messages",
+        "tracking": "tracked",
+        "presence": "present",
+        "type_name": "list[str]"
+      },
+      {
+        "name": "resource",
+        "tracking": "untracked",
+        "presence": "present",
+        "type_name": "RuntimeResource"
+      }
+    ],
+    "canonical_shape_digest": "sha256:c50c95e2f3685796b58131616c1b8b23ae3883f7a9e2724d84324e9d054f9177"
+  },
+  "checkpoint": {
+    "thread_id": "send-untracked-resume",
+    "checkpoint_id": null,
+    "checkpoint_id_status": "unavailable",
+    "pending_workers": ["worker"],
+    "state_shape": {
+      "descriptor": [
+        {
+          "name": "messages",
+          "tracking": "tracked",
+          "presence": "present",
+          "type_name": "list[str]"
+        },
+        {
+          "name": "resource",
+          "tracking": "untracked",
+          "presence": "absent",
+          "type_name": "RuntimeResource"
+        }
+      ],
+      "canonical_shape_digest": "sha256:69d5cf27fe06fe6fe8ad09985b77c6e2ef274f455f40d8b14c54b4a2cee5ac36"
+    }
+  },
+  "resumed_input_shape": {
+    "descriptor": [
+      {
+        "name": "messages",
+        "tracking": "tracked",
+        "presence": "present",
+        "type_name": "list[str]"
+      },
+      {
+        "name": "resource",
+        "tracking": "untracked",
+        "presence": "absent",
+        "type_name": "RuntimeResource"
+      }
+    ],
+    "canonical_shape_digest": "sha256:69d5cf27fe06fe6fe8ad09985b77c6e2ef274f455f40d8b14c54b4a2cee5ac36"
+  },
+  "acceptable_outcomes": [
+    "faithful-reconstruction",
+    "explicit-non-resumable-error",
+    "UNVERIFIED"
+  ],
+  "failure_condition": "The logical task resumes with a materially different input shape while being treated as the same faithful retry.",
+  "observed_classification": "NON_FAITHFUL",
+  "agentci_result": "UNVERIFIED"
+}
