@@ -8,6 +8,14 @@ The current primary product line is **AgentCI 0.2 Developer Preview / Agent Sand
 
 AgentCI is open source and intentionally adversarial: builders, runtime experts, security reviewers, and external agents are welcome to contribute reproducible counterexamples and corrections.
 
+## Main-only S1 route-binding gate (`0.3.0.dev0`)
+
+Development on `main` after the `v0.2.0` tag includes the first falsifiable S1 primitive: a provider-neutral execution contract and route-binding eligibility gate. It requires one completed external observation to match the requested target, route, version, build, mode, adapter, contract, attempt nonce, environment, policy, and UTC/monotonic observation window exactly.
+
+Missing, unauthenticated, ambiguous, stale, fallback, degraded, or mismatched observations return `UNVERIFIED`. **ELIGIBLE is not PASS**: it means only that later semantic evidence evaluation may continue. The gate does not execute a backend and does not claim isolation, containment, security, or certification. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
+
+See [`docs/architecture/s1-execution-route-binding.md`](docs/architecture/s1-execution-route-binding.md). The released `v0.2.0` CLI remains limited to `sandbox doctor` and `sandbox verify`; no S1 execution CLI is released.
+
 ## Current delivered Developer Preview
 
 ### 1. Deterministic agent evals

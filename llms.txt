@@ -20,6 +20,14 @@ agentci sandbox verify <evidence.json> --json --print-digest
 
 No sandbox backend is currently certified or claimed secure by AgentCI. Real cross-backend execution/certification remains experimental/UNVERIFIED.
 
+## Main-only S1 route-binding gate: 0.3.0.dev0
+
+`main` after the `v0.2.0` release carries `S1-EXEC-ROUTE-001`: strict schemas and a provider-neutral evaluator that bind one completed external route observation to the exact contract digest, run/case/attempt nonce, environment, policy, UTC/monotonic window, target, route, version, build, mode, and adapter. Missing, unauthenticated, ambiguous, stale, fallback, degraded, or mismatched material remains `UNVERIFIED`.
+
+**ELIGIBLE is not PASS.** Eligibility only permits later semantic evidence evaluation. This development API does not execute a backend and does not emit a backend verdict, containment result, security claim, or certification. It is not a released S1 CLI. S1 remains UNVERIFIED until at least two materially different real backends provide externally observed evidence for the same semantic suite.
+
+See `docs/architecture/s1-execution-route-binding.md` and `src/agentci/sandbox/execution_route.py`.
+
 ## Sandbox evidence core
 
 `main` contains the S0 evidence foundation used to reject false-PASS sandbox claims:

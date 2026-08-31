@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentci.dev/schemas/sandbox-execution-contract-v0alpha1.schema.json",
+  "title": "AgentCI Execution Contract v0alpha1",
+  "description": "Provider-neutral requested execution route for S1 route-binding eligibility. This schema does not express a backend verdict or certification.",
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "NonEmpty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "RouteIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_id",
+        "route_id",
+        "route_version",
+        "route_build_digest",
+        "mode_id",
+        "mode_digest",
+        "adapter_id",
+        "adapter_version"
+      ],
+      "properties": {
+        "target_id": {"$ref": "#/$defs/NonEmpty"},
+        "route_id": {"$ref": "#/$defs/NonEmpty"},
+        "route_version": {"$ref": "#/$defs/NonEmpty"},
+        "route_build_digest": {"$ref": "#/$defs/Digest"},
+        "mode_id": {"$ref": "#/$defs/NonEmpty"},
+        "mode_digest": {"$ref": "#/$defs/Digest"},
+        "adapter_id": {"$ref": "#/$defs/NonEmpty"},
+        "adapter_version": {"$ref": "#/$defs/NonEmpty"}
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "contract_id",
+    "contract_version",
+    "case_id",
+    "requested_route",
+    "fallback_policy",
+    "canonicalization"
+  ],
+  "properties": {
+    "apiVersion": {"const": "agentci.dev/sandbox-execution/v0alpha1"},
+    "kind": {"const": "ExecutionContract"},
+    "contract_id": {"$ref": "#/$defs/NonEmpty"},
+    "contract_version": {"$ref": "#/$defs/NonEmpty"},
+    "case_id": {"$ref": "#/$defs/NonEmpty"},
+    "requested_route": {"$ref": "#/$defs/RouteIdentity"},
+    "fallback_policy": {"const": "forbid"},
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "contract_digest"],
+      "properties": {
+        "algorithm": {"const": "agentci-json-c14n-v0alpha1"},
+        "contract_digest": {"$ref": "#/$defs/Digest"}
+      }
+    }
+  }
+}

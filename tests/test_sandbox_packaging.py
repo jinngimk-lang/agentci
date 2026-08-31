@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
         ('schemas/sandbox-certification-v0alpha1.schema.json', 'schema/sandbox-certification-v0alpha1.schema.json'),
         ('schemas/sandbox-authority-v0alpha1.schema.json', 'authority-schema/sandbox-authority-v0alpha1.schema.json'),
         ('schemas/sandbox-receipt-v0alpha1.schema.json', 'receipt-schema/sandbox-receipt-v0alpha1.schema.json'),
+        ('schemas/sandbox-execution-contract-v0alpha1.schema.json', 'execution-contract-schema/sandbox-execution-contract-v0alpha1.schema.json'),
+        ('schemas/sandbox-execution-route-observation-v0alpha1.schema.json', 'execution-route-observation-schema/sandbox-execution-route-observation-v0alpha1.schema.json'),
         ('examples/sandbox/testcases/sandbox-sensitive-canary-v0alpha1.json', 'testcases/sandbox-sensitive-canary-v0alpha1.json'),
         ('examples/sandbox/execution-attestations/red-control-sensitive-read-001.json', 'execution-attestations/red-control-sensitive-read-001.json'),
         ('examples/sandbox/execution-attestations/pass-sensitive-read-denied-001.json', 'execution-attestations/pass-sensitive-read-denied-001.json'),

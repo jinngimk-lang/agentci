@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentci.dev/schemas/sandbox-execution-route-observation-v0alpha1.schema.json",
+  "title": "AgentCI Execution Route Observation v0alpha1",
+  "description": "Raw external observation of one effective execution route. The document cannot authenticate itself and carries no backend verdict.",
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "NonEmpty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "RouteIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_id",
+        "route_id",
+        "route_version",
+        "route_build_digest",
+        "mode_id",
+        "mode_digest",
+        "adapter_id",
+        "adapter_version"
+      ],
+      "properties": {
+        "target_id": {"$ref": "#/$defs/NonEmpty"},
+        "route_id": {"$ref": "#/$defs/NonEmpty"},
+        "route_version": {"$ref": "#/$defs/NonEmpty"},
+        "route_build_digest": {"$ref": "#/$defs/Digest"},
+        "mode_id": {"$ref": "#/$defs/NonEmpty"},
+        "mode_digest": {"$ref": "#/$defs/Digest"},
+        "adapter_id": {"$ref": "#/$defs/NonEmpty"},
+        "adapter_version": {"$ref": "#/$defs/NonEmpty"}
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "observation_id",
+    "contract_digest",
+    "run_id",
+    "case_id",
+    "attempt",
+    "attempt_nonce",
+    "environment_fingerprint",
+    "policy_digest",
+    "execution_state",
+    "effective_route",
+    "fallback_used",
+    "degraded",
+    "observed_at_utc",
+    "monotonic_ns",
+    "observer_source_id"
+  ],
+  "properties": {
+    "apiVersion": {"const": "agentci.dev/sandbox-execution/v0alpha1"},
+    "kind": {"const": "ExecutionRouteObservation"},
+    "observation_id": {"$ref": "#/$defs/NonEmpty"},
+    "contract_digest": {"$ref": "#/$defs/Digest"},
+    "run_id": {"$ref": "#/$defs/NonEmpty"},
+    "case_id": {"$ref": "#/$defs/NonEmpty"},
+    "attempt": {"type": "integer", "minimum": 1},
+    "attempt_nonce": {"$ref": "#/$defs/NonEmpty"},
+    "environment_fingerprint": {"$ref": "#/$defs/Digest"},
+    "policy_digest": {"$ref": "#/$defs/Digest"},
+    "execution_state": {"enum": ["not-attempted", "started", "completed", "harness-error", "unverified"]},
+    "effective_route": {"$ref": "#/$defs/RouteIdentity"},
+    "fallback_used": {"type": "boolean"},
+    "degraded": {"type": "boolean"},
+    "observed_at_utc": {"type": "string", "format": "date-time"},
+    "monotonic_ns": {"type": "integer", "minimum": 0},
+    "observer_source_id": {"$ref": "#/$defs/NonEmpty"}
+  }
+}
