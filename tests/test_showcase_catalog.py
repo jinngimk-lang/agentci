@@ -55,3 +55,21 @@ def test_showcase_catalog_validator_rejects_duplicate_ids(tmp_path: Path):
     errors = showcase_module.validate_showcase_catalog(catalog, repository_root=tmp_path)
 
     assert errors == ['duplicate: duplicate showcase id']
+
+
+def test_showcase_catalog_validator_rejects_fixture_certification_claim(tmp_path: Path):
+    catalog = {
+        'schema_version': 'agentci.showcase.v1',
+        'items': [
+            {
+                'id': 'fixture-claim',
+                'repository_path': None,
+                'evidence_maturity': 'fixture',
+                'certification_claim': True,
+            }
+        ],
+    }
+
+    errors = showcase_module.validate_showcase_catalog(catalog, repository_root=tmp_path)
+
+    assert errors == ['fixture-claim: fixture entries cannot claim certification']
