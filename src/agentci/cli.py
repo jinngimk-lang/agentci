@@ -39,6 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
     showcase_subparsers = showcase_parser.add_subparsers(dest='showcase_command', required=True)
     showcase_list_parser = showcase_subparsers.add_parser('list', help='list canonical showcase entries')
     showcase_list_parser.add_argument('--json', action='store_true', help='emit the machine-readable showcase catalog')
+    showcase_show_parser = showcase_subparsers.add_parser('show', help='show one canonical showcase entry')
+    showcase_show_parser.add_argument('showcase_id')
+    showcase_show_parser.add_argument('--json', action='store_true', help='emit the machine-readable showcase entry')
     return parser
 
 
@@ -83,6 +86,16 @@ def main(argv: list[str] | None = None) -> int:
             if not args.json:
                 parser.error('showcase list currently requires --json')
             print(json.dumps(load_showcase_catalog(), sort_keys=True))
+            return 0
+        if args.command == 'showcase' and args.showcase_command == 'show':
+            if not args.json:
+                parser.error('showcase show currently requires --json')
+            catalog = load_showcase_catalog()
+            item = next((candidate for candidate in catalog['items'] if candidate['id'] == args.showcase_id), None)
+            if item is None:
+                print(f'error: unknown showcase id: {args.showcase_id}', file=sys.stderr)
+                return 2
+            print(json.dumps(item, sort_keys=True))
             return 0
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
