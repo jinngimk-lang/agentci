@@ -98,6 +98,16 @@ def test_showcase_show_json_returns_exact_entry():
     assert item['certification_claim'] is False
 
 
+def test_showcase_show_human_output_exposes_command_and_boundary():
+    result = run_cli('showcase', 'show', 'sandbox-sensitive-read-red-control')
+
+    assert result.returncode == 0, result.stderr
+    assert 'sandbox-sensitive-read-red-control [fixture]' in result.stdout
+    assert 'Command: agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --json --print-digest' in result.stdout
+    assert 'Claim boundary:' in result.stdout
+    assert 'does not certify a sandbox backend' in result.stdout
+
+
 def test_showcase_show_unknown_id_fails_clearly():
     result = run_cli('showcase', 'show', 'missing-case', '--json')
 
