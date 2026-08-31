@@ -8,6 +8,7 @@ import sys
 from .config import ConfigError
 from .runner import run_suite
 from .sandbox import collect_readiness_report
+from .showcase import load_showcase_catalog
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,6 +35,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help='read the exact signed observer and cleanup sidecar directory for --receipt',
     )
+    showcase_parser = subparsers.add_parser('showcase', help='discover truth-bounded AgentCI cases')
+    showcase_subparsers = showcase_parser.add_subparsers(dest='showcase_command', required=True)
+    showcase_list_parser = showcase_subparsers.add_parser('list', help='list canonical showcase entries')
+    showcase_list_parser.add_argument('--json', action='store_true', help='emit the machine-readable showcase catalog')
     return parser
 
 
@@ -74,6 +79,11 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _print_sandbox_verification(result)
             return 0 if result.valid and (args.receipt is None or result.receipt_written) else 1
+        if args.command == 'showcase' and args.showcase_command == 'list':
+            if not args.json:
+                parser.error('showcase list currently requires --json')
+            print(json.dumps(load_showcase_catalog(), sort_keys=True))
+            return 0
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2
