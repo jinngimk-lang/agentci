@@ -113,3 +113,20 @@ def test_showcase_show_unknown_id_fails_clearly():
 
     assert result.returncode == 2
     assert 'unknown showcase id: missing-case' in result.stderr.lower()
+
+
+def test_cli_init_creates_runnable_starter_config(tmp_path: Path):
+    target = tmp_path / 'agentci.yaml'
+    result = run_cli('init', str(target))
+
+    assert result.returncode == 0, result.stderr
+    assert target.exists()
+    assert f'Created: {target}' in result.stdout
+    assert f'Next: agentci test {target}' in result.stdout
+
+    output_dir = tmp_path / 'artifacts'
+    test_result = run_cli('test', str(target), '--output-dir', str(output_dir))
+    assert test_result.returncode == 0, test_result.stderr
+    assert '1/1 passed' in test_result.stdout
+    assert (output_dir / 'agentci-results.json').exists()
+    assert (output_dir / 'agentci-report.md').exists()
