@@ -43,6 +43,8 @@ jobs:
           python -m venv /tmp/agentci-venv
           /tmp/agentci-venv/bin/python -m pip install /tmp/agentci-wheel/*.whl
           cd /tmp/agentci-smoke
+          /tmp/agentci-venv/bin/agentci init starter.yaml
+          /tmp/agentci-venv/bin/agentci test starter.yaml --output-dir starter-artifacts
           /tmp/agentci-venv/bin/agentci sandbox doctor --json > doctor.json
           /tmp/agentci-venv/bin/agentci showcase list --json > showcase.json
           /tmp/agentci-venv/bin/agentci sandbox verify "$GITHUB_WORKSPACE/examples/sandbox/v0alpha1-red-control-evidence.json" --json --print-digest > verify.json
@@ -63,6 +65,9 @@ jobs:
           from agentci.sandbox.receipt import validate_receipt_manifest
           from scripts import validate_sandbox_authority as authority_validator
 
+          starter = Path('starter.yaml')
+          starter_results = Path('starter-artifacts/agentci-results.json')
+          starter_report = Path('starter-artifacts/agentci-report.md')
           doctor = json.load(open('doctor.json', encoding='utf-8'))
           showcase = json.load(open('showcase.json', encoding='utf-8'))
           verify = json.load(open('verify.json', encoding='utf-8'))
@@ -71,6 +76,12 @@ jobs:
           resource_root = Path(sys.prefix) / 'share' / 'agentci' / 'sandbox'
           lifecycle_sidecar = resource_root / 'lifecycle-attestations' / 'red-control-sensitive-read-001-11.json'
           authority_schema = resource_root / 'authority-schema' / 'sandbox-authority-v0alpha1.schema.json'
+          assert starter.is_file()
+          assert starter_results.is_file()
+          assert starter_report.is_file()
+          starter_payload = json.load(starter_results.open(encoding='utf-8'))
+          assert starter_payload['passed_cases'] == 1
+          assert starter_payload['failed_cases'] == 0
           assert doctor['state'] in {'ready', 'not-ready'}
           assert showcase['schema_version'] == 'agentci.showcase.v1'
           assert {item['id'] for item in showcase['items']} >= {

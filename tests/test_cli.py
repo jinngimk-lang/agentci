@@ -7,12 +7,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_cli(*args: str):
+def run_cli(*args: str, cwd: Path | None = None):
     env = os.environ.copy()
     env['PYTHONPATH'] = str(ROOT / 'src')
     return subprocess.run(
         [sys.executable, '-m', 'agentci.cli', *args],
-        cwd=ROOT,
+        cwd=cwd or ROOT,
         env=env,
         capture_output=True,
         text=True,
@@ -113,3 +113,40 @@ def test_showcase_show_unknown_id_fails_clearly():
 
     assert result.returncode == 2
     assert 'unknown showcase id: missing-case' in result.stderr.lower()
+
+
+def test_cli_init_creates_runnable_starter_config(tmp_path: Path):
+    target = tmp_path / 'agentci.yaml'
+    result = run_cli('init', str(target))
+
+    assert result.returncode == 0, result.stderr
+    assert target.exists()
+    assert f'Created: {target}' in result.stdout
+    assert f'Next: agentci test {target}' in result.stdout
+
+    output_dir = tmp_path / 'artifacts'
+    test_result = run_cli('test', str(target), '--output-dir', str(output_dir))
+    assert test_result.returncode == 0, test_result.stderr
+    assert '1/1 passed' in test_result.stdout
+    assert (output_dir / 'agentci-results.json').exists()
+    assert (output_dir / 'agentci-report.md').exists()
+
+
+def test_cli_init_defaults_to_agentci_yaml(tmp_path: Path):
+    result = run_cli('init', cwd=tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / 'agentci.yaml').exists()
+    assert 'Created: agentci.yaml' in result.stdout
+    assert 'Next: agentci test agentci.yaml' in result.stdout
+
+
+def test_cli_init_refuses_to_overwrite_existing_file(tmp_path: Path):
+    target = tmp_path / 'agentci.yaml'
+    target.write_text('sentinel\n')
+
+    result = run_cli('init', str(target))
+
+    assert result.returncode == 2
+    assert target.read_text() == 'sentinel\n'
+    assert 'error:' in result.stderr.lower()
