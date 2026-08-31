@@ -32,3 +32,18 @@ def load_showcase_catalog(
     if not isinstance(value, dict):
         raise ValueError('showcase catalog must be a JSON object')
     return value
+
+
+def validate_showcase_catalog(
+    catalog: dict[str, Any],
+    *,
+    repository_root: Path = SOURCE_ROOT,
+) -> list[str]:
+    errors: list[str] = []
+    for item in catalog.get('items', []):
+        repository_path = item.get('repository_path')
+        if repository_path and not (repository_root / repository_path).is_file():
+            errors.append(
+                f"{item.get('id', '<unknown>')}: repository_path does not exist: {repository_path}"
+            )
+    return errors
