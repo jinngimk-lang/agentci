@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -39,3 +40,38 @@ def test_cli_invalid_input_returns_two(tmp_path: Path):
     result = run_cli('test', str(invalid), '--output-dir', str(tmp_path / 'out'))
     assert result.returncode == 2
     assert 'error:' in result.stderr.lower()
+
+
+def test_showcase_list_json_exposes_truth_bounded_entries():
+    result = run_cli('showcase', 'list', '--json')
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload['schema_version'] == 'agentci.showcase.v1'
+
+    items = payload['items']
+    ids = [item['id'] for item in items]
+    assert ids == sorted(ids)
+    assert 'sandbox-doctor' in ids
+    assert 'sandbox-sensitive-read-red-control' in ids
+
+    by_id = {item['id']: item for item in items}
+    doctor = by_id['sandbox-doctor']
+    assert doctor['semantic_class'] == 'readiness-discovery'
+    assert doctor['evidence_maturity'] == 'released-capability'
+    assert doctor['released_command'] == ['agentci', 'sandbox', 'doctor', '--json']
+    assert doctor['certification_claim'] is False
+
+    red_control = by_id['sandbox-sensitive-read-red-control']
+    assert red_control['semantic_class'] == 'false-pass-control'
+    assert red_control['evidence_maturity'] == 'fixture'
+    assert red_control['repository_path'] == 'examples/sandbox/v0alpha1-red-control-evidence.json'
+    assert red_control['released_command'] == [
+        'agentci',
+        'sandbox',
+        'verify',
+        'examples/sandbox/v0alpha1-red-control-evidence.json',
+        '--json',
+        '--print-digest',
+    ]
+    assert red_control['certification_claim'] is False
