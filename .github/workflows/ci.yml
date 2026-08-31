@@ -80,8 +80,8 @@ jobs:
           assert starter_results.is_file()
           assert starter_report.is_file()
           starter_payload = json.load(starter_results.open(encoding='utf-8'))
-          assert starter_payload['summary']['passed_cases'] == 1
-          assert starter_payload['summary']['failed_cases'] == 0
+          assert starter_payload['passed_cases'] == 1
+          assert starter_payload['failed_cases'] == 0
           assert doctor['state'] in {'ready', 'not-ready'}
           assert showcase['schema_version'] == 'agentci.showcase.v1'
           assert {item['id'] for item in showcase['items']} >= {
