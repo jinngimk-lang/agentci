@@ -90,14 +90,15 @@ def main(argv: list[str] | None = None) -> int:
                 _print_showcase_list(catalog)
             return 0
         if args.command == 'showcase' and args.showcase_command == 'show':
-            if not args.json:
-                parser.error('showcase show currently requires --json')
             catalog = load_showcase_catalog()
             item = next((candidate for candidate in catalog['items'] if candidate['id'] == args.showcase_id), None)
             if item is None:
                 print(f'error: unknown showcase id: {args.showcase_id}', file=sys.stderr)
                 return 2
-            print(json.dumps(item, sort_keys=True))
+            if args.json:
+                print(json.dumps(item, sort_keys=True))
+            else:
+                _print_showcase_item(item)
             return 0
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
@@ -136,6 +137,17 @@ def _print_showcase_list(catalog) -> None:
         print(f"  command: {' '.join(item['released_command'])}")
         print(f"  boundary: {item['claim_boundary']}")
     print('Truth boundary: showcase metadata does not certify any sandbox backend.')
+
+
+def _print_showcase_item(item) -> None:
+    print(f"{item['id']} [{item['evidence_maturity']}]")
+    print(item['title'])
+    print(f"Semantic class: {item['semantic_class']}")
+    print(f"Command: {' '.join(item['released_command'])}")
+    if item.get('repository_path'):
+        print(f"Repository path: {item['repository_path']}")
+    print(f"Claim boundary: {item['claim_boundary']}")
+    print(f"Certification claim: {str(item['certification_claim']).lower()}")
 
 
 if __name__ == '__main__':
