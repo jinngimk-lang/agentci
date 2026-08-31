@@ -1,0 +1,95 @@
+name: Sandbox backend evidence
+
+description: Submit a real backend execution/reproduction for provider-neutral AgentCI verification.
+title: "[backend-evidence] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for **real execution evidence**, not provider marketing or configuration-only claims. AgentCI does not certify a backend from this submission alone. Remove secrets and use synthetic canaries.
+
+  - type: input
+    id: backend
+    attributes:
+      label: Backend / runtime
+      description: Product/runtime and execution class (for example Docker, gVisor, Kata, microVM, OS sandbox).
+      placeholder: "runtime name + execution class"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Exact version / build
+      description: Version, image digest, commit, package version, or other immutable build identity when available.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and policy boundary
+      description: OS/arch, host/runtime context, configured policy, network mode, filesystem/workspace boundary, credentials mode, and relevant limits. Configuration is context, not proof.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Exact safe commands or code required to reproduce the execution. Do not include real secrets or destructive escape steps.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: route
+    attributes:
+      label: Requested and observed execution route
+      description: Record target/route/version/build/mode/adapter identity when available, plus how the observed route was collected independently from caller assertions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and observations
+      description: Attach or link machine-readable output, logs, hashes/digests, timestamps, observer provenance, negative controls, and failure evidence. State explicitly when a fact is unavailable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: semantics
+    attributes:
+      label: Semantic cases exercised
+      description: Which useful action and forbidden capabilities were tested (filesystem, network, credential access, process/resource limits, lifecycle/cleanup, restore/replay, etc.) and the observed outcome for each.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cleanup
+    attributes:
+      label: Cleanup / lifecycle result
+      description: Describe teardown, residual processes/files/network state, restore behavior, or explain why cleanup was not observable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations / unverified material
+      description: List anything that remains unknown, inferred, provider-asserted, unauthenticated, or not independently observed.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Submission checks
+      options:
+        - label: I removed real credentials, secrets, tokens, and sensitive user data.
+          required: true
+        - label: I did not run destructive sandbox-escape testing on an ordinary CI runner or developer host.
+          required: true
+        - label: I understand this submission is evidence for review, not a backend security certification.
+          required: true
