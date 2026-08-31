@@ -35,6 +35,39 @@ GitHub is both the product surface and the first distribution channel. Maintain:
 
 Do not manufacture issues just to appear active. A `good first issue` should be bounded, useful, and verifiable by a new contributor without hidden repository context.
 
+## Attribution-first external acquisition
+
+External outreach is useful only when it meets users where they already encounter a problem AgentCI can make more falsifiable, portable, or independently verifiable.
+
+The current reference funnel is:
+
+```text
+upstream reproducible failure
+→ context-specific technical contribution from AgentCI
+→ bounded portable fixture/validator invitation
+→ explicit contributor interest
+→ AgentCI intake/spec
+→ external fork/PR
+→ independent verification
+→ merge
+```
+
+LangGraph #8582 → AgentCI #123 → external PR #124 is the first fully evidenced example of this chain.
+
+Before external promotion:
+
+1. Identify the user's likely discovery path: upstream framework/runtime issue, reproduction search, integration failure, benchmark gap, or developer community question.
+2. Verify that AgentCI can add concrete technical value in that thread. Similar topic labels are not enough.
+3. Search the thread for an existing AgentCI comment. Do not repeat promotion unless there is meaningful new activity that warrants a direct response.
+4. Lead with the falsifiable invariant, evidence shape, or portable fixture—not the AgentCI link.
+5. Offer a small contribution path with preserved upstream provenance and durable contributor credit.
+6. Disclose AgentCI affiliation and keep compatibility/security/certification claims bounded to evidence.
+7. Record downstream evidence when visible: reply, fork, issue, PR, merge, repeat contributor. Keep hidden traffic/referrer data unknown when tooling cannot observe it.
+
+Channel expansion is based on downstream evidence, not raw write volume. A single externally authored, independently verified contribution is stronger acquisition evidence than many unresponsive comments.
+
+High-fit external issue classes currently include replay/checkpoint/restore fidelity, duplicate non-idempotent effects, cleanup/terminality, residual process/socket/resource state, execution identity drift, policy/authority binding, checkpoint/state immutability, and configured-vs-effective capability contradictions.
+
 ## Contributor funnel
 
 Track the community funnel qualitatively first, and quantitatively only when data is real:
@@ -141,8 +174,9 @@ During inspection, the Supervisor should consider both product and community hea
 3. Is there at least one bounded contribution path for interested developers?
 4. Are external issues/PRs/questions being answered with evidence?
 5. Which platform/audience specifically benefits from the current artifact?
-6. Did prior distribution produce installs, successful runs, bugs, integration requests, or contributors?
+6. Did prior distribution produce installs, successful runs, bugs, integration requests, contributors, or other attributable downstream evidence?
 7. Should Agent A improve onboarding before the next campaign?
+8. Which external user path has actually converted, and which unproven channels should remain bounded experiments?
 
 When a real Growth Artifact exists, the default campaign should include a GitHub-native update and, when useful, an explicit invitation for reproducible testing/contribution.
 
