@@ -54,4 +54,7 @@ def validate_showcase_catalog(
             errors.append(
                 f'{item_id}: repository_path does not exist: {repository_path}'
             )
+
+        if item.get('evidence_maturity') == 'fixture' and item.get('certification_claim') is True:
+            errors.append(f'{item_id}: fixture entries cannot claim certification')
     return errors
