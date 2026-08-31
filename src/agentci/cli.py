@@ -83,9 +83,11 @@ def main(argv: list[str] | None = None) -> int:
                 _print_sandbox_verification(result)
             return 0 if result.valid and (args.receipt is None or result.receipt_written) else 1
         if args.command == 'showcase' and args.showcase_command == 'list':
-            if not args.json:
-                parser.error('showcase list currently requires --json')
-            print(json.dumps(load_showcase_catalog(), sort_keys=True))
+            catalog = load_showcase_catalog()
+            if args.json:
+                print(json.dumps(catalog, sort_keys=True))
+            else:
+                _print_showcase_list(catalog)
             return 0
         if args.command == 'showcase' and args.showcase_command == 'show':
             if not args.json:
@@ -125,6 +127,15 @@ def _print_sandbox_verification(result) -> None:
     for error in result.errors:
         print(f'- ERROR: {error}')
     print('Truth boundary: valid evidence is not a security certification; inspect the recorded verdict and limitations.')
+
+
+def _print_showcase_list(catalog) -> None:
+    print('AgentCI showcase:')
+    for item in catalog['items']:
+        print(f"- {item['id']} [{item['evidence_maturity']}] {item['title']}")
+        print(f"  command: {' '.join(item['released_command'])}")
+        print(f"  boundary: {item['claim_boundary']}")
+    print('Truth boundary: showcase metadata does not certify any sandbox backend.')
 
 
 if __name__ == '__main__':
