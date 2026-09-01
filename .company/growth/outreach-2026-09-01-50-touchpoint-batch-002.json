@@ -1,0 +1,84 @@
+{
+  "schema_version": "agentci.outreach.v2",
+  "batch_id": "2026-09-01-50tp-002-concurrent-reconciliation",
+  "date": "2026-09-01",
+  "channel": "langgraph-upstream-issues",
+  "channel_status": "concurrent-overlap-reconciled",
+  "placements": [
+    {
+      "id": "langgraph-8693-resume-identity-authority",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8693,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8693#issuecomment-5491682961",
+      "semantic_class": "resume-identity-authority",
+      "intent": "ordinary resume payloads are misclassified as interrupt-id maps by shape rather than pending identity",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only; no reply, traffic, compatibility, endorsement, or certification claim."
+    },
+    {
+      "id": "langgraph-8653-persistence-authority-hydration",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8653,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8653#issuecomment-5491733853",
+      "semantic_class": "persistence-authority-state-hydration",
+      "intent": "state hydration can consult the wrong checkpointer and persist a false empty state",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only; no reply, traffic, compatibility, endorsement, or certification claim."
+    },
+    {
+      "id": "langgraph-8686-migration-replay-seed",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8686,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8686#issuecomment-5491740597",
+      "semantic_class": "migration-replay-seed",
+      "intent": "DeltaChannel migration replay treats an absent null value as a semantic seed and stops ancestor recovery",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only; no reply, traffic, compatibility, endorsement, or certification claim."
+    },
+    {
+      "id": "langgraph-8184-checkpoint-semantic-fidelity",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8184,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8184#issuecomment-5491746958",
+      "semantic_class": "checkpoint-semantic-fidelity",
+      "intent": "checkpoint round-trip preserves items while silently erasing behavior-bearing mapping subclass semantics",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only; no reply, traffic, compatibility, endorsement, or certification claim."
+    },
+    {
+      "id": "langgraph-8759-cross-backend-query-semantics",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8759,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8759#issuecomment-5491755834",
+      "semantic_class": "cross-backend-query-semantics",
+      "intent": "documented operator-form filters silently return different result identities across SQLite and in-memory backends",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only; no reply, traffic, compatibility, endorsement, or certification claim."
+    }
+  ],
+  "attempts": [],
+  "reconciliation": {
+    "reason": "These five confirmed writes were published concurrently with batch 001 before the campaign HOLD state was visible across execution lanes.",
+    "policy": "Preserve the public evidence, count it exactly once, and freeze additional external-comment publication until downstream evidence is re-checked across both batches."
+  }
+}
