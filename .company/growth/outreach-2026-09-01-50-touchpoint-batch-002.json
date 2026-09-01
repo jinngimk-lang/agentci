@@ -1,0 +1,105 @@
+{
+  "schema_version": "agentci.outreach.v2",
+  "batch_id": "2026-09-01-50tp-002",
+  "date": "2026-09-01",
+  "channel": "adjacent-agent-runtime-upstream-issues",
+  "channel_status": "bounded-experiment-unproven-conversion",
+  "placements": [
+    {
+      "id": "e2b-1587",
+      "repository": "e2b-dev/E2B",
+      "item_type": "issue",
+      "item_number": 1587,
+      "comment_url": "https://github.com/e2b-dev/E2B/issues/1587#issuecomment-5491969489",
+      "semantic_class": "resume-observer-liveness-divergence",
+      "intent": "resumed process remains alive while a ghost stream consumer can suppress all later observer output",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Process liveness and observer-path liveness are treated as separate evidence claims; no E2B compatibility, adoption, or certification claim."
+    },
+    {
+      "id": "openai-agents-4749",
+      "repository": "openai/openai-agents-python",
+      "item_type": "issue",
+      "item_number": 4749,
+      "comment_url": "https://github.com/openai/openai-agents-python/issues/4749#issuecomment-5491980266",
+      "semantic_class": "pre-registration-cleanup-ownership",
+      "intent": "resources exist before registry ownership commits, so cancellation can strand cleanup without a durable owner",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The fixture scope follows the upstream-reachable Blaxel and UnixLocal cancellation boundaries and preserves withdrawn synthetic subclaims; no SDK compatibility or certification claim."
+    },
+    {
+      "id": "openclaw-135068",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 135068,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/135068#issuecomment-5492151240",
+      "semantic_class": "runtime-success-visible-warning-loss",
+      "intent": "tool failure is recorded and runtime settles ok while the only user-facing failure warning disappears",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Runtime completion and user-visible diagnostic delivery are separate evidence dimensions; no hidden referral, OpenClaw compatibility, or certification claim."
+    },
+    {
+      "id": "openclaw-134975",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 134975,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/134975#issuecomment-5492153481",
+      "semantic_class": "transport-ack-semantic-content-loss",
+      "intent": "LINE can acknowledge delivery while required question and overflow presentation content are absent from the wire-visible message",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Provider acknowledgement is not treated as proof of semantic content completeness; upstream PR #134976 remains the implementation owner."
+    },
+    {
+      "id": "openclaw-134968",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 134968,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/134968#issuecomment-5492155904",
+      "semantic_class": "terminal-refusal-reinterpreted-as-retry",
+      "intent": "a structured provider refusal is terminal at the producer boundary but a downstream generic classifier silently authorizes the same request again",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The fixture concerns terminality and retry authority for the same attempt; cross-provider fallback policy and OpenClaw compatibility/certification are explicitly out of scope."
+    }
+  ],
+  "attempts": [
+    {
+      "id": "google-adk-6951",
+      "repository": "google/adk-python",
+      "item_type": "issue",
+      "item_number": 6951,
+      "semantic_class": "vacuous-evaluation-pass",
+      "intent": "zero evaluated cases can produce a clean pass through an empty failure set",
+      "cta": "fixture",
+      "publication_result": "permission_denied",
+      "reason": "GitHub App returned 403 Resource not accessible by integration",
+      "claim_boundary": "No public AgentCI write was created. This attempt is excluded from successful placement counts."
+    },
+    {
+      "id": "mastra-22379",
+      "repository": "mastra-ai/mastra",
+      "item_type": "issue",
+      "item_number": 22379,
+      "semantic_class": "false-human-approval-ui",
+      "intent": "an allow-policy tool executes while the channel still renders an actionable human approval card",
+      "cta": "fixture",
+      "publication_result": "permission_denied",
+      "reason": "GitHub App returned 403 Blocked for issue comment creation",
+      "claim_boundary": "No public AgentCI write was created. This attempt is excluded from successful placement counts."
+    }
+  ]
+}
