@@ -34,6 +34,11 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
     for placement in placements:
         if not isinstance(placement, dict):
             raise ValueError('each placement must be an object')
+        comment_url = placement.get('comment_url')
+        if not isinstance(comment_url, str) or not comment_url.startswith('https://github.com/'):
+            raise ValueError('placement comment_url must be a confirmed public GitHub comment URL')
+        if '#issuecomment-' not in comment_url:
+            raise ValueError('placement comment_url must identify a GitHub issue/PR comment')
         semantic_class = placement.get('semantic_class')
         downstream_state = placement.get('downstream_state')
         if not isinstance(semantic_class, str) or not semantic_class:
