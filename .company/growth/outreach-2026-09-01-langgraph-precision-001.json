@@ -1,0 +1,24 @@
+{
+  "schema_version": "agentci.outreach.v2",
+  "batch_id": "2026-09-01-langgraph-precision-001",
+  "date": "2026-09-01",
+  "channel": "langgraph-proven-contributor-path",
+  "channel_status": "proven-channel-precision-placement-awaiting-response",
+  "placements": [
+    {
+      "id": "langgraph-8656",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8656,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8656#issuecomment-5492534365",
+      "semantic_class": "cross-backend-checkpoint-query-divergence",
+      "intent": "the same BaseCheckpointSaver list(limit=-1) request yields empty history on InMemorySaver and complete history on SQLite savers while the intended negative-limit contract remains undecided",
+      "cta": "external-fixture-contribution",
+      "publication_result": "posted",
+      "downstream_state": "awaiting_upstream_response",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The placement does not choose reject/zero/unbounded semantics, does not claim either saver is correct, and does not imply repository visit, contribution, adoption, compatibility, or certification. The upstream issue remains canonical and AgentCI would keep any fixture UNVERIFIED until independent evidence supports a stronger result."
+    }
+  ],
+  "attempts": []
+}
