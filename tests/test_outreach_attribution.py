@@ -128,3 +128,16 @@ def test_advanced_downstream_state_requires_public_evidence_url(tmp_path: Path):
 
     assert result.returncode == 1
     assert 'downstream_urls' in result.stderr
+
+
+def test_hidden_traffic_page_cannot_prove_downstream_state(tmp_path: Path):
+    payload = _valid_payload()
+    payload['placements'][0]['downstream_state'] = 'replied'
+    payload['placements'][0]['downstream_urls'] = [
+        'https://github.com/jinngimk-lang/agentci/graphs/traffic'
+    ]
+
+    result = _run_validator(tmp_path, payload)
+
+    assert result.returncode == 1
+    assert 'traffic' in result.stderr.lower()
