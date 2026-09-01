@@ -28,6 +28,7 @@ dependencies = ["PyYAML>=6.0", "jsonschema[format]>=4.23"]
 Repository = "https://github.com/jinngimk-lang/agentci"
 Issues = "https://github.com/jinngimk-lang/agentci/issues"
 Documentation = "https://github.com/jinngimk-lang/agentci#readme"
+Installation = "https://github.com/jinngimk-lang/agentci/blob/main/INSTALL.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
