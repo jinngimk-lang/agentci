@@ -1,0 +1,37 @@
+{
+  "format_version": "agentci-recovery-provenance-v0alpha1",
+  "case_id": "langgraph-8764-precheckpoint-admission-gap",
+  "source": {
+    "url": "https://github.com/langchain-ai/langgraph/issues/8764",
+    "repository": "langchain-ai/langgraph",
+    "issue_number": 8764,
+    "reporter": "mstevens843",
+    "reported_at": "2026-08-30",
+    "observed_commit": null,
+    "observed_commit_status": "unavailable",
+    "observed_versions": {
+      "langgraph": "1.2.11",
+      "langgraph-checkpoint-sqlite": "3.1.1",
+      "python": "3.12.13"
+    }
+  },
+  "clarification": {
+    "url": "https://github.com/langchain-ai/langgraph/issues/8764#issuecomment-5476924150",
+    "author": "mstevens843",
+    "effect_count": 0,
+    "durable_checkpoint_count": 0,
+    "scope": "admission / visibility before the first durable runtime record; no hidden-side-effect claim"
+  },
+  "capture": {
+    "captured_at": "2026-09-01",
+    "upstream_state": "open",
+    "upstream_contract": "UNCONFIRMED",
+    "linked_fix_pr": null,
+    "agentci_intake": "https://github.com/jinngimk-lang/agentci/issues/159"
+  },
+  "agentci_reproduction_status": "UNVERIFIED",
+  "credit": {
+    "contributor": "mstevens843",
+    "contribution": "Original LangGraph crash-before-first-checkpoint reproduction and admission-boundary clarification"
+  }
+}
