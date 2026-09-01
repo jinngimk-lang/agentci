@@ -1,0 +1,36 @@
+{
+  "schema_version": "agentci.replay_fixture.v1",
+  "case_id": "langgraph-8764-accepted-not-durable",
+  "semantic_class": "admission-vs-runtime-evidence",
+  "agentci_result": "UNVERIFIED",
+  "runtime_identity": {
+    "logical_run_ref": "langgraph-8764-run",
+    "thread_id": "accepted-run",
+    "runtime_run_id": null,
+    "runtime_run_id_status": "unavailable"
+  },
+  "upstream_observation": {
+    "durable_checkpoint_count": 0,
+    "user_effect_count": 0,
+    "recovery_status": "NO_RESUMABLE_RUNTIME_STATE",
+    "recovery_error_type": "EmptyInputError"
+  },
+  "external_admission": {
+    "evidence_status": "NOT_PROVIDED_UPSTREAM",
+    "authority": "UNAVAILABLE",
+    "statement": "The upstream issue describes an external caller that may have accepted or enqueued the run, but does not include an authoritative admission record."
+  },
+  "classification": {
+    "without_authoritative_external_admission": "NOT_ADMITTED_OR_UNKNOWN",
+    "with_authoritative_external_admission": "ADMITTED_BUT_RUNTIME_EVIDENCE_MISSING"
+  },
+  "safety": {
+    "blind_retry_safe": "UNVERIFIED",
+    "backend_certified": false
+  },
+  "claim_boundary": [
+    "Checkpoint absence does not prove no admission.",
+    "Effect absence does not prove retry safety.",
+    "Fixture presence does not certify LangGraph or any backend."
+  ]
+}
