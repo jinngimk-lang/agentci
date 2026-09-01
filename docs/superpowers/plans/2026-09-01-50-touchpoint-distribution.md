@@ -177,16 +177,18 @@ Update PR #141 body with RED→GREEN evidence, exact head SHA, full test count a
 
 **Files:**
 - Create after #141 contract is GREEN: `.company/growth/outreach-2026-09-01-50-touchpoint-batch-001.json`
-- Later create: `batch-002.json`, `batch-003.json`, `batch-004.json`
+- Create: `.company/growth/outreach-2026-09-01-50-touchpoint-batch-002.json`
+- Create: `.company/growth/outreach-2026-09-01-50-touchpoint-batch-003.json`
+- Create: `.company/growth/outreach-2026-09-01-50-touchpoint-batch-004.json`
 - Create/update campaign checkpoint: `.company/checkpoints/2026-09-01-50-touchpoint-campaign.md`
 
 **Interfaces:**
 - One batch = five confirmed successful external comment placements plus any attempts encountered while finding them.
 - Batch IDs: `2026-09-01-50tp-001` through `004`.
 
-- [ ] **Step 1: Create batch 001 skeleton only after five writes exist**
+- [ ] **Step 1: Create each batch file only after its five successful writes exist**
 
-Use this exact top-level shape:
+Use this exact top-level shape, substituting the matching batch ID:
 
 ```json
 {
@@ -204,9 +206,12 @@ Do not pre-fill planned targets as successful placements.
 
 ```bash
 python scripts/validate_outreach_batch.py .company/growth/outreach-2026-09-01-50-touchpoint-batch-001.json --json
+python scripts/validate_outreach_batch.py .company/growth/outreach-2026-09-01-50-touchpoint-batch-002.json --json
+python scripts/validate_outreach_batch.py .company/growth/outreach-2026-09-01-50-touchpoint-batch-003.json --json
+python scripts/validate_outreach_batch.py .company/growth/outreach-2026-09-01-50-touchpoint-batch-004.json --json
 ```
 
-Expected after five writes: `successful_placements == 5`.
+Expected for every completed batch: `successful_placements == 5`.
 
 - [ ] **Step 3: Campaign checkpoint counters**
 
@@ -240,7 +245,7 @@ Fetch comments for every candidate. Exclude a thread if AgentCI already has a co
 
 - [ ] **Step 3: Score**
 
-Record each candidate's 10-point score privately/in the attempt evidence. Publish by default only when score >= 7.
+For every candidate considered for publication, record the six design score components and total in the campaign checkpoint before posting. Publish by default only when score >= 7.
 
 - [ ] **Step 4: Write five problem-specific comments**
 
