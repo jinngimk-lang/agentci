@@ -77,6 +77,8 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
                 for url in downstream_urls
             ):
                 raise ValueError('downstream_urls evidence must use public GitHub URLs')
+            if any('/graphs/traffic' in url for url in downstream_urls):
+                raise ValueError('traffic/referral pages are not observable downstream evidence')
         semantic[semantic_class] += 1
         downstream[downstream_state] += 1
     return {
