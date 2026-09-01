@@ -1,0 +1,41 @@
+{
+  "schema_version": "agentci.showcase.v1",
+  "items": [
+    {
+      "id": "sandbox-doctor",
+      "title": "Discover sandbox readiness without treating configuration as proof",
+      "semantic_class": "readiness-discovery",
+      "evidence_maturity": "released-capability",
+      "repository_path": null,
+      "installed_path": null,
+      "provenance_url": null,
+      "released_command": [
+        "agentci",
+        "sandbox",
+        "doctor",
+        "--json"
+      ],
+      "certification_claim": false,
+      "claim_boundary": "Readiness is not backend execution, isolation proof, or security certification."
+    },
+    {
+      "id": "sandbox-sensitive-read-red-control",
+      "title": "Reject a canonical false-PASS sandbox evidence control",
+      "semantic_class": "false-pass-control",
+      "evidence_maturity": "fixture",
+      "repository_path": "examples/sandbox/v0alpha1-red-control-evidence.json",
+      "installed_path": null,
+      "provenance_url": null,
+      "released_command": [
+        "agentci",
+        "sandbox",
+        "verify",
+        "examples/sandbox/v0alpha1-red-control-evidence.json",
+        "--json",
+        "--print-digest"
+      ],
+      "certification_claim": false,
+      "claim_boundary": "Fixture validation exercises the verifier against canonical demo evidence; it does not certify a sandbox backend."
+    }
+  ]
+}

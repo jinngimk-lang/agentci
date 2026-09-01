@@ -16,6 +16,23 @@ Missing, unauthenticated, ambiguous, stale, fallback, degraded, or mismatched ob
 
 See [`docs/architecture/s1-execution-route-binding.md`](docs/architecture/s1-execution-route-binding.md). The released `v0.2.0` CLI remains limited to `sandbox doctor` and `sandbox verify`; no S1 execution CLI is released.
 
+## Main-only showcase discovery (`0.3.0.dev0`)
+
+Development on `main` also includes a deliberately small, truth-checked discovery catalog over existing AgentCI capabilities and canonical fixtures:
+
+```bash
+agentci showcase list
+agentci showcase list --json
+agentci showcase show <id>
+agentci showcase show <id> --json
+```
+
+Each entry exposes its evidence maturity, the exact represented CLI command, a repository path where applicable, and a claim boundary. The catalog is **discovery metadata only**: it does not execute a backend, create a second verdict engine, turn a fixture into provider-native evidence, or certify a sandbox. Fixture entries are explicitly forbidden from claiming certification.
+
+Source checkouts and clean wheel installs read the same canonical catalog bytes; contract tests bind catalog paths to real repository files, reject duplicate IDs, enforce fixture claim boundaries, and require represented commands to remain parseable by the current CLI.
+
+This showcase surface is **main-only `0.3.0.dev0` behavior** until a later release includes it. It must not be attributed to the released `v0.2.0` CLI.
+
 ## Current delivered Developer Preview
 
 ### 1. Deterministic agent evals
@@ -151,7 +168,11 @@ agentci --help
 agentci test examples/evals.yaml
 agentci sandbox doctor --json
 agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --json --print-digest
+agentci showcase list
+agentci showcase show sandbox-sensitive-read-red-control
 ```
+
+The two `showcase` calls above are available on the current `0.3.0.dev0` development line, not the released `v0.2.0` CLI. They expose discovery metadata and truth boundaries; they do not run or certify a sandbox.
 
 For deterministic evals, default evidence is:
 
@@ -188,7 +209,11 @@ agentci --help
 agentci test --help
 agentci sandbox doctor --help
 agentci sandbox verify --help
+agentci showcase list --json
+agentci showcase show sandbox-sensitive-read-red-control --json
 ```
+
+The `showcase` discovery commands are main-only `0.3.0.dev0` surfaces until a later release includes them. An unfamiliar agent should use their evidence maturity and claim boundaries to decide what is actually represented, not infer backend execution or certification from catalog presence.
 
 An unfamiliar agent should be able to determine what is actually released, what remains experimental, how to install/run the first useful call, where canonical evidence lives, and which claims remain `UNVERIFIED`.
 
@@ -288,6 +313,7 @@ src/agentci/                 installed CLI + evals + sandbox doctor/verify adapt
 schemas/                     sandbox certification/authority contracts
 scripts/                     canonical evidence validator/attestation + growth tooling
 examples/sandbox/            canonical TestCases and synthetic evidence controls
+showcase/                    canonical truth-bounded discovery catalog
 skills/                      reusable agent-facing operating/product skills
 docs/architecture/           sandbox/harness architecture contracts
 docs/operations/             closed-loop delivery and governance

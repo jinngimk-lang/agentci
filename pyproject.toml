@@ -41,6 +41,7 @@ packages = ["agentci", "agentci.sandbox", "scripts"]
 package-dir = {"" = "src", "scripts" = "scripts"}
 
 [tool.setuptools.data-files]
+"share/agentci/showcase" = ["showcase/catalog-v1.json"]
 "share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
 "share/agentci/sandbox/receipt-schema" = ["schemas/sandbox-receipt-v0alpha1.schema.json"]
 "share/agentci/sandbox/authority-schema" = ["schemas/sandbox-authority-v0alpha1.schema.json"]
