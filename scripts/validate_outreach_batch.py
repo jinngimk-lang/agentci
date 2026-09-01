@@ -66,6 +66,17 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError('placement semantic_class must be a non-empty string')
         if downstream_state not in ALLOWED_DOWNSTREAM_STATES:
             raise ValueError('placement downstream_state must be an observable supported state')
+        downstream_urls = placement.get('downstream_urls')
+        if not isinstance(downstream_urls, list):
+            raise ValueError('placement downstream_urls must be a list')
+        if downstream_state != 'posted':
+            if not downstream_urls:
+                raise ValueError('advanced downstream_state requires public downstream_urls evidence')
+            if any(
+                not isinstance(url, str) or not url.startswith('https://github.com/')
+                for url in downstream_urls
+            ):
+                raise ValueError('downstream_urls evidence must use public GitHub URLs')
         semantic[semantic_class] += 1
         downstream[downstream_state] += 1
     return {
