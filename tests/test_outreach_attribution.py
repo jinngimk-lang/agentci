@@ -81,3 +81,29 @@ def test_counted_placement_must_be_confirmed_posted_write(tmp_path: Path):
 
     assert result.returncode == 1
     assert 'publication_result' in result.stderr
+
+
+def test_duplicate_placement_ids_are_rejected(tmp_path: Path):
+    payload = _valid_payload()
+    duplicate = dict(payload['placements'][0])
+    duplicate['comment_url'] = 'https://github.com/openclaw/openclaw/issues/134622#issuecomment-5489847044'
+    duplicate['item_number'] = 134622
+    payload['placements'].append(duplicate)
+
+    result = _run_validator(tmp_path, payload)
+
+    assert result.returncode == 1
+    assert 'duplicate placement id' in result.stderr.lower()
+
+
+def test_duplicate_comment_urls_are_rejected(tmp_path: Path):
+    payload = _valid_payload()
+    duplicate = dict(payload['placements'][0])
+    duplicate['id'] = 'openclaw-134622'
+    duplicate['item_number'] = 134622
+    payload['placements'].append(duplicate)
+
+    result = _run_validator(tmp_path, payload)
+
+    assert result.returncode == 1
+    assert 'duplicate placement comment_url' in result.stderr.lower()
