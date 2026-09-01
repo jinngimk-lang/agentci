@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,10 @@ def _number(facts: dict[str, Any], key: str) -> float:
     value = facts.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ArtifactError(f"facts.{key} must be a number")
-    return float(value)
+    number = float(value)
+    if not math.isfinite(number):
+        raise ArtifactError(f"facts.{key} must be finite")
+    return number
 
 
 def _integer(facts: dict[str, Any], key: str) -> int:
