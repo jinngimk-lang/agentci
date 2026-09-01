@@ -1,0 +1,69 @@
+{
+  "format_version": "agentci-admission-durability-case-v0alpha1",
+  "case_id": "langgraph-8764-precheckpoint-admission-gap",
+  "claim_under_test": "Absence of durable runtime state after a crash is not, by itself, proof that a run was never admitted or that an admitted run failed. ADMITTED_BUT_RUNTIME_EVIDENCE_MISSING requires authoritative admission evidence; otherwise admission remains UNVERIFIED.",
+  "target": {
+    "framework": "LangGraph",
+    "operation": "process death during first SqliteSaver.put under durability=sync",
+    "observed_commit": null,
+    "observed_commit_status": "unavailable",
+    "observed_versions": {
+      "langgraph": "1.2.11",
+      "langgraph-checkpoint-sqlite": "3.1.1"
+    }
+  },
+  "correlation": {
+    "thread_id": "accepted-run",
+    "thread_id_role": "correlation-only",
+    "proves_admission": false
+  },
+  "crash_boundary": {
+    "injection": "SIGKILL inside the first SqliteSaver.put before super().put can commit a checkpoint",
+    "signal": "SIGKILL",
+    "process_exit_code": -9,
+    "first_checkpoint_commit_observed": false
+  },
+  "observations": {
+    "external_effect": {
+      "artifact": "effects.txt",
+      "effect_count": 0,
+      "classification": "NONE_OBSERVED"
+    },
+    "durable_runtime": {
+      "checkpoint_count": 0,
+      "classification": "MISSING"
+    },
+    "recovery": {
+      "operation": "invoke(None, thread_id=accepted-run) in a fresh process",
+      "outcome": "error",
+      "error_class": "EmptyInputError",
+      "error_message": "Received no input for __start__",
+      "classification": "NOT_RESUMABLE_FROM_CHECKPOINTER_EVIDENCE"
+    },
+    "external_admission": {
+      "status": "unavailable",
+      "authoritative_source": null,
+      "decision": null
+    }
+  },
+  "acceptable_classifications": [
+    "NOT_ADMITTED_IF_AUTHORITATIVE_LEDGER_PROVES_NO_ADMISSION",
+    "ADMITTED_BUT_RUNTIME_EVIDENCE_MISSING_IF_AUTHORITATIVE_LEDGER_PROVES_ADMISSION",
+    "DURABLE_ADMISSION_EVIDENCE_PRESENT_IF_AUTHORITATIVE_DURABLE_RECORD_EXISTS",
+    "UNVERIFIED_IF_ADMISSION_EVIDENCE_IS_UNAVAILABLE"
+  ],
+  "forbidden_inferences": [
+    "thread_id_implies_admission",
+    "zero_checkpoints_implies_not_admitted",
+    "zero_checkpoints_implies_admitted_but_failed",
+    "empty_input_error_implies_admitted_but_failed",
+    "zero_effects_implies_not_admitted"
+  ],
+  "observed_classification": {
+    "runtime_evidence": "MISSING",
+    "effects": "NONE_OBSERVED",
+    "recovery": "NOT_RESUMABLE_FROM_CHECKPOINTER_EVIDENCE",
+    "admission": "UNVERIFIED"
+  },
+  "agentci_result": "UNVERIFIED"
+}
