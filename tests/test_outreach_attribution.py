@@ -7,6 +7,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CURRENT_BATCH = ROOT / '.company' / 'growth' / 'outreach-2026-09-01-50-touchpoint-batch-001.json'
 
 
 def _valid_payload() -> dict:
@@ -128,3 +129,32 @@ def test_advanced_downstream_state_requires_public_evidence_url(tmp_path: Path):
 
     assert result.returncode == 1
     assert 'downstream_urls' in result.stderr
+
+
+def test_current_v2_campaign_batch_has_five_confirmed_placements():
+    result = subprocess.run(
+        [
+            sys.executable,
+            'scripts/validate_outreach_batch.py',
+            str(CURRENT_BATCH),
+            '--json',
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    summary = json.loads(result.stdout)
+    assert summary == {
+        'schema_version': 'agentci.outreach.v2',
+        'successful_placements': 5,
+        'by_semantic_class': {
+            'durable-path-evidence-gap': 1,
+            'observer-side-effect': 1,
+            'scheduled-failure-false-success': 1,
+            'split-observer-false-success': 1,
+            'terminality-resource-residue': 1,
+        },
+        'by_downstream_state': {'posted': 5},
+    }
