@@ -31,14 +31,25 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
     placements = payload['placements']
     semantic = Counter()
     downstream = Counter()
+    seen_ids: set[str] = set()
+    seen_urls: set[str] = set()
     for placement in placements:
         if not isinstance(placement, dict):
             raise ValueError('each placement must be an object')
+        placement_id = placement.get('id')
+        if not isinstance(placement_id, str) or not placement_id:
+            raise ValueError('placement id must be a non-empty string')
+        if placement_id in seen_ids:
+            raise ValueError(f'duplicate placement id: {placement_id}')
+        seen_ids.add(placement_id)
         comment_url = placement.get('comment_url')
         if not isinstance(comment_url, str) or not comment_url.startswith('https://github.com/'):
             raise ValueError('placement comment_url must be a confirmed public GitHub comment URL')
         if '#issuecomment-' not in comment_url:
             raise ValueError('placement comment_url must identify a GitHub issue/PR comment')
+        if comment_url in seen_urls:
+            raise ValueError(f'duplicate placement comment_url: {comment_url}')
+        seen_urls.add(comment_url)
         if placement.get('publication_result') != 'posted':
             raise ValueError('counted placement publication_result must be posted')
         semantic_class = placement.get('semantic_class')
