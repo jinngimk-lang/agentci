@@ -1,0 +1,29 @@
+{
+  "schema_version": "agentci.fixture-index.v0alpha1",
+  "captured_at": "2026-09-01",
+  "scope": "provider-neutral replay/recovery fixtures preserved from canonical upstream issues",
+  "entries": [
+    {
+      "case_id": "langgraph-8582-send-untracked",
+      "fixture_type": "replay-fidelity",
+      "path": "tests/fixtures/replay/langgraph-8582-send-untracked",
+      "canonical_upstream": "https://github.com/langchain-ai/langgraph/issues/8582",
+      "reporter": "Hello-world-Prakash",
+      "agentci_intake": "https://github.com/jinngimk-lang/agentci/issues/123",
+      "merged_pr": "https://github.com/jinngimk-lang/agentci/pull/124",
+      "semantic_boundary": "A failed dynamic task must not be accepted as a faithful retry when checkpoint recovery materially changes its input shape.",
+      "agentci_reproduction_status": "UNVERIFIED"
+    },
+    {
+      "case_id": "langgraph-8764-precheckpoint-admission-gap",
+      "fixture_type": "admission-durability",
+      "path": "tests/fixtures/recovery/langgraph-8764-precheckpoint-admission-gap",
+      "canonical_upstream": "https://github.com/langchain-ai/langgraph/issues/8764",
+      "reporter": "mstevens843",
+      "agentci_intake": "https://github.com/jinngimk-lang/agentci/issues/159",
+      "merged_pr": "https://github.com/jinngimk-lang/agentci/pull/160",
+      "semantic_boundary": "Missing durable runtime state after a crash cannot by itself prove whether a run was admitted; authoritative admission evidence is a separate boundary.",
+      "agentci_reproduction_status": "UNVERIFIED"
+    }
+  ]
+}
