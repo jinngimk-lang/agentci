@@ -1,0 +1,61 @@
+{
+  "schema_version": "agentci.attribution-event.v0alpha1",
+  "event_id": "2026-09-01-langgraph-8764-artifact-handoff",
+  "channel": "langgraph-upstream-issue",
+  "classification": "PROVEN_ARTIFACT_HANDOFF",
+  "conversion_scope": "upstream issue -> author clarification -> AgentCI intake -> merged fixture -> upstream delivery",
+  "not_a_contributor_conversion": true,
+  "claim_boundary": "The upstream reporter clarified the evidence boundary, but did not create the AgentCI intake or PR. This record proves an artifact handoff path, not an external AgentCI contributor conversion, repository visit, star, fork, adoption, compatibility, or certification.",
+  "canonical_upstream": {
+    "repository": "langchain-ai/langgraph",
+    "issue_number": 8764,
+    "url": "https://github.com/langchain-ai/langgraph/issues/8764",
+    "reporter": "mstevens843"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "type": "agentci_external_comment",
+      "url": "https://github.com/langchain-ai/langgraph/issues/8764#issuecomment-5476014058",
+      "observation": "AgentCI proposed an admission-vs-durability fixture while preserving the upstream issue as canonical provenance."
+    },
+    {
+      "sequence": 2,
+      "type": "upstream_author_clarification",
+      "url": "https://github.com/langchain-ai/langgraph/issues/8764#issuecomment-5476924150",
+      "observation": "The reporter corrected the scope to effect_count=0 and durable_checkpoint_count=0, and explicitly separated authoritative admission evidence from missing runtime state."
+    },
+    {
+      "sequence": 3,
+      "type": "agentci_intake",
+      "url": "https://github.com/jinngimk-lang/agentci/issues/159",
+      "observation": "AgentCI created a bounded intake using the reporter's clarification and kept independent reproduction UNVERIFIED."
+    },
+    {
+      "sequence": 4,
+      "type": "agentci_fixture_pr",
+      "url": "https://github.com/jinngimk-lang/agentci/pull/160",
+      "observation": "A four-file recovery fixture plus focused validator encoded the admission/durability boundary and authoritative-ledger controls."
+    },
+    {
+      "sequence": 5,
+      "type": "agentci_merge",
+      "url": "https://github.com/jinngimk-lang/agentci/commit/d56a40d0d1e73c48201f88c059e1822e8d539448",
+      "merge_sha": "d56a40d0d1e73c48201f88c059e1822e8d539448",
+      "observation": "PR #160 merged after exact-head CI and the post-merge main CI completed successfully."
+    },
+    {
+      "sequence": 6,
+      "type": "upstream_artifact_delivery",
+      "url": "https://github.com/langchain-ai/langgraph/issues/8764#issuecomment-5492403668",
+      "observation": "AgentCI returned the merged fixture to the canonical upstream thread and credited the reporter's scope correction."
+    }
+  ],
+  "growth_decision": {
+    "counts_as_external_placement": true,
+    "counts_as_artifact_conversion": true,
+    "counts_as_external_contributor_conversion": false,
+    "scale_signal": "positive",
+    "reason": "The upstream interaction materially changed a merged AgentCI artifact and the result was delivered back to the same canonical upstream thread."
+  }
+}
