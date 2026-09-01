@@ -35,6 +35,10 @@ def _load(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _is_hidden_traffic_url(url: str) -> bool:
+    return '/graphs/traffic' in url or '/traffic' in url
+
+
 def summarize(payload: dict[str, Any]) -> dict[str, Any]:
     placements = payload['placements']
     semantic = Counter()
@@ -77,6 +81,8 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
                 for url in downstream_urls
             ):
                 raise ValueError('downstream_urls evidence must use public GitHub URLs')
+            if any(_is_hidden_traffic_url(url) for url in downstream_urls):
+                raise ValueError('hidden traffic analytics cannot prove downstream state')
         semantic[semantic_class] += 1
         downstream[downstream_state] += 1
     return {
