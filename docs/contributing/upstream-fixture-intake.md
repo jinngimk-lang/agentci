@@ -4,6 +4,8 @@ This path is for an upstream issue author, maintainer, or reproducer who already
 
 The upstream issue stays canonical. AgentCI does not need to copy the upstream implementation, decide the upstream product contract, or claim the behavior is a confirmed bug before maintainers do.
 
+Browse concrete upstream-derived cases in the [real fixture gallery](../fixtures/README.md). The machine-readable source of truth is [`tests/fixtures/index.json`](../../tests/fixtures/index.json).
+
 ## Good fit
 
 A strong intake usually has most of these properties:
@@ -83,7 +85,7 @@ upstream issue
 
 The intake issue is a handoff surface after a qualified upstream failure exists; it is not the acquisition channel itself. Keep discussion of the original product behavior in the upstream issue whenever possible.
 
-## Example that converted into a contribution
+## Example that converted into an external contribution
 
 LangGraph issue #8582 became AgentCI intake #123 and then external PR #124. The successful handoff kept LangGraph #8582 as canonical provenance, asked for a four-file provider-neutral fixture, avoided a LangGraph core dependency, and kept AgentCI status `UNVERIFIED` until independent reproduction.
 
@@ -91,7 +93,17 @@ LangGraph issue #8582 became AgentCI intake #123 and then external PR #124. The 
 - AgentCI intake: https://github.com/jinngimk-lang/agentci/issues/123
 - Contributed fixture PR: https://github.com/jinngimk-lang/agentci/pull/124
 
-Use that shape as a starting point, not as a requirement that every failure be a replay bug.
+## Example that converted into an artifact handoff
+
+LangGraph issue #8764 followed a different but still useful path. AgentCI proposed an admission-vs-durability fixture in the upstream thread; the reporter then corrected the scope to `effect count: 0` and `durable checkpoints: 0`, explicitly separating missing runtime state from authoritative admission evidence. AgentCI used that clarification to create intake #159 and merged fixture PR #160, then delivered the resulting artifact back to the same upstream thread.
+
+- Upstream: https://github.com/langchain-ai/langgraph/issues/8764
+- AgentCI intake: https://github.com/jinngimk-lang/agentci/issues/159
+- Merged fixture PR: https://github.com/jinngimk-lang/agentci/pull/160
+
+This is **not** counted as an external contributor conversion because the upstream reporter did not create the AgentCI PR. It is evidence of an upstream-to-artifact handoff: the external interaction materially changed a merged AgentCI fixture and the result was returned to the canonical source.
+
+Use these shapes as starting points, not as requirements that every failure be a replay or recovery bug.
 
 ## What not to claim
 
