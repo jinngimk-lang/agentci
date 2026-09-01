@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn repeated external failure signals into 10 reusable public technical assets, with at least one new provider-neutral AgentCI fixture/showcase improvement built through RED→GREEN evidence.
+**Goal:** Turn repeated external failure signals into 10 reusable public technical assets, including one concrete provider-neutral replay/durability fixture derived from LangGraph #8764 and built through RED→GREEN evidence.
 
-**Architecture:** External GitHub/runtime issues are untrusted provenance inputs, not AgentCI truth. Cluster them by semantic invariant, choose the strongest evidence-backed class, create a small provider-neutral fixture or checklist/validator asset, validate it independently, then use the resulting artifact as a higher-conversion distribution destination in later cohorts. External projects remain upstream provenance and pattern sources; AgentCI does not import their runtime dependencies unless a separate experiment proves that necessary.
+**Architecture:** External GitHub/runtime issues are untrusted provenance inputs, not AgentCI truth. The first executable artifact extends AgentCI's existing provider-neutral replay fixture pattern (`tests/fixtures/replay/langgraph-8582-send-untracked`) rather than adding a provider SDK or second verdict engine. LangGraph #8764 is reduced to the caller-admission vs runtime-durability boundary: an external caller may record a background run as accepted while the runtime has no first durable checkpoint after process death. AgentCI preserves that upstream claim as `UNVERIFIED` and makes the missing durability evidence explicit.
 
-**Tech Stack:** Python 3.11, JSON fixtures, pytest, Markdown, AgentCI showcase catalog, GitHub Actions.
+**Tech Stack:** Python 3.11, JSON/JSONL fixtures, pytest, Markdown, AgentCI showcase catalog, GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-01-50-touchpoint-growth-loop-design.md`
 
@@ -14,10 +14,12 @@
 
 - Target: 10 new reusable public technical assets after campaign approval.
 - At least one asset must include executable/reproducible machine-readable evidence rather than prose only.
-- External issue claims stay `UNVERIFIED` until independently reproduced or represented as a bounded upstream-provenance fixture with an explicit claim boundary.
-- Do not add provider SDK dependencies merely to reproduce an evidence shape.
-- Preserve upstream issue URLs and contributor credit.
-- Fixture presence does not certify a backend.
+- LangGraph #8764 remains upstream provenance; AgentCI does not claim independent LangGraph reproduction in the reduced fixture unless that is separately executed later.
+- Do not say LangGraph itself durably accepted a run when the public issue only establishes that an external caller/system may have recorded acceptance.
+- No LangGraph core/runtime dependency is added.
+- Preserve upstream issue URL and reporter credit.
+- Fixture presence does not certify LangGraph or any backend.
+- Missing runtime material remains `UNVERIFIED`; absence of a checkpoint does not prove “nothing happened” or “the run never existed”.
 - `configured/present != verified/effective`; `observation != authority`.
 - Security-sensitive external cases must not be expanded into public exploit instructions.
 - Behavior/schema changes use TDD; `Fixer != Merge Decider`.
@@ -63,9 +65,9 @@ existing AgentCI fixture overlap
 smallest new invariant
 ```
 
-- [ ] **Step 3: Select one executable-fixture candidate**
+- [ ] **Step 3: Record the first executable choice**
 
-Default choice is the highest cluster with at least two independent upstream cases and no existing equivalent canonical fixture. A single exceptionally strong case may win if it has deterministic reproduction and contributor intent.
+Select `accepted-not-durable` / LangGraph #8764 for the first new fixture because it is a recent open issue with a self-contained process-death reproduction and cleanly extends the existing replay fixture corpus without a new runtime dependency.
 
 ### Task 2: Asset 1 — machine-readable external provenance index
 
@@ -75,136 +77,262 @@ Default choice is the highest cluster with at least two independent upstream cas
 
 **Interfaces:**
 - Each record: `id`, `source_url`, `source_repository`, `semantic_class`, `status`, `agentci_artifact`, `claim_boundary`.
-- `status`: `observed-upstream | reduced-fixture | independently-reproduced | merged-contribution`.
+- Allowed `status`: `observed-upstream | reduced-fixture | independently-reproduced | merged-contribution`.
 
-- [ ] **Step 1: RED — duplicate or missing source URLs fail**
+- [ ] **Step 1: Write RED for duplicate source URLs**
 
-Write a test loading a temporary index with duplicate `source_url` and require failure from a small validation helper or test-local validator.
+Create `tests/test_external_provenance_index.py` with a helper that validates a list of records and one test containing the same `source_url` twice. The test must fail until canonical validation exists.
 
-- [ ] **Step 2: GREEN — add canonical index with uniqueness test**
+- [ ] **Step 2: Add the canonical index and validation assertions**
 
-Do not invent reproduction status. Initial entries may remain `observed-upstream`.
+The initial LangGraph #8764 record is:
 
-- [ ] **Step 3: Add secret/material scan assertions**
-
-Reject obvious credential/token fields in persisted provenance records.
-
-### Task 3: Select and specify the new executable fixture
-
-**Files:**
-- Create issue in AgentCI with exact upstream provenance and acceptance criteria.
-- Later fixture files under `tests/fixtures/` or `examples/` following the existing semantic domain.
-
-**Interfaces:**
-- The issue must define:
-
-```text
-upstream source(s)
-portable invariant
-input/state identities
-negative control
-expected AgentCI verdict/validation state
-what remains unverified
-no-provider-dependency boundary
+```json
+{
+  "id": "langgraph-8764-accepted-not-durable",
+  "source_url": "https://github.com/langchain-ai/langgraph/issues/8764",
+  "source_repository": "langchain-ai/langgraph",
+  "semantic_class": "accepted-not-durable",
+  "status": "observed-upstream",
+  "agentci_artifact": "tests/fixtures/replay/langgraph-8764-accepted-not-durable",
+  "claim_boundary": "Upstream reproduction observed; AgentCI runtime reproduction remains UNVERIFIED."
+}
 ```
 
-- [ ] Search existing AgentCI issues/fixtures for semantic duplication.
-- [ ] Create one issue only if no equivalent task exists.
-- [ ] Name exact future test/fixture paths so an external contributor can start without private context.
+Make the test enforce unique non-empty HTTPS source URLs and allowed status values.
 
-### Task 4: RED for the selected external invariant
+- [ ] **Step 3: Add secret/material scan**
+
+Serialize the canonical index in the test and assert it does not contain keys or values named `token`, `password`, `secret_value`, `api_key`, or `authorization`.
+
+- [ ] **Step 4: Run focused GREEN**
+
+```bash
+python -m pytest -q tests/test_external_provenance_index.py
+```
+
+### Task 3: Asset 2 — RED for LangGraph #8764 reduced fixture
 
 **Files:**
-- Test path chosen in Task 3.
-- Fixture source chosen in Task 3.
+- Create test first: `tests/test_langgraph_8764_accepted_not_durable_fixture.py`
+- Fixture directory to be created only in GREEN: `tests/fixtures/replay/langgraph-8764-accepted-not-durable/`
 
 **Interfaces:**
-- Test must fail against current AgentCI for the intended missing representation/validation behavior, or, when product validator already behaves correctly, fail because the new canonical fixture/catalog entry is absent.
+- Reuses the file pattern of `tests/fixtures/replay/langgraph-8582-send-untracked`:
+  - `provenance.json`
+  - `case.json`
+  - `trajectory.jsonl`
+  - `README.md`
+- No production validator API is added in this slice; the fixture itself is the canonical reduced evidence artifact and the pytest contract makes its claims deterministic.
 
-- [ ] **Step 1: Write the smallest failing test first**
+- [ ] **Step 1: Write the failing provenance/boundary test**
 
-Example shape for a lost-ack/exactly-once case:
+Create the new test file with:
 
 ```python
-def test_committed_effect_with_lost_ack_is_not_safe_to_blindly_replay():
-    case = load_fixture('lost-ack-committed-effect.json')
-    result = validate_or_classify(case)
-    assert result.state != 'PASS'
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / 'tests' / 'fixtures' / 'replay' / 'langgraph-8764-accepted-not-durable'
+
+
+def _load_json(name: str):
+    return json.loads((FIXTURE / name).read_text(encoding='utf-8'))
+
+
+def test_langgraph_8764_preserves_upstream_and_unverified_boundary():
+    provenance = _load_json('provenance.json')
+    case = _load_json('case.json')
+    assert provenance['source']['url'] == 'https://github.com/langchain-ai/langgraph/issues/8764'
+    assert provenance['source']['reporter'] == 'mstevens843'
+    assert provenance['agentci_reproduction_status'] == 'UNVERIFIED'
+    assert case['semantic_class'] == 'accepted-not-durable'
+    assert case['agentci_result'] == 'UNVERIFIED'
 ```
 
-Use actual existing AgentCI interfaces discovered from the selected domain; do not create a second verdict engine for convenience.
+Run:
 
-- [ ] **Step 2: Confirm RED reason**
-
-Existing unrelated suite stays green; only the new missing contract/fixture assertion fails.
-
-### Task 5: GREEN for the selected fixture
-
-**Files:**
-- Minimal production/schema/catalog changes required by Task 4.
-- Canonical fixture + provenance metadata.
-
-- [ ] Add only the structure needed to make the invariant machine-checkable.
-- [ ] Preserve `UNVERIFIED` when material evidence is missing.
-- [ ] Bind upstream provenance in fixture metadata without depending on upstream package imports.
-- [ ] Run targeted GREEN, full pytest, compileall and relevant clean-wheel smoke.
-- [ ] Hand exact head to a non-Fixer Challenger.
-
-### Task 6: Challenger attack for the new fixture
-
-**Files:**
-- Prefer separate RED-only branch/PR if a material counterexample is found.
-
-Attack at least:
-
-```text
-wrong input/work identity
-stale/replayed evidence
-missing effect identity
-same-looking success with different durable state
-missing terminal/cleanup state where relevant
-copied digest/label without underlying semantic material
+```bash
+python -m pytest -q tests/test_langgraph_8764_accepted_not_durable_fixture.py
 ```
 
-- [ ] Record Spec verdict and Standards verdict separately.
-- [ ] If a counterexample survives, return the exact head immediately; do not approve based on green CI.
-- [ ] If clean, hand to eligible Merge Decider.
+Expected: FAIL with missing fixture files/directories, while the existing LangGraph #8582 test remains green.
 
-### Task 7: Asset 2 — provider-neutral fixture README
+- [ ] **Step 2: Add RED for admission/durability distinction**
+
+In the same test file add:
+
+```python
+def test_external_acceptance_is_not_promoted_to_runtime_durability():
+    case = _load_json('case.json')
+    assert case['external_acceptance']['status'] == 'asserted-by-upstream-caller'
+    assert case['runtime_admission_record']['status'] == 'unavailable'
+    assert case['first_durable_checkpoint']['presence'] == 'absent-in-upstream-reproduction'
+    assert case['user_effect']['observed_count'] == 0
+    assert case['recovery']['outcome'] == 'no-resumable-state'
+    assert case['classification'] == 'ADMISSION_DURABILITY_GAP'
+    assert case['agentci_result'] == 'UNVERIFIED'
+```
+
+This test intentionally forbids collapsing caller acceptance into a LangGraph runtime acceptance claim.
+
+- [ ] **Step 3: Add RED for trajectory shape**
+
+Load `trajectory.jsonl` and assert event types exactly equal:
+
+```python
+[
+    'external-run-accepted',
+    'process-terminated',
+    'durable-checkpoint-observed',
+    'recovery-attempted',
+    'admission-durability-result',
+]
+```
+
+Final event must contain:
+
+```python
+assert final['classification'] == 'ADMISSION_DURABILITY_GAP'
+assert final['verdict'] == 'UNVERIFIED'
+assert final['missing_material_evidence'] == ['runtime_admission_record', 'first_durable_checkpoint']
+```
+
+### Task 4: Asset 2 — GREEN fixture files
 
 **Files:**
-- Create/update a README adjacent to the new fixture corpus.
+- Create: `tests/fixtures/replay/langgraph-8764-accepted-not-durable/provenance.json`
+- Create: `tests/fixtures/replay/langgraph-8764-accepted-not-durable/case.json`
+- Create: `tests/fixtures/replay/langgraph-8764-accepted-not-durable/trajectory.jsonl`
+- Create: `tests/fixtures/replay/langgraph-8764-accepted-not-durable/README.md`
 
 **Interfaces:**
-- Must answer: what failure this represents, how to run it, what PASS/FAIL/UNVERIFIED means, what it does not prove, upstream provenance.
+- `provenance.json` records upstream issue metadata and `agentci_reproduction_status: UNVERIFIED`.
+- `case.json` records the reduced semantic boundary, not raw LangGraph code.
+- `trajectory.jsonl` is a case-local semantic reduction, not a claim that AgentCI captured native runtime telemetry.
 
-- [ ] Include one exact reproduction/validation command.
-- [ ] Include one negative control description.
-- [ ] Include no backend certification wording.
+- [ ] **Step 1: Write `provenance.json`**
 
-### Task 8: Asset 3 — showcase entry for the new fixture
+Use:
+
+```json
+{
+  "source": {
+    "url": "https://github.com/langchain-ai/langgraph/issues/8764",
+    "repository": "langchain-ai/langgraph",
+    "issue_number": 8764,
+    "reporter": "mstevens843",
+    "reported_at": "2026-08-30"
+  },
+  "capture": {
+    "source_kind": "public-upstream-issue",
+    "reproduction_kind": "self-contained-process-death-reproduction",
+    "upstream_contract": "UNCONFIRMED"
+  },
+  "agentci_reproduction_status": "UNVERIFIED"
+}
+```
+
+- [ ] **Step 2: Write `case.json`**
+
+Use a provider-neutral object containing exactly these semantic fields:
+
+```json
+{
+  "case_id": "langgraph-8764-accepted-not-durable",
+  "semantic_class": "accepted-not-durable",
+  "external_acceptance": {"status": "asserted-by-upstream-caller"},
+  "runtime_admission_record": {"status": "unavailable"},
+  "first_durable_checkpoint": {"presence": "absent-in-upstream-reproduction"},
+  "process_termination": {"kind": "abrupt-process-death"},
+  "user_effect": {"observed_count": 0},
+  "recovery": {"outcome": "no-resumable-state"},
+  "classification": "ADMISSION_DURABILITY_GAP",
+  "acceptable_outcomes": ["durable-admission-record", "explicit-durable-failure-record", "caller-owned-acceptance-ledger", "UNVERIFIED"],
+  "agentci_result": "UNVERIFIED",
+  "claim_boundary": "This fixture preserves an upstream admission/durability ambiguity; it does not prove LangGraph runtime acceptance or certify recovery behavior."
+}
+```
+
+- [ ] **Step 3: Write five JSONL trajectory events**
+
+Use monotonic `sequence` 1–5 and one case-local `logical_run_ref`. Event 3 records checkpoint presence as false/absent in the upstream reproduction; event 5 records the missing material list and `UNVERIFIED` verdict.
+
+- [ ] **Step 4: Write fixture README**
+
+README must state:
+
+```text
+upstream provenance
+what the upstream reproduction observed
+what AgentCI reduced into a provider-neutral invariant
+why caller acceptance != runtime durability
+how to run the fixture test
+why the result remains UNVERIFIED
+no LangGraph dependency / no backend certification
+```
+
+Exact command:
+
+```bash
+python -m pytest -q tests/test_langgraph_8764_accepted_not_durable_fixture.py
+```
+
+- [ ] **Step 5: Focused GREEN**
+
+Run the new test plus existing #8582 fixture test:
+
+```bash
+python -m pytest -q tests/test_langgraph_8764_accepted_not_durable_fixture.py tests/test_langgraph_8582_replay_fixture.py
+```
+
+Expected: all PASS.
+
+### Task 5: Asset 2 — no-dependency/secret boundary
+
+**Files:**
+- Modify: `tests/test_langgraph_8764_accepted_not_durable_fixture.py`
+
+- [ ] Add a test concatenating all new fixture text and assert it contains no `secret_value`, `api_key`, `authorization`, or copied private runtime value.
+- [ ] Parse `pyproject.toml` and assert no dependency begins with `langgraph`.
+- [ ] Scan `src/agentci/**/*.py` and assert the new fixture work did not add `import langgraph` / `from langgraph`.
+- [ ] Run focused GREEN again.
+
+### Task 6: Asset 2 — full verification and challenge
+
+- [ ] Run:
+
+```bash
+python -m pytest -q
+python -m compileall src scripts
+```
+
+- [ ] Open a dedicated fixture PR from current main; do not mix it into the campaign-design PR.
+- [ ] Challenger attacks the exact head for: caller acceptance mislabeled as runtime acceptance, nonzero effect count incorrectly tolerated, checkpoint presence incorrectly marked durable, and copied `UNVERIFIED` labels without underlying missing-material fields.
+- [ ] Record Spec and Standards verdicts separately.
+- [ ] Eligible non-Fixer Merge Decider acts only on exact head + green CI + clean challenge.
+
+### Task 7: Asset 3 — showcase entry for LangGraph #8764 fixture
 
 **Files:**
 - Modify `showcase/catalog-v1.json` only after #130 or its successor is on the relevant integration base.
-- Modify truth-contract tests as required.
+- Modify existing showcase truth-contract tests.
 
 **Interfaces:**
-- New entry uses `evidence_maturity: fixture`.
-- `certification_claim` must remain `false`.
-- `repository_path` must exist.
-- `released_command` must be parseable on the documented line/version.
+- ID: `replay-accepted-not-durable-langgraph-8764`.
+- `evidence_maturity: fixture`.
+- `certification_claim: false`.
+- `repository_path: tests/fixtures/replay/langgraph-8764-accepted-not-durable/case.json`.
 
-- [ ] RED: test expects the new fixture ID absent/currently undiscoverable.
-- [ ] GREEN: add exactly one catalog entry.
-- [ ] Run catalog validator and clean-wheel installed fallback smoke.
+- [ ] RED: canonical catalog test expects this fixture ID and currently fails because the entry is absent.
+- [ ] GREEN: add one catalog entry pointing to the existing fixture path and a parseable pytest/reproduction command supported by the documented development line.
+- [ ] Run catalog validator and clean-wheel/source discovery tests; do not package the entire test fixture corpus into the wheel unless a separate product decision requires that.
 
-### Task 9: Asset 4 — external execution-result binding checklist
+### Task 8: Asset 4 — external execution-result binding checklist
 
 **Files:**
 - Create: `docs/testing/execution-result-binding.md`
-
-**Interfaces:**
-- Inspired by adjacent runners such as agent-belt without importing them.
 
 Document the minimum evidence tuple:
 
@@ -220,15 +348,14 @@ actor/verifier shared-authority relationship
 claim boundary
 ```
 
-End with a contribution CTA for runners that can export this evidence.
+End with a contribution CTA for runners that can export this evidence. Cite external projects only as provenance/pattern inputs, not compatibility claims.
 
-### Task 10: Asset 5 — cross-runtime evidence comparison matrix
+### Task 9: Asset 5 — cross-runtime evidence comparison matrix
 
 **Files:**
 - Create: `.company/research/external/cross-runtime-evidence-matrix-2026-09-01.md`
 
-**Interfaces:**
-- Compare only documented/public evidence surfaces for projects already researched (for example SWE-ReX, Kubernetes Agent Sandbox, Docker Sandboxes, E2B, OpenHands, agent-belt where relevant).
+Compare only documented/public evidence surfaces for projects already researched: SWE-ReX, Kubernetes Agent Sandbox, Docker Sandboxes, E2B, OpenHands, and agent-belt where relevant.
 
 Columns:
 
@@ -244,35 +371,29 @@ AgentCI classification
 source/version/date
 ```
 
-Use `unknown` rather than inference.
+Use `unknown` rather than inference. Record license and source pin for every row.
 
-### Task 11: Asset 6 — configured-vs-effective capability matrix
+### Task 10: Asset 6 — configured-vs-effective capability matrix
 
 **Files:**
 - Create: `docs/testing/configured-vs-effective-capability.md`
 
-**Interfaces:**
-- Explain why declared support cannot prove combinations work (e.g. tool + output-schema combinations, installed backend vs usable backend).
-
-Include one deterministic matrix example:
+Explain why declared support cannot prove feature combinations or runtime usability. Include this deterministic matrix:
 
 ```text
 configured=true, discovered=true, effective=unknown -> non-PASS
-configured=true, probe fails -> not-ready
-configured=true, bounded real probe succeeds -> evidence limited to probed capability
+configured=true, bounded probe fails -> not-ready
+configured=true, bounded real probe succeeds -> evidence limited to the probed capability
 ```
 
-Do not claim Google ADK or other upstream compatibility from the example.
+Use Google ADK #6954 only as an upstream example of why combination-level capability truth matters; do not claim AgentCI has reproduced or supports Google ADK.
 
-### Task 12: Asset 7 — terminal evidence absence pattern
+### Task 11: Asset 7 — terminal evidence absence pattern
 
 **Files:**
 - Create: `docs/testing/negative-terminal-evidence.md`
 
-**Interfaces:**
-- Define how to record “no terminal event observed” without turning absence into “sandbox died” or “command succeeded”.
-
-Include:
+Define how to record “no terminal event observed” without turning absence into “sandbox died” or “command succeeded”. Require:
 
 ```text
 last observed event identity
@@ -283,23 +404,20 @@ negative evidence statement
 allowed classifications
 ```
 
-### Task 13: Asset 8 — exactly-once / lost-ack checklist
+### Task 12: Asset 8 — exactly-once / lost-ack checklist
 
 **Files:**
 - Create: `docs/testing/exactly-once-lost-ack.md`
 
-**Interfaces:**
-- Separate commit truth from caller acknowledgement.
-- Require durable reconciliation before blind replay.
-- Link only to public upstream provenance where already recorded.
+Separate durable commit truth from caller acknowledgement. Require durable state reconciliation before replaying a guarded input/effect. Use OpenAI Agents SDK #4775 only as public provenance for the failure shape unless independently reproduced.
 
-### Task 14: Asset 9 — upstream fixture contribution template
+### Task 13: Asset 9 — upstream fixture contribution template
 
 **Files:**
-- Create: `.github/ISSUE_TEMPLATE/upstream_fixture.yml` or extend the existing backend evidence template if that is the better single entry point.
+- Inspect first: `.github/ISSUE_TEMPLATE/backend_evidence.yml`
+- Extend that template if it can remain the single intake surface; create `.github/ISSUE_TEMPLATE/upstream_fixture.yml` only if the existing form cannot express replay/terminality/false-success provenance without confusing backend evidence.
 
-**Interfaces:**
-- Required fields:
+Required fields after the change:
 
 ```text
 upstream URL
@@ -312,38 +430,43 @@ secret/redaction confirmation
 proposed fixture path
 ```
 
-- [ ] Inspect existing issue templates first and avoid duplicate intake forms.
-- [ ] If extending the existing form, add only missing fields.
+Add YAML parse validation to repository tests or CI if current templates are not already parsed.
 
-### Task 15: Asset 10 — campaign-derived technical index
+### Task 14: Asset 10 — campaign-derived technical index
 
 **Files:**
 - Create: `docs/testing/agent-evidence-patterns.md`
 
-**Interfaces:**
-- Search-oriented index linking the nine preceding technical assets and existing canonical AgentCI evidence docs.
-- Each entry: problem phrase → use this AgentCI asset → exact next command/action → claim boundary.
-
-Example row:
+Create a search-oriented router linking Assets 2–9 plus existing AgentCI evidence docs. Each row contains:
 
 ```text
-"agent says success but tool failed" -> false-PASS taxonomy -> inspect/reduce fixture -> telemetry truth is not execution truth
+problem phrase | AgentCI evidence pattern | exact next action/command | claim boundary
 ```
 
-Do not duplicate full content; this is routing/indexing.
+Include phrases such as:
 
-### Task 16: Reuse technical assets in later distribution cohorts
+```text
+agent says success but tool failed
+checkpoint resume duplicated an effect
+background run disappeared after acceptance
+cancelled sandbox still has a process/socket
+reviewed commit is green but merge result changed
+tool reviewer allowed action but policy should deny
+```
 
-- [ ] For every new external placement after an applicable asset exists, prefer linking the exact technical asset over linking only the repository root when it materially helps the upstream user.
+Do not duplicate full guides; this page is routing/indexing.
+
+### Task 15: Reuse technical assets in later distribution cohorts
+
+- [ ] For every new external placement after an applicable asset exists, prefer linking the exact technical asset over only the repository root when it materially helps the upstream user.
 - [ ] Record CTA as `reproduce`, `fixture`, `challenge`, or `contribute` according to the asset.
-- [ ] Compare downstream evidence for root-link placements vs asset-link placements; do not claim causality without enough evidence.
+- [ ] Compare downstream public evidence for root-link placements vs asset-link placements; do not claim causality without enough evidence.
 
-### Task 17: Final verification for this plan
+### Task 16: Final verification for this plan
 
-- [ ] 10 new public reusable technical assets are live after campaign approval.
-- [ ] At least one asset is backed by a machine-readable fixture/test and exact-head CI.
-- [ ] New fixture has upstream provenance and explicit non-certification boundary.
-- [ ] No copied upstream code/dependency was introduced without license/dependency review.
-- [ ] Research matrix marks unknowns as unknown.
+- [ ] 10 new public reusable technical assets are live after campaign approval: provenance index, LangGraph #8764 fixture, showcase entry, execution-result binding checklist, cross-runtime matrix, configured-vs-effective guide, terminal absence guide, lost-ack guide, intake template, evidence-pattern index.
+- [ ] LangGraph #8764 fixture is backed by machine-readable fixture files, a focused test, exact-head full CI and explicit `UNVERIFIED` boundary.
+- [ ] No LangGraph dependency was added.
+- [ ] Research matrix marks unknowns as unknown and includes source/license pins.
 - [ ] Agent-facing index gives direct next actions.
 - [ ] Campaign checkpoint records which repeated external failure classes changed AgentCI product priorities.
