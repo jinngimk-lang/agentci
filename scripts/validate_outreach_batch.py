@@ -39,6 +39,8 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError('placement comment_url must be a confirmed public GitHub comment URL')
         if '#issuecomment-' not in comment_url:
             raise ValueError('placement comment_url must identify a GitHub issue/PR comment')
+        if placement.get('publication_result') != 'posted':
+            raise ValueError('counted placement publication_result must be posted')
         semantic_class = placement.get('semantic_class')
         downstream_state = placement.get('downstream_state')
         if not isinstance(semantic_class, str) or not semantic_class:
