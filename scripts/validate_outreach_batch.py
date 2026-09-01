@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+import json
+from pathlib import Path
+import sys
+from typing import Any
+
+
+SCHEMA_VERSION = 'agentci.outreach.v2'
+
+
+def _load(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(payload, dict):
+        raise ValueError('outreach batch must be a JSON object')
+    if payload.get('schema_version') != SCHEMA_VERSION:
+        raise ValueError(f'schema_version must be {SCHEMA_VERSION}')
+    placements = payload.get('placements')
+    attempts = payload.get('attempts')
+    if not isinstance(placements, list):
+        raise ValueError('placements must be a list')
+    if not isinstance(attempts, list):
+        raise ValueError('attempts must be a list')
+    return payload
+
+
+def summarize(payload: dict[str, Any]) -> dict[str, Any]:
+    placements = payload['placements']
+    semantic = Counter()
+    downstream = Counter()
+    for placement in placements:
+        if not isinstance(placement, dict):
+            raise ValueError('each placement must be an object')
+        semantic_class = placement.get('semantic_class')
+        downstream_state = placement.get('downstream_state')
+        if not isinstance(semantic_class, str) or not semantic_class:
+            raise ValueError('placement semantic_class must be a non-empty string')
+        if not isinstance(downstream_state, str) or not downstream_state:
+            raise ValueError('placement downstream_state must be a non-empty string')
+        semantic[semantic_class] += 1
+        downstream[downstream_state] += 1
+    return {
+        'schema_version': SCHEMA_VERSION,
+        'successful_placements': len(placements),
+        'by_semantic_class': dict(sorted(semantic.items())),
+        'by_downstream_state': dict(sorted(downstream.items())),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description='Validate an AgentCI outreach v2 batch')
+    parser.add_argument('path', type=Path)
+    parser.add_argument('--json', action='store_true', help='emit the deterministic JSON summary')
+    args = parser.parse_args(argv)
+
+    try:
+        summary = summarize(_load(args.path))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f'error: {exc}', file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(summary, sort_keys=True))
+    else:
+        print(f"Outreach placements: {summary['successful_placements']}")
+        for name, count in summary['by_semantic_class'].items():
+            print(f'- semantic {name}: {count}')
+        for name, count in summary['by_downstream_state'].items():
+            print(f'- downstream {name}: {count}')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
