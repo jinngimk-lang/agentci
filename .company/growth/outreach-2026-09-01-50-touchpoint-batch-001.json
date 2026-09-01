@@ -1,0 +1,93 @@
+{
+  "schema_version": "agentci.outreach.v2",
+  "batch_id": "2026-09-01-50tp-001",
+  "date": "2026-09-01",
+  "channel": "langgraph-upstream-issues",
+  "channel_status": "proven-contributor-conversion-path",
+  "placements": [
+    {
+      "id": "langgraph-8757",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8757,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8757#issuecomment-5491672768",
+      "semantic_class": "terminality-resource-residue",
+      "intent": "delete reports success while derived embeddings remain on disk",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Upstream issue remains canonical provenance; no hidden referral, compatibility, endorsement, or certification claim."
+    },
+    {
+      "id": "langgraph-8754",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8754,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8754#issuecomment-5491763974",
+      "semantic_class": "observer-side-effect",
+      "intent": "read-only lookup creates persistent ghost state",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. A read-path invariant was offered; no hidden referral or adoption claim."
+    },
+    {
+      "id": "langgraph-8715",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8715,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8715#issuecomment-5491782051",
+      "semantic_class": "scheduled-failure-false-success",
+      "intent": "child task failed but parent run can finish successfully depending on timing",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Failure propagation and cleanup are separate evidence claims; no hidden referral or compatibility claim."
+    },
+    {
+      "id": "langgraph-8716",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8716,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8716#issuecomment-5491792154",
+      "semantic_class": "split-observer-false-success",
+      "intent": "shared source failed but a sibling consumer ends cleanly",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Contradictory branch observations are the fixture target; no hidden referral or adoption claim."
+    },
+    {
+      "id": "langgraph-8705",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8705,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8705#issuecomment-5491806137",
+      "semantic_class": "durable-path-evidence-gap",
+      "intent": "tests pass in memory but production persistence serialization fails",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. In-memory success is not durable-path verification; no hidden referral or compatibility claim."
+    }
+  ],
+  "attempts": [
+    {
+      "id": "nannos-182",
+      "repository": "ringier-data/nannos",
+      "item_type": "issue",
+      "item_number": 182,
+      "semantic_class": "checkpoint-replay-corruption",
+      "intent": "persisted orphan tool result bricks every later replay",
+      "cta": "fixture",
+      "publication_result": "permission_denied",
+      "reason": "GitHub App returned 403 Resource not accessible by integration",
+      "claim_boundary": "No public AgentCI write was created. This attempt is excluded from successful placement counts."
+    }
+  ]
+}
