@@ -107,3 +107,13 @@ def test_duplicate_comment_urls_are_rejected(tmp_path: Path):
 
     assert result.returncode == 1
     assert 'duplicate placement comment_url' in result.stderr.lower()
+
+
+def test_unobservable_downstream_state_is_rejected(tmp_path: Path):
+    payload = _valid_payload()
+    payload['placements'][0]['downstream_state'] = 'visited'
+
+    result = _run_validator(tmp_path, payload)
+
+    assert result.returncode == 1
+    assert 'downstream_state' in result.stderr
