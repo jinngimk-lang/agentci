@@ -105,6 +105,24 @@ agentci sandbox verify examples/sandbox/v0alpha1-pass-evidence.json \
 
 `Replay` here means deterministic revalidation of the self-contained fixture-binding manifest. It does not rerun a sandbox, provider, workload, or external observer. No `agentci sandbox replay` command is released.
 
+## Upstream bug / fixture intake
+
+If the current task starts from a concrete upstream agent-runtime issue with a bounded reproduction, keep that upstream issue as canonical provenance and use `docs/contributing/upstream-fixture-intake.md` or the GitHub `upstream-fixture-intake.yml` issue form.
+
+The smallest normal first contribution is:
+
+```text
+tests/fixtures/<class>/<project>-<issue>-<short-name>/
+  provenance.json
+  case.json
+  trajectory.jsonl
+  README.md
+```
+
+plus one focused validation test. Start the AgentCI result as `UNVERIFIED` unless independently reproduced. Do not add the upstream SDK to AgentCI core dependencies merely to preserve the fixture; do not serialize secrets or opaque runtime values. The upstream issue remains the place for product-specific contract discussion.
+
+Known successful handoff shape: LangGraph #8582 → AgentCI #123 → external PR #124.
+
 ## Active Sandbox Program
 
 - Program / Supervisor: https://github.com/jinngimk-lang/agentci/issues/24
@@ -140,7 +158,7 @@ AgentCI is exploring **Verified Execution** as a strategic hypothesis: remove pr
 
 Useful contributions include reproducible false-PASS cases, RED regressions, runtime semantic corrections backed by primary sources, bounded probes/collectors, authority-confusion fixtures, telemetry/replay/cleanup oracles, real cross-backend mismatches, packaging/first-run failures, and public-contract fixes.
 
-Preserve attribution and exact reproduction evidence.
+Preserve attribution and exact reproduction evidence. If the contribution originates from a specific upstream issue, prefer the upstream fixture intake path above rather than a generic research issue.
 
 ## Public claims
 

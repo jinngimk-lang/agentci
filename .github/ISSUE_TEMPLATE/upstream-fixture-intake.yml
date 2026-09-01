@@ -1,0 +1,78 @@
+name: Upstream fixture intake
+description: Preserve a concrete upstream agent-runtime failure as a provider-neutral AgentCI fixture
+title: "INTAKE: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep the upstream issue canonical. This form defines the smallest AgentCI handoff needed to preserve the failure without claiming upstream correctness, compatibility, or certification.
+
+  - type: input
+    id: upstream_issue
+    attributes:
+      label: Canonical upstream issue
+      description: Link the original issue or discussion where the behavior was reported.
+      placeholder: https://github.com/owner/repo/issues/123
+    validations:
+      required: true
+
+  - type: input
+    id: upstream_version
+    attributes:
+      label: Upstream version or commit
+      description: Exact commit/version if known; otherwise say unknown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: falsifiable_claim
+    attributes:
+      label: Falsifiable provider-neutral claim
+      description: State the semantic invariant without requiring the upstream SDK implementation.
+      placeholder: A terminal refusal must not be silently reinterpreted as authority to retry the same attempt.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction and observed evidence
+      description: Include the smallest deterministic sequence, controls, and observed before/after facts. Do not include secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Evidence and claim boundaries
+      description: What is observed, what is unknown, what must remain UNVERIFIED, and what AgentCI must not claim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fixture_shape
+    attributes:
+      label: Proposed smallest fixture
+      description: Usually provenance.json, case.json, trajectory.jsonl, README.md, plus one focused validation test. Note any safe redactions or non-serializable dependencies.
+      value: |
+        tests/fixtures/<class>/<project>-<issue>-<short-name>/
+          provenance.json
+          case.json
+          trajectory.jsonl
+          README.md
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Intake confirmations
+      options:
+        - label: The upstream issue will remain canonical provenance.
+          required: true
+        - label: No secret, credential, or opaque runtime resource value is included.
+          required: true
+        - label: Missing material evidence may remain UNVERIFIED instead of being inferred.
+          required: true
+        - label: The first contribution can stay provider-neutral without adding the upstream SDK to AgentCI core dependencies.
+          required: true
