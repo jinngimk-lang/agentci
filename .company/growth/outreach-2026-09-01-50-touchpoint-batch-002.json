@@ -1,0 +1,93 @@
+{
+  "schema_version": "agentci.outreach.v2",
+  "batch_id": "2026-09-01-50tp-002",
+  "date": "2026-09-01",
+  "channel": "mixed-high-intent-upstream-issues",
+  "channel_status": "bounded-multi-ecosystem-experiment",
+  "placements": [
+    {
+      "id": "browser-use-5635",
+      "repository": "browser-use/browser-use",
+      "item_type": "issue",
+      "item_number": 5635,
+      "comment_url": "https://github.com/browser-use/browser-use/issues/5635#issuecomment-5491878003",
+      "semantic_class": "replay-substitution-fidelity",
+      "intent": "saved browser history misclassifies company fields so requested rerun substitution can silently leave stale values",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The proposed fixture checks replay/substitution fidelity; no Browser Use compatibility, hidden referral, endorsement, or certification claim."
+    },
+    {
+      "id": "openclaw-134999",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 134999,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/134999#issuecomment-5491881018",
+      "semantic_class": "lease-ownership-crash-residue",
+      "intent": "a stale persisted lock can survive restart and a reused PID can be mistaken for continuing lease ownership",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Process liveness and lease continuity are treated as separate evidence facts; no OpenClaw compatibility or certification claim."
+    },
+    {
+      "id": "langgraph-8768",
+      "repository": "langchain-ai/langgraph",
+      "item_type": "issue",
+      "item_number": 8768,
+      "comment_url": "https://github.com/langchain-ai/langgraph/issues/8768#issuecomment-5491896676",
+      "semantic_class": "subscription-evidence-completeness",
+      "intent": "a shared stream union can underfetch an explicitly unscoped subscriber and make matching events unobservable",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The fixture target is evidence completeness of the requested stream scope; no hidden referral, SDK compatibility, or certification claim."
+    },
+    {
+      "id": "openclaw-134895",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 134895,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/134895#issuecomment-5491899276",
+      "semantic_class": "execution-delivery-divergence",
+      "intent": "scheduled work can execute while operator-visible announce delivery fails closed, creating contradictory success impressions",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. Payload execution and operator-visible delivery remain separate outcome dimensions; no hidden referral or OpenClaw adoption claim."
+    },
+    {
+      "id": "openclaw-134982",
+      "repository": "openclaw/openclaw",
+      "item_type": "issue",
+      "item_number": 134982,
+      "comment_url": "https://github.com/openclaw/openclaw/issues/134982#issuecomment-5491901799",
+      "semantic_class": "cross-surface-authority-preservation",
+      "intent": "typed approval semantics can degrade into non-actionable labels on presentation surfaces without native action encoding",
+      "cta": "fixture",
+      "publication_result": "posted",
+      "downstream_state": "posted",
+      "downstream_urls": [],
+      "claim_boundary": "Confirmed public AgentCI comment only. The invariant preserves bounded approval authority across presentation encodings without selecting OpenClaw product policy or claiming compatibility/certification."
+    }
+  ],
+  "attempts": [
+    {
+      "id": "mastra-22702",
+      "repository": "mastra-ai/mastra",
+      "item_type": "issue",
+      "item_number": 22702,
+      "semantic_class": "sandbox-capability-truth",
+      "intent": "sandbox device-path presence and effective /dev/null capability can diverge across Linux and macOS isolation backends",
+      "cta": "fixture",
+      "publication_result": "permission_denied",
+      "reason": "GitHub issue comment write returned 403 Blocked",
+      "claim_boundary": "No public AgentCI write was created. This attempt is excluded from successful placement counts and remains research-only evidence."
+    }
+  ]
+}

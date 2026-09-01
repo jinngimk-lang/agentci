@@ -8,6 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_BATCH = ROOT / '.company' / 'growth' / 'outreach-2026-09-01-50-touchpoint-batch-001.json'
+SECOND_BATCH = ROOT / '.company' / 'growth' / 'outreach-2026-09-01-50-touchpoint-batch-002.json'
 
 
 def _valid_payload() -> dict:
@@ -155,6 +156,35 @@ def test_current_v2_campaign_batch_has_five_confirmed_placements():
             'scheduled-failure-false-success': 1,
             'split-observer-false-success': 1,
             'terminality-resource-residue': 1,
+        },
+        'by_downstream_state': {'posted': 5},
+    }
+
+
+def test_second_v2_campaign_batch_has_five_confirmed_placements():
+    result = subprocess.run(
+        [
+            sys.executable,
+            'scripts/validate_outreach_batch.py',
+            str(SECOND_BATCH),
+            '--json',
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    summary = json.loads(result.stdout)
+    assert summary == {
+        'schema_version': 'agentci.outreach.v2',
+        'successful_placements': 5,
+        'by_semantic_class': {
+            'cross-surface-authority-preservation': 1,
+            'execution-delivery-divergence': 1,
+            'lease-ownership-crash-residue': 1,
+            'replay-substitution-fidelity': 1,
+            'subscription-evidence-completeness': 1,
         },
         'by_downstream_state': {'posted': 5},
     }
