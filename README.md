@@ -8,6 +8,14 @@ The current primary product line is **AgentCI 0.2 Developer Preview / Agent Sand
 
 AgentCI is open source and intentionally adversarial: builders, runtime experts, security reviewers, and external agents are welcome to contribute reproducible counterexamples and corrections.
 
+## Coming from an upstream bug?
+
+If you already have a concrete upstream agent-runtime issue with a bounded reproduction, you do **not** need to learn the whole AgentCI roadmap first. Keep the upstream issue canonical and turn only the falsifiable semantic failure into a small provider-neutral fixture.
+
+Start with [`docs/contributing/upstream-fixture-intake.md`](docs/contributing/upstream-fixture-intake.md) or [open the upstream fixture intake form](https://github.com/jinngimk-lang/agentci/issues/new?template=upstream-fixture-intake.yml).
+
+The smallest useful first PR is usually four fixture files (`provenance.json`, `case.json`, `trajectory.jsonl`, `README.md`) plus one focused validation test. Initial AgentCI status stays `UNVERIFIED` unless the behavior has been independently reproduced, and the upstream SDK does not need to become an AgentCI core dependency.
+
 ## Main-only S1 route-binding gate (`0.3.0.dev0`)
 
 Development after the `v0.2.0` tag includes the first falsifiable S1 primitive: a provider-neutral execution contract and route-binding eligibility gate. It requires one completed external observation to match the requested target, route, version, build, mode, adapter, contract, attempt nonce, environment, policy, and UTC/monotonic observation window exactly. Observation authentication is signature-verified against verifier-supplied pinned trust; the default trust policy is empty and no S1 authority keys ship with AgentCI.
