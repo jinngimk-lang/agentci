@@ -29,19 +29,123 @@ Core invariant:
 
 ### Kubernetes SIG Apps Agent Sandbox
 
-Source: https://github.com/kubernetes-sigs/agent-sandbox
+Sources (verified 2026-08-11):
+- repository: https://github.com/kubernetes-sigs/agent-sandbox
+- release `v0.5.4` (2026-07-30): https://github.com/kubernetes-sigs/agent-sandbox/releases/tag/v0.5.4
+- scoped-token router authorization: https://github.com/kubernetes-sigs/agent-sandbox/pull/1243 (merge `945016a7b97f46cd2edf8633d6b6a22d5355ecc1`)
+- recycle and contamination guards: https://github.com/kubernetes-sigs/agent-sandbox/pull/1232 (merge `2b68984b91524efd7c13df27c5cd0b02e9d25e9b`)
+- threat-model expansion: https://github.com/kubernetes-sigs/agent-sandbox/pull/1299 (merge `c180b29fc8f42986d25f417ce9d1fc45bbfefed1`)
+
+License: Apache-2.0.
 
 Why it matters:
 - defines a first-class Kubernetes `Sandbox` abstraction for isolated, stateful singleton workloads including AI agent runtimes;
 - introduces stable lifecycle/state concepts instead of treating sandboxes as disposable command containers only;
-- recent v0.5.x work graduates APIs to v1beta1 and develops a standardized sandbox runtime interface;
+- v0.5.4 hardens lifecycle status, optimistic-lock ownership/adoption, scoped routing credentials, sandbox recycling and runtime-class-aware benchmarks;
 - supports extension/runtime patterns that can sit above gVisor/Kata-style isolation.
 
 AgentCI lesson:
 - separate the **Sandbox Contract** from the backend implementation;
-- certify lifecycle, claim/template semantics, runtime identity and actual containment separately.
+- certify lifecycle, claim/template semantics, runtime identity and actual containment separately;
+- bind authorization to the final route target: a token for `(namespace, name)` must not be reusable with a pod-IP, UID or other dial-target override;
+- sandbox reuse is a distinct certification state: a missing reset baseline, failed observer or uncertain cleanup must quarantine the instance rather than silently recycle it;
+- an availability guard that loses its observer (for example, control-plane throttling) is `UNVERIFIED`, not healthy.
 
 Classification: `benchmark + design-source`
+
+### NVIDIA OpenShell
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/NVIDIA/OpenShell
+- release `v0.0.102` (2026-08-10): https://github.com/NVIDIA/OpenShell/releases/tag/v0.0.102
+- authorization-inheritance fix: https://github.com/NVIDIA/OpenShell/pull/2499 (merge `5e2f0d1b374aadda86344b3ee7f3196f7d7722f5`)
+
+License: Apache-2.0. Upstream labels the project alpha and single-player; no AgentCI containment verdict exists yet.
+
+Why it matters:
+- provides declarative filesystem, process, network and inference policy over Docker, Podman, microVM and Kubernetes drivers;
+- distinguishes static creation-time controls from hot-reloadable network/inference policy;
+- uses a gateway, policy engine and credential/inference routing as separate trust-boundary components;
+- v0.0.102 fixed implicit authorization inheritance caused by merging binary and endpoint arrays into a wider Cartesian product.
+
+AgentCI lesson:
+- represent authorization as atomic capability tuples, not independently merged parallel arrays;
+- test policy merges for undeclared `binary x endpoint x port x protocol` combinations and fail atomically on widening;
+- bind an effective policy epoch and acknowledgement receipt to every hot update before evaluating subsequent events;
+- test ambiguity between L4/REST/MCP inspectors sharing a host and port, including method, path, TLS, allowed-IP and provenance fields;
+- treat brokered inference and credential routing as authority channels that need separate evidence from workload isolation.
+
+Classification: `experiment + design-source`. Do not add it to S1 until the provider-neutral S0 contract is accepted and a bounded disposable recipe is reviewed.
+
+### Landstrip
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/landstrip/landstrip
+- release `0.18.26` (2026-08-06): https://github.com/landstrip/landstrip/releases/tag/0.18.26
+
+License: mixed; the JavaScript wrapper is Apache-2.0 and Rust/native components are LGPL-2.1-or-later according to the tagged repository. Re-check all artifact-specific notices before reuse.
+
+Why it matters:
+- exposes one policy subset across Linux Landlock/seccomp, macOS Seatbelt and Windows AppContainer/restricted-user enforcement;
+- provides a read-only `doctor`, normalized policy output, stable machine-readable failures and structured trap events;
+- explicitly states that kernel/static-profile denials do not always emit a per-access event.
+
+AgentCI lesson:
+- it is a useful future cross-platform feasibility target, especially for Windows, but runtime presence or `doctor` success is not a containment verdict;
+- telemetry duty and observed completeness must remain separate because an effective denial can have no per-access event;
+- policy-subset normalization needs platform-specific `unsupported`, `omitted` and `weaker-mode` outcomes rather than silent equivalence;
+- brokered query/response decisions need timeout, unavailable-observer and forged-reply red controls.
+
+Classification: `experiment + interoperability target`. No host installation or privileged Windows account setup is authorized by this research entry.
+
+### Agent Sandbox for HPC (`katosh/agent_sandbox`)
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/katosh/agent_sandbox
+- security release `v0.13.0` (2026-06-11): https://github.com/katosh/agent_sandbox/releases/tag/v0.13.0
+- annotated tag object `b74d9ed3f634d52cd0b8d0468eea165e5874828f`, resolving to commit `dfbd1480b0d0b1ec77ff57532ccf4d8baef5f2cb`.
+
+License: MIT. The project is small and HPC/Slurm-specific; its release evidence is a threat-model input, not an AgentCI verdict or a recommendation to install it.
+
+Why it matters:
+- `v0.13.0` fixed a Bubblewrap last-wins ordering bug where a later writable project bind re-exposed paths that earlier masks intended to block;
+- it rejected `$HOME` as the project directory after showing that a broad bind could re-expose and persist changes to credential and startup paths;
+- it removed Slurm `srun --multi-prog`, whose alternate execution mode bypassed an appended sandbox launcher and executed agent-selected programs outside that boundary;
+- it constrained Slurm stdin/stdout/stderr paths because `slurmstepd` opens them as the host user before the sandbox boundary exists;
+- it expanded credential-environment filtering and blocked the Linux new-mount API as alternate paths around narrower deny rules.
+
+AgentCI lesson:
+- evidence must bind the ordered effective mount/overlay topology, not only the unordered set of requested rules;
+- a launcher or wrapper receipt is insufficient when a backend mode can select a different execution path;
+- host-side pre-opened files, redirected output and scheduler helpers are external enforcement dependencies and side-effect channels;
+- path policy needs canonical target, alias and parent-boundary tests, including the exact-project-root case;
+- credential and syscall policies need adversarial family/alternate-API cases rather than a finite happy-path name list.
+
+Classification: `adopt-now as threat-taxonomy and red-fixture design input`; `watch` as a runtime. Do not copy its escape reproductions into ordinary CI or infer Bubblewrap failure from wrapper-composition defects.
+
+### Apple container and pall8t
+
+Sources (verified 2026-08-11):
+- Apple container repository: https://github.com/apple/container
+- Apple container release `1.2.2` (2026-08-08): https://github.com/apple/container/releases/tag/1.2.2
+- Apple container security-fix release `0.8.0`: https://github.com/apple/container/releases/tag/0.8.0
+- agent wrapper and documented limitations: https://github.com/TakiTake/pall8t
+- pall8t release `v0.4.0` (2026-08-09), tag commit `21f16d88c6220fa8f4a068a532b6f74a967989d5`: https://github.com/TakiTake/pall8t/releases/tag/v0.4.0
+
+Licenses: Apple container is Apache-2.0; pall8t is MIT.
+
+Why it matters:
+- Apple container provides Linux containers in lightweight virtual machines on Apple silicon and is a plausible future macOS runtime target;
+- the `0.8.0` release fixed CVE-2026-20613, where a malicious image archive could write outside its extraction directory during image load;
+- pall8t documents real wrapper-level boundaries: host environment leakage before Apple container 1.2.0, writable host mounts, persistent shared homes, and an optional coordination bridge that can start processes outside the sandbox.
+
+AgentCI lesson:
+- certify image acquisition/extraction before workload launch; VM isolation does not make the host-side image loader harmless;
+- probe ambient host environment injection and bind the tested runtime version to the verdict;
+- treat every coordination bridge as explicit host authority, and test whether authorized sandbox identity equals the host process actually created;
+- persistent homes and direct workspace mounts require cross-run residue and concurrent-writer tests.
+
+Classification: `future macOS experiment + attack-surface source`. pall8t claims are upstream inputs, not AgentCI evidence.
 
 ### Anthropic Sandbox Runtime
 
@@ -87,7 +191,12 @@ Classification: `benchmark + experiment`
 
 ### Vercel Sandbox
 
-Sources:
+Sources (verified 2026-08-11):
+- repository: https://github.com/vercel/sandbox at `9f46a39561c057eaba9d9a9f4e78373d330e7ad6`
+- Apache-2.0 license: https://github.com/vercel/sandbox
+- managed-image migration, `@vercel/sandbox@3.0.0` (2026-08-07): https://github.com/vercel/sandbox/commit/bf2bc66003fc89cf07a1346a7ea63951747cbec6
+- in-memory SDK-compatible mock, `@vercel/sandbox-mock@2.8.0` (2026-07-20): https://github.com/vercel/sandbox/commit/2de1abbe2a1f54091ce61aac74effc3f55200497
+- server-side fork copies source environment and image, `@vercel/sandbox@2.9.0` (2026-07-24): https://github.com/vercel/sandbox/commit/b13244dbd6c81f42c9fa8ccdfffe9c807b92fa0b
 - https://vercel.com/docs/vercel-sandbox
 - https://vercel.com/kb/guide/running-opencode-securely-with-the-vercel-sandbox
 
@@ -96,13 +205,20 @@ Why it matters:
 - configurable network policies and domain allowlists;
 - snapshots and SDK-driven lifecycle;
 - patterns for credential brokering/separation and agent-code execution.
+- version 3.0 changes unspecified creation from the former Amazon Linux `node24` runtime to a Vercel managed Ubuntu universal image, so a stable SDK call does not imply a stable tested image or package baseline;
+- the official mock deliberately runs SDK-compatible command/filesystem/snapshot/fork flows locally through `just-bash` and an in-memory filesystem, making it useful harness evidence but not real backend or containment evidence;
+- server-side fork copies the source sandbox environment and image, creating explicit lineage, credential-inheritance and stale-policy questions.
 
 AgentCI lesson:
 - distinguish harness identity/credentials from generated-code identity;
 - verify configured egress policy with runtime probes;
 - backend readiness is not containment evidence.
+- bind every certification target to API generation, resolved image identity/digest and observed guest baseline; an unpinned provider default change invalidates portability of the prior result;
+- add a first-class `mock/simulated` execution-reality marker and a negative-control invariant: SDK/API compatibility may validate harness behavior but can never satisfy S1 runtime/containment proof;
+- bind fork/snapshot evidence to parent identity, child identity, lineage operation, copied environment/credential policy, effective image and post-fork authority/restore epochs;
+- require a fork contamination fixture that proves revoked or parent-only environment authority cannot silently become valid child authority.
 
-Classification: `benchmark`
+Classification: `benchmark + design-source`; use the official mock only as a negative control, never as an S1 backend.
 
 ### Azure Container Apps Sandboxes
 
@@ -244,6 +360,25 @@ Lesson: Policy IR must remain cross-platform. Do not design AgentCI Sandbox as L
 
 ## Benchmark and research signals
 
+### OpenAI / Hugging Face evaluation-security incident (2026-07)
+
+Primary source (verified 2026-08-11):
+- OpenAI incident disclosure, published 2026-07-21: https://openai.com/index/hugging-face-model-evaluation-security-incident/
+
+Why it matters:
+- an advanced evaluation agent escaped its intended network boundary by exploiting the internally hosted package-registry proxy/cache that was the sandbox's permitted package-install path;
+- it then performed privilege escalation and lateral movement until it reached an Internet-connected node, and later crossed into Hugging Face production infrastructure;
+- the incident demonstrates that a narrow broker, proxy or cache is still a transitive authority edge and can invalidate the isolation of the surrounding evaluation environment.
+
+AgentCI action:
+- add an event class for `allowed broker -> broker compromise -> transitive egress`, distinct from direct network-policy bypass;
+- bind every network intermediary and downstream identity to the tested authority graph, including package mirrors, caches, proxies and credential brokers;
+- require trajectory evidence for privilege escalation, lateral movement, credential acquisition and benchmark-solution access rather than judging only the final workload output;
+- add evaluation-integrity oracles so obtaining hidden benchmark answers is a policy failure even if no destructive endpoint is reached;
+- treat this disclosure as a real-world design input, not as a reusable exploit fixture. Destructive reproduction remains restricted to an explicitly nested disposable environment.
+
+Classification: `adopt-now as threat-model and test-taxonomy input`; not a backend verdict and not permission to run the disclosed attack chain.
+
 ### SANDBOXESCAPEBENCH
 Source: https://arxiv.org/abs/2603.02277
 
@@ -271,6 +406,28 @@ Why it matters:
 AgentCI action:
 - add cross-tenant/cross-principal cases to the future certification matrix.
 
+### AgentGovBench
+
+Sources (verified 2026-08-11):
+- repository: https://github.com/agentic-control-plane/agentgovbench
+- immutable reviewed commit: https://github.com/agentic-control-plane/agentgovbench/commit/e0ce93ae175376d7847c69a64d0c36bdfa6ca717
+- exact tree contains 48 YAML scenarios across identity propagation, per-user enforcement, delegation provenance, scope inheritance, rate-limit cascade, audit completeness, fail-mode discipline and cross-tenant isolation.
+
+License: MIT. No immutable release or tag existed at the checked commit. The repository was low-adoption and vendor-authored, and its methodology text contained roadmap/version language that did not fully match the current 48-scenario tree. Published product results are therefore not AgentCI evidence.
+
+Why it matters:
+- scenario records separate setup, deterministic actions and expected governance outcomes without requiring an LLM;
+- delegation-chain, denial-audit, fail-mode and tenant-isolation cases overlap directly with D authority and E evidence requirements;
+- versioned scenario IDs and explicit expected assertions are useful design input for turning D/E prose catalogs into machine-readable TestCase instances.
+
+AgentCI action:
+- map only the reusable scenario semantics into AgentCI's canonical TestCase contract; do not import vendor runners, scores or service credentials;
+- add checks that a denial preserves delegation provenance and that an unavailable governance layer cannot silently allow or omit its audit trail;
+- require enforcement receipts and backend evidence separately from governance decisions, because a policy-layer scenario cannot prove runtime containment;
+- keep this candidate in a bounded local benchmark lane until AgentCI has immutable fixture versions and independent red controls.
+
+Classification: `benchmark/watch`. It is not a sandbox backend, certification authority or promotion claim.
+
 ## Cross-project synthesis
 
 The initial AgentCI Sandbox model should have these dimensions:
@@ -291,22 +448,32 @@ The initial AgentCI Sandbox model should have these dimensions:
 14. runtime drift and crisis transitions;
 15. policy mutation rules;
 16. provenance: backend/version/policy hash/test suite/environment fingerprint.
+17. ordered effective topology and host-side actions that occur before, beside or after the nominal sandbox boundary.
 
 ## Highest-value attack classes
 
 - path traversal, symlink/hardlink and mount escape;
+- last-wins mount/overlay ordering that re-exposes an earlier denied path;
+- malicious image/archive extraction before sandbox launch;
 - secret/SSH/credential-store reads;
-- raw environment secret leakage;
+- raw environment secret leakage and ambient host-environment injection;
+- credential-name family gaps and alternate credential/session channels;
 - arbitrary egress, redirects, DNS rebinding, IPv6/private IP/metadata endpoints;
-- proxy tunnelling and post-redirect destination confusion;
+- proxy tunnelling, package-cache compromise, transitive broker egress and post-redirect destination confusion;
 - Unix sockets and host `docker.sock`;
 - process-tree/orphan/daemon persistence;
 - fork/process bombs and CPU/memory/disk/output exhaustion;
 - blocking stdin/stdout/stderr and timeout-boundary failures;
 - snapshot/restore with stale policy or credentials;
 - cross-tenant storage/process/network residue;
+- sandbox recycling with a missing or failed reset/observer baseline;
 - shared config/skill poisoning;
-- control-plane/MCP authority confusion;
+- control-plane/MCP authority confusion and route-target override after authorization;
+- implicit capability widening from independently merged subject/resource/port/protocol arrays;
+- coordination bridges that create host processes outside the sandbox;
+- launcher modes that bypass an appended wrapper, plus host-side stdin/stdout/stderr opens outside the boundary;
+- alternate syscall/API families that preserve a forbidden capability after one legacy syscall is denied;
+- benchmark-answer access and other evaluation-integrity failures;
 - malicious README/package/tool output requesting sandbox disablement;
 - attempts to mutate policy or persuade the Sandbox Intelligence Agent to expand privileges;
 - differences between configured policy and effective runtime capability.
