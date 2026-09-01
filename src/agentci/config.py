@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,8 @@ def _optional_number(mapping: dict[str, Any], key: str, where: str) -> float | N
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ConfigError(f"{where}.{key} must be a number")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ConfigError(f"{where}.{key} must be finite")
     if value < 0:
         raise ConfigError(f"{where}.{key} must be >= 0")
     return value
@@ -82,6 +85,8 @@ def load_suite(path: str | Path) -> EvalSuite:
     raw_cases = root.get("cases")
     if not isinstance(raw_cases, list):
         raise ConfigError("cases must be a list")
+    if not raw_cases:
+        raise ConfigError("cases must contain at least one case")
 
     cases: list[EvalCase] = []
     seen: set[str] = set()
