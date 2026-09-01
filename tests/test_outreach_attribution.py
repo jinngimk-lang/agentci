@@ -71,3 +71,13 @@ def test_counted_placement_requires_confirmed_public_comment_url(tmp_path: Path)
 
     assert result.returncode == 1
     assert 'comment_url' in result.stderr
+
+
+def test_counted_placement_must_be_confirmed_posted_write(tmp_path: Path):
+    payload = _valid_payload()
+    payload['placements'][0]['publication_result'] = 'blocked'
+
+    result = _run_validator(tmp_path, payload)
+
+    assert result.returncode == 1
+    assert 'publication_result' in result.stderr
