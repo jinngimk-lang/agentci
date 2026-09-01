@@ -1,0 +1,14 @@
+{
+  "schema_version": "agentci.upstream_provenance.v1",
+  "source": {
+    "url": "https://github.com/langchain-ai/langgraph/issues/8764",
+    "repository": "langchain-ai/langgraph",
+    "issue_number": 8764,
+    "reporter": "mstevens843",
+    "reported_at": "2026-08-30"
+  },
+  "observed_commit_status": "unavailable",
+  "upstream_observation_status": "REPORTED",
+  "agentci_reproduction_status": "UNVERIFIED",
+  "claim_boundary": "Preserves upstream-reported observations only; AgentCI has not independently reproduced the LangGraph runtime."
+}
