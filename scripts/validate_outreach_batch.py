@@ -10,6 +10,14 @@ from typing import Any
 
 
 SCHEMA_VERSION = 'agentci.outreach.v2'
+ALLOWED_DOWNSTREAM_STATES = {
+    'posted',
+    'replied',
+    'repo_action',
+    'contribution',
+    'merged',
+    'repeat_contributor',
+}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -56,8 +64,8 @@ def summarize(payload: dict[str, Any]) -> dict[str, Any]:
         downstream_state = placement.get('downstream_state')
         if not isinstance(semantic_class, str) or not semantic_class:
             raise ValueError('placement semantic_class must be a non-empty string')
-        if not isinstance(downstream_state, str) or not downstream_state:
-            raise ValueError('placement downstream_state must be a non-empty string')
+        if downstream_state not in ALLOWED_DOWNSTREAM_STATES:
+            raise ValueError('placement downstream_state must be an observable supported state')
         semantic[semantic_class] += 1
         downstream[downstream_state] += 1
     return {
