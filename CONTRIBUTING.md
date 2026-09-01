@@ -58,14 +58,35 @@ You do not need to start with a large feature. High-value contributions include:
 
 For security findings, do not publish exploit-enabling details in a public issue before responsible-disclosure readiness. Open a minimal non-sensitive report or contact the maintainer privately when appropriate.
 
+## If you came from an upstream issue
+
+If you are the author, maintainer, or reproducer of a concrete upstream agent-runtime issue, keep that upstream issue as the canonical place for the product behavior. AgentCI only needs the smallest provider-neutral evidence fixture needed to preserve and independently challenge the semantic claim.
+
+Use [`docs/contributing/upstream-fixture-intake.md`](docs/contributing/upstream-fixture-intake.md) or open the [Upstream fixture intake](https://github.com/jinngimk-lang/agentci/issues/new?template=upstream-fixture-intake.yml).
+
+The normal first contribution is deliberately small:
+
+```text
+tests/fixtures/<class>/<project>-<issue>-<short-name>/
+  provenance.json
+  case.json
+  trajectory.jsonl
+  README.md
+```
+
+Add one focused validation test. Keep the initial AgentCI result `UNVERIFIED` unless the behavior has been independently reproduced. Do not add the upstream SDK to AgentCI core dependencies merely to preserve the case, and do not serialize secrets or opaque runtime resource values.
+
+A proven example is LangGraph #8582 → AgentCI intake #123 → external PR #124. That handoff preserved upstream attribution, constrained the first PR to a portable fixture, and avoided turning an upstream report into an unsupported compatibility or certification claim.
+
 ## Before starting
 
 1. Read `README.md`.
-2. For active Sandbox work, read issue #24 and the role-specific issue most relevant to your contribution.
-3. For executable target work, read `docs/architecture/agent-harness-contract.md`.
-4. Search existing Issues and PRs to avoid duplicates.
-5. Prefer an existing issue before starting a substantial change. If no issue exists, open one describing the user problem, proposed evidence, and smallest useful scope.
-6. Keep one PR focused on one problem.
+2. If you came from an existing upstream issue, use the upstream-fixture intake path above before reading the broader program roadmap.
+3. For active Sandbox work, read issue #24 and the role-specific issue most relevant to your contribution.
+4. For executable target work, read `docs/architecture/agent-harness-contract.md`.
+5. Search existing Issues and PRs to avoid duplicates.
+6. Prefer an existing issue before starting a substantial change. If no issue exists, open one describing the user problem, proposed evidence, and smallest useful scope.
+7. Keep one PR focused on one problem.
 
 The repository uses an evidence-first development model. A plausible implementation is not enough: important claims should be reproducible by another contributor.
 
@@ -144,11 +165,12 @@ When a contribution produces a real reusable benchmark, dataset, integration, re
 
 If you want to help but do not know where to start:
 
-1. Read the Sandbox contributor call in issue #42 if sandbox security interests you.
-2. Look for small reproducible bugs, docs friction, test gaps, or issues marked for community contribution.
-3. Comment with the scope you want to take.
-4. Start with a narrow PR that can be independently verified.
-5. Ask questions on the relevant issue rather than silently expanding scope.
+1. If you already have a reproducible upstream failure, use the upstream-fixture intake path instead of searching for generic starter work.
+2. Read the Sandbox contributor call in issue #42 if sandbox security interests you.
+3. Look for small reproducible bugs, docs friction, test gaps, or issues marked for community contribution.
+4. Comment with the scope you want to take.
+5. Start with a narrow PR that can be independently verified.
+6. Ask questions on the relevant issue rather than silently expanding scope.
 
 Maintainers should keep a healthy queue of newcomer-sized work and clearly separate `good first issue` tasks from deep architecture/security tasks.
 
