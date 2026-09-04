@@ -1,0 +1,5 @@
+{"sequence":1,"event_type":"crash-boundary-observed","logical_run_ref":"langgraph-8764-run","runtime_run_id":null,"boundary":"before-first-durable-checkpoint","observation_source":"upstream-reproduction"}
+{"sequence":2,"event_type":"checkpoint-count-observed","logical_run_ref":"langgraph-8764-run","runtime_run_id":null,"durable_checkpoint_count":0,"observation_source":"upstream-output"}
+{"sequence":3,"event_type":"user-effect-count-observed","logical_run_ref":"langgraph-8764-run","runtime_run_id":null,"user_effect_count":0,"observation_source":"upstream-output"}
+{"sequence":4,"event_type":"fresh-process-recovery-observed","logical_run_ref":"langgraph-8764-run","runtime_run_id":null,"recovery_status":"NO_RESUMABLE_RUNTIME_STATE","recovery_error_type":"EmptyInputError","observation_source":"upstream-output"}
+{"sequence":5,"event_type":"external-admission-evidence-checked","logical_run_ref":"langgraph-8764-run","runtime_run_id":null,"external_admission_evidence_status":"NOT_PROVIDED_UPSTREAM","authority":"UNAVAILABLE","classification_without_authoritative_admission":"NOT_ADMITTED_OR_UNKNOWN"}
