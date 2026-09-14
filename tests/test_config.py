@@ -51,6 +51,12 @@ def test_rejects_missing_suite(tmp_path: Path):
         load_suite(path)
 
 
+def test_rejects_empty_cases(tmp_path: Path):
+    path = write(tmp_path / 'bad.yaml', 'suite: empty\ncases: []\n')
+    with pytest.raises(ConfigError, match='cases.*at least one'):
+        load_suite(path)
+
+
 def test_rejects_duplicate_ids(tmp_path: Path):
     path = write(tmp_path / 'bad.yaml', '''
 suite: demo
@@ -78,6 +84,44 @@ cases:
     expected: {expected}
 ''')
     with pytest.raises(ConfigError, match=f'{section}.*success'):
+        load_suite(path)
+
+
+@pytest.mark.parametrize(
+    ('section', 'key', 'value'),
+    [
+        ('actual', 'latency_ms', '.nan'),
+        ('actual', 'cost_usd', '.inf'),
+        ('expected', 'max_latency_ms', '.nan'),
+        ('expected', 'max_cost_usd', '.inf'),
+    ],
+)
+def test_rejects_non_finite_yaml_numbers(tmp_path: Path, section: str, key: str, value: str):
+    actual_extra = f'      {key}: {value}\n' if section == 'actual' else ''
+    expected_extra = f'      {key}: {value}\n' if section == 'expected' else ''
+    path = write(tmp_path / 'bad.yaml', f'''
+suite: finite-only
+cases:
+  - id: a
+    actual:
+      success: true
+{actual_extra}    expected:
+      success: true
+{expected_extra}''')
+    with pytest.raises(ConfigError, match=f'{key}.*finite'):
+        load_suite(path)
+
+
+@pytest.mark.parametrize(
+    'raw',
+    [
+        '{"suite":"x","cases":[{"id":"a","actual":{"success":true,"latency_ms":NaN},"expected":{"success":true}}]}',
+        '{"suite":"x","cases":[{"id":"a","actual":{"success":true},"expected":{"success":true,"max_cost_usd":Infinity}}]}',
+    ],
+)
+def test_rejects_non_finite_json_numbers(tmp_path: Path, raw: str):
+    path = write(tmp_path / 'bad.json', raw)
+    with pytest.raises(ConfigError, match='finite'):
         load_suite(path)
 
 
