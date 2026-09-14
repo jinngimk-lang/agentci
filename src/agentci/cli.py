@@ -8,6 +8,7 @@ import sys
 from .config import ConfigError
 from .runner import run_suite
 from .sandbox import collect_readiness_report
+from .showcase import load_showcase_catalog
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,6 +35,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help='read the exact signed observer and cleanup sidecar directory for --receipt',
     )
+    showcase_parser = subparsers.add_parser('showcase', help='discover truth-bounded AgentCI cases')
+    showcase_subparsers = showcase_parser.add_subparsers(dest='showcase_command', required=True)
+    showcase_list_parser = showcase_subparsers.add_parser('list', help='list canonical showcase entries')
+    showcase_list_parser.add_argument('--json', action='store_true', help='emit the machine-readable showcase catalog')
+    showcase_show_parser = showcase_subparsers.add_parser('show', help='show one canonical showcase entry')
+    showcase_show_parser.add_argument('showcase_id')
+    showcase_show_parser.add_argument('--json', action='store_true', help='emit the machine-readable showcase entry')
     return parser
 
 
@@ -74,6 +82,24 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _print_sandbox_verification(result)
             return 0 if result.valid and (args.receipt is None or result.receipt_written) else 1
+        if args.command == 'showcase' and args.showcase_command == 'list':
+            catalog = load_showcase_catalog()
+            if args.json:
+                print(json.dumps(catalog, sort_keys=True))
+            else:
+                _print_showcase_list(catalog)
+            return 0
+        if args.command == 'showcase' and args.showcase_command == 'show':
+            catalog = load_showcase_catalog()
+            item = next((candidate for candidate in catalog['items'] if candidate['id'] == args.showcase_id), None)
+            if item is None:
+                print(f'error: unknown showcase id: {args.showcase_id}', file=sys.stderr)
+                return 2
+            if args.json:
+                print(json.dumps(item, sort_keys=True))
+            else:
+                _print_showcase_item(item)
+            return 0
     except ConfigError as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2
@@ -102,6 +128,26 @@ def _print_sandbox_verification(result) -> None:
     for error in result.errors:
         print(f'- ERROR: {error}')
     print('Truth boundary: valid evidence is not a security certification; inspect the recorded verdict and limitations.')
+
+
+def _print_showcase_list(catalog) -> None:
+    print('AgentCI showcase:')
+    for item in catalog['items']:
+        print(f"- {item['id']} [{item['evidence_maturity']}] {item['title']}")
+        print(f"  command: {' '.join(item['released_command'])}")
+        print(f"  boundary: {item['claim_boundary']}")
+    print('Truth boundary: showcase metadata does not certify any sandbox backend.')
+
+
+def _print_showcase_item(item) -> None:
+    print(f"{item['id']} [{item['evidence_maturity']}]")
+    print(item['title'])
+    print(f"Semantic class: {item['semantic_class']}")
+    print(f"Command: {' '.join(item['released_command'])}")
+    if item.get('repository_path'):
+        print(f"Repository path: {item['repository_path']}")
+    print(f"Claim boundary: {item['claim_boundary']}")
+    print(f"Certification claim: {str(item['certification_claim']).lower()}")
 
 
 if __name__ == '__main__':

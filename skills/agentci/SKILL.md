@@ -1,6 +1,6 @@
 ---
 name: agentci
-description: Use when evaluating AI-agent behavior, executable targets, reproducible regressions, sandbox readiness, or canonical sandbox evidence with AgentCI.
+description: Use when evaluating AI-agent behavior, executable targets, reproducible regressions, sandbox readiness, canonical sandbox evidence, or truth-bounded AgentCI showcase discovery.
 ---
 
 # AgentCI Skill
@@ -9,7 +9,7 @@ description: Use when evaluating AI-agent behavior, executable targets, reproduc
 
 AgentCI is an evidence-first reliability, regression-testing, and sandbox-verification project.
 
-The 0.2 Developer Preview / Sandbox Alpha exposes:
+The released 0.2 Developer Preview / Sandbox Alpha exposes:
 
 ```bash
 agentci test <eval-suite>
@@ -21,11 +21,24 @@ Do not infer additional sandbox commands from architecture documents. Future `in
 
 No backend is currently certified by AgentCI.
 
-### Main-only development API
+### Main-only development surfaces
 
-Development after `v0.2.0` is versioned `0.3.0.dev0` and contains the first S1 falsifiable route gate, `S1-EXEC-ROUTE-001`. It compares a signature-authenticated completed execution observation with an exact provider-neutral contract and attempt binding. Signatures are verified against verifier-supplied pinned authority/key/epoch policy; the default trust policy is empty, so caller-asserted trust fails closed. Missing, ambiguous, stale, fallback, degraded, context-mismatched, or route-mismatched evidence remains `UNVERIFIED`.
+Development after `v0.2.0` is versioned `0.3.0.dev0`.
 
-**ELIGIBLE is not PASS.** The gate only allows later semantic evidence evaluation to continue. It does not execute a backend and exposes no backend verdict, isolation, containment, security, or certification field. There is no S1 execution CLI. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
+It includes a truth-checked showcase discovery surface:
+
+```bash
+agentci showcase list
+agentci showcase list --json
+agentci showcase show <id>
+agentci showcase show <id> --json
+```
+
+Showcase entries expose evidence maturity, the current represented CLI command, local repository paths where applicable, and a claim boundary. The catalog is discovery metadata only: it does not execute a backend, create a second verdict engine, or certify a sandbox. Fixture entries cannot claim certification. Source checkouts and installed wheels load the same canonical catalog bytes.
+
+Development also contains the first S1 falsifiable route gate, `S1-EXEC-ROUTE-001`. It compares a signature-authenticated completed execution observation with an exact provider-neutral contract and attempt binding. Signatures are verified against verifier-supplied pinned authority/key/epoch policy; the default trust policy is empty, so caller-asserted trust fails closed. Missing, ambiguous, stale, fallback, degraded, context-mismatched, or route-mismatched evidence remains `UNVERIFIED`.
+
+**ELIGIBLE is not PASS.** The S1 gate only allows later semantic evidence evaluation to continue. It does not execute a backend and exposes no backend verdict, isolation, containment, security, or certification field. There is no S1 execution CLI. S1 remains UNVERIFIED until the same semantic suite has externally observed evidence from at least two materially different real backends.
 
 Use `docs/architecture/s1-execution-route-binding.md` for the contract boundary and `src/agentci/sandbox/execution_route.py` for the development API. Do not infer backend execution from the presence of these schemas.
 
@@ -37,6 +50,7 @@ Use AgentCI to:
 - produce machine-readable CI evidence;
 - inspect local sandbox backend **readiness** without claiming security;
 - validate a canonical sandbox `EvidenceEnvelope` without conflating evidence validity with PASS;
+- discover current AgentCI capabilities/fixtures and their evidence maturity from a canonical catalog;
 - reproduce reliability/evidence failures;
 - work on provider-neutral sandbox authority, runtime, telemetry, replay, or adversarial verification.
 
@@ -52,7 +66,25 @@ agentci --help
 agentci test examples/evals.yaml
 agentci sandbox doctor --json
 agentci sandbox verify examples/sandbox/v0alpha1-red-control-evidence.json --json --print-digest
+agentci showcase list --json
 ```
+
+`showcase` is a main-only `0.3.0.dev0` surface until a later release includes it; do not attribute it to `v0.2.0`.
+
+## Showcase discovery
+
+Use `agentci showcase list` when the first question is “what canonical cases or current capabilities can this checkout truthfully represent?” Use `--json` for machine routing.
+
+Use `agentci showcase show <id>` to inspect one entry's maturity, represented command, repository path when present, and claim boundary.
+
+Do not reinterpret:
+
+- catalog presence as execution evidence;
+- `released-capability` maturity as a backend security result;
+- `fixture` maturity as provider-native execution or certification;
+- a represented command as proof that its outcome will be PASS.
+
+The catalog is intentionally small until entries can satisfy repository-path, unique-ID, CLI-surface, packaging, and claim-boundary contracts.
 
 ## Sandbox doctor
 
@@ -167,10 +199,12 @@ Start with:
 llms.txt
 AGENTS.md
 agentci --help
+agentci showcase list --json
 ```
 
 Then load only what the task needs:
 
+- one current capability/fixture → `agentci showcase show <id> --json`;
 - sandbox research/certification → `skills/sandbox-research-certification/SKILL.md`;
 - readiness/backend discovery → `skills/capability-routing-reach/SKILL.md`;
 - closed-loop engineering → `docs/operations/closed-loop-agent-delivery.md`;
