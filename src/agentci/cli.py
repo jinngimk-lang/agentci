@@ -43,10 +43,15 @@ def main(argv: list[str] | None = None) -> int:
         args = parser.parse_args(argv)
         if args.command == 'test':
             result = run_suite(args.path, args.output_dir)
+            # Never print a bare "passed" here: the comparisons run against values
+            # the suite author typed into the eval file, so the honest word is
+            # UNVERIFIED. See scoring.py and CONTEXT.md "Fixture Mode".
             print(
-                f'AgentCI {result.suite}: {result.passed_cases}/{result.total_cases} passed '
+                f'AgentCI {result.suite}: {result.passed_cases}/{result.total_cases} comparisons held '
                 f'({result.success_rate:.1%})'
             )
+            print(f'Verdict: {result.verdict} (source: {result.source})')
+            print(f'Note: {result.verdict_note}')
             print(f'Report: {args.output_dir / "agentci-report.md"}')
             return 0 if result.failed_cases == 0 else 1
         if args.command == 'sandbox' and args.sandbox_command == 'doctor':

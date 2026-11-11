@@ -23,14 +23,20 @@ def test_cli_pass_returns_zero_and_writes_artifacts(tmp_path: Path):
     assert result.returncode == 0, result.stderr
     assert (tmp_path / 'agentci-results.json').exists()
     assert (tmp_path / 'agentci-report.md').exists()
-    assert '2/2 passed' in result.stdout
+    # The CLI must not claim PASS: these comparisons run against author-supplied
+    # numbers, so the honest verdict is UNVERIFIED.
+    assert '2/2 comparisons held' in result.stdout
+    assert 'Verdict: UNVERIFIED' in result.stdout
+    assert 'passed' not in result.stdout
 
 
 def test_cli_failure_returns_one_but_writes_artifacts(tmp_path: Path):
     result = run_cli('test', 'examples/evals-failing.yaml', '--output-dir', str(tmp_path))
     assert result.returncode == 1
     assert (tmp_path / 'agentci-results.json').exists()
-    assert '0/1 passed' in result.stdout
+    assert '0/1 comparisons held' in result.stdout
+    assert 'Verdict: FAIL' in result.stdout
+    assert 'passed' not in result.stdout
 
 
 def test_cli_invalid_input_returns_two(tmp_path: Path):
