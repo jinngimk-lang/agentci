@@ -4,6 +4,20 @@ from dataclasses import dataclass
 
 from .config import EvalCase, EvalSuite
 
+# `agentci test` compares numbers that the suite author typed into the YAML file.
+# It does not execute the agent, so a threshold comparison can never be evidence
+# that the agent actually behaved that way. Reporting a bare `PASS` implied
+# execution evidence that does not exist, so every result is now labelled with
+# where its numbers came from and a verdict that stops short of PASS.
+SOURCE_AUTHOR_SUPPLIED = "author-supplied"
+VERDICT_UNVERIFIED = "UNVERIFIED"
+VERDICT_FAIL = "FAIL"
+
+VERDICT_NOTE = (
+    "Threshold comparisons against author-supplied values. "
+    "This is not execution evidence and not a PASS claim."
+)
+
 
 @dataclass(frozen=True)
 class CaseResult:
@@ -13,6 +27,11 @@ class CaseResult:
     latency_ms: float | None
     cost_usd: float | None
     failure_reasons: list[str]
+    # Where the compared numbers came from. Always author-supplied today.
+    source: str = SOURCE_AUTHOR_SUPPLIED
+    # `UNVERIFIED` when every comparison holds, `FAIL` when one does not.
+    # A held comparison is not a PASS: nothing was executed to obtain it.
+    verdict: str = VERDICT_UNVERIFIED
 
 
 @dataclass(frozen=True)
@@ -26,6 +45,9 @@ class SuiteResult:
     total_cost_usd: float | None
     average_cost_usd: float | None
     cases: list[CaseResult]
+    source: str = SOURCE_AUTHOR_SUPPLIED
+    verdict: str = VERDICT_UNVERIFIED
+    verdict_note: str = VERDICT_NOTE
 
 
 def score_case(case: EvalCase) -> CaseResult:
@@ -46,13 +68,16 @@ def score_case(case: EvalCase) -> CaseResult:
             reasons.append(
                 f"cost_usd {case.actual.cost_usd:g} exceeds max_cost_usd {case.expected.max_cost_usd:g}"
             )
+    passed = not reasons
     return CaseResult(
         id=case.id,
-        passed=not reasons,
+        passed=passed,
         actual_success=case.actual.success,
         latency_ms=case.actual.latency_ms,
         cost_usd=case.actual.cost_usd,
         failure_reasons=reasons,
+        source=SOURCE_AUTHOR_SUPPLIED,
+        verdict=VERDICT_UNVERIFIED if passed else VERDICT_FAIL,
     )
 
 
@@ -72,4 +97,7 @@ def summarize_results(suite: EvalSuite, results: list[CaseResult]) -> SuiteResul
         total_cost_usd=total_cost,
         average_cost_usd=(total_cost / len(costs)) if costs else None,
         cases=results,
+        source=SOURCE_AUTHOR_SUPPLIED,
+        verdict=VERDICT_UNVERIFIED if passed else VERDICT_FAIL,
+        verdict_note=VERDICT_NOTE,
     )
