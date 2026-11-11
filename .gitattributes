@@ -1,0 +1,38 @@
+# Normalise line endings so the repository does not fight its contributors.
+#
+# Without this file, 214 of the 217 tracked files were stored with CRLF line
+# endings in the working tree. Any editor or tool that writes LF then produces a
+# diff of the entire file, which buries the real change and makes review
+# impossible. It also broke scripted edits that match on exact text.
+#
+# `* text=auto` lets Git decide per file, and `eol=lf` stores LF in the
+# repository while checking out the platform convention where a file type needs
+# one. Run `git add --renormalize .` once after adopting this file.
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: no line-ending conversion, no textual diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.whl binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+
+# Canonical evidence and schema fixtures are content-addressed: a byte-level
+# difference must show up as a change, not be silently normalised away.
+examples/sandbox/** -text
+schemas/*.json text eol=lf
+
+# Generated reports are never reviewed by hand.
+artifacts/** -text

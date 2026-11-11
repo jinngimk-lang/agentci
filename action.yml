@@ -1,0 +1,96 @@
+name: 'AgentCI'
+description: 'Fail-closed evidence check for agent sandbox and eval claims. Runs agentci test and uploads the canonical JSON plus the human report.'
+author: 'jinngimk-lang'
+
+# This action wraps the CLI that already exists. It deliberately does not run a
+# sandbox, benchmark an agent, or certify a provider: it reads an eval suite,
+# compares the numbers written in it, and reports UNVERIFIED unless a case fails.
+# Consumers get exit-code-driven gating without writing any workflow steps.
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  suite:
+    description: 'Path to the eval suite (.yaml, .yml or .json).'
+    required: true
+  output-dir:
+    description: 'Directory for agentci-results.json and agentci-report.md.'
+    required: false
+    default: 'artifacts'
+  python-version:
+    description: 'Python version used to install AgentCI. Requires 3.11 or newer.'
+    required: false
+    default: '3.11'
+  fail-on:
+    description: >
+      When to fail the step: `failure` fails only when a comparison does not
+      hold, `never` always succeeds and leaves the verdict to the report.
+    required: false
+    default: 'failure'
+  upload-artifacts:
+    description: 'Upload the JSON result and Markdown report as build artifacts.'
+    required: false
+    default: 'true'
+
+outputs:
+  verdict:
+    description: 'UNVERIFIED when every comparison held, FAIL when one did not.'
+    value: ${{ steps.run.outputs.verdict }}
+  results-path:
+    description: 'Absolute path to agentci-results.json.'
+    value: ${{ steps.run.outputs.results-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install AgentCI
+      shell: bash
+      # The PyPI name `agentci` belongs to an unrelated project. This repository
+      # publishes as `agentci-v0`, so the install target is pinned explicitly.
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install "agentci-v0"
+
+    - name: Run the eval suite
+      id: run
+      shell: bash
+      # Do not use `set -e`: the exit code carries the verdict, so capture it and
+      # decide afterwards. A non-zero code from the CLI is a real FAIL, not a
+      # broken step, and the caller asked which one to surface.
+      run: |
+        set +e
+        python -m agentci.cli test "${{ inputs.suite }}" --output-dir "${{ inputs.output-dir }}"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+
+        results="${{ inputs.output-dir }}/agentci-results.json"
+        echo "results-path=$(cd "$(dirname "$results")" 2>/dev/null && pwd)/$(basename "$results")" >> "$GITHUB_OUTPUT"
+
+        verdict="UNKNOWN"
+        if [ -f "$results" ]; then
+          verdict=$(python -c "import json,sys; print(json.load(open(sys.argv[1])).get('verdict','UNKNOWN'))" "$results" 2>/dev/null || echo UNKNOWN)
+        fi
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        echo "AgentCI verdict: $verdict (exit $code)"
+
+        if [ "${{ inputs.fail-on }}" = "failure" ] && [ "$code" -ne 0 ]; then
+          echo "::error::AgentCI reported a failing comparison (exit $code)."
+          exit "$code"
+        fi
+
+    - name: Upload evidence
+      if: ${{ inputs.upload-artifacts == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: agentci-evidence
+        path: |
+          ${{ inputs.output-dir }}/agentci-results.json
+          ${{ inputs.output-dir }}/agentci-report.md
+        if-no-files-found: warn
