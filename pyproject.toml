@@ -41,6 +41,11 @@ agentci = "agentci.cli:main"
 packages = ["agentci", "agentci.sandbox", "scripts"]
 package-dir = {"" = "src", "scripts" = "scripts"}
 
+# PEP 561: without this the marker is not included in the wheel and every
+# downstream type checker treats the package as untyped.
+[tool.setuptools.package-data]
+agentci = ["py.typed"]
+
 [tool.setuptools.data-files]
 "share/agentci/sandbox/schema" = ["schemas/sandbox-certification-v0alpha1.schema.json"]
 "share/agentci/sandbox/receipt-schema" = ["schemas/sandbox-receipt-v0alpha1.schema.json"]

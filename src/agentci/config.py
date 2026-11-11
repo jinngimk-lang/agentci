@@ -12,6 +12,55 @@ class ConfigError(ValueError):
     """Raised when an eval suite is invalid."""
 
 
+# Keys accepted at each level. Anything else is a typo, and a typo used to be
+# dropped silently: writing `expected.max_latency` instead of `max_latency_ms`
+# meant the threshold was ignored entirely, so a case whose actual latency was
+# 9000 ms passed against an intended 100 ms limit and the suite exited 0. A tool
+# that exists to reject false PASS cannot afford that, so unknown keys are now a
+# hard error naming the offending key and its closest valid spelling.
+ROOT_KEYS = frozenset({"suite", "cases"})
+CASE_KEYS = frozenset({"id", "input", "actual", "expected"})
+ACTUAL_KEYS = frozenset({"success", "latency_ms", "cost_usd"})
+EXPECTED_KEYS = frozenset({"success", "max_latency_ms", "max_cost_usd"})
+
+
+def _closest_match(word: str, candidates: frozenset[str]) -> str | None:
+    """Return the candidate most similar to `word`, or None when nothing is close.
+
+    Deliberately dependency-free: difflib is stdlib but this needs only the best
+    single guess, and keeping it explicit makes the suggestion behaviour testable.
+    """
+    best: str | None = None
+    best_score = 0.0
+    lowered = word.lower()
+    for candidate in candidates:
+        target = candidate.lower()
+        # Cheap similarity: shared character count weighted by length agreement.
+        shared = sum(1 for a, b in zip(lowered, target) if a == b)
+        if max(len(lowered), len(target)) == 0:
+            continue
+        score = (shared / max(len(lowered), len(target))) * (min(len(lowered), len(target)) / max(len(lowered), len(target)))
+        if score > best_score:
+            best_score = score
+            best = candidate
+    return best if best_score >= 0.6 else None
+
+
+def _require_known_keys(mapping: dict[str, Any], allowed: frozenset[str], where: str) -> None:
+    unknown = [key for key in mapping if key not in allowed]
+    if not unknown:
+        return
+    problems: list[str] = []
+    for key in sorted(unknown):
+        hint = _closest_match(str(key), allowed)
+        if hint:
+            problems.append(f"{where}.{key} is not a valid key (did you mean '{hint}'?)")
+        else:
+            problems.append(f"{where}.{key} is not a valid key")
+    valid = ", ".join(sorted(allowed))
+    raise ConfigError("; ".join(problems) + f". Valid keys in {where}: {valid}")
+
+
 @dataclass(frozen=True)
 class Actual:
     success: bool
@@ -76,6 +125,7 @@ def load_suite(path: str | Path) -> EvalSuite:
     except (json.JSONDecodeError, yaml.YAMLError) as exc:
         raise ConfigError(f"invalid suite syntax: {exc}") from exc
     root = _require_mapping(raw, "root")
+    _require_known_keys(root, ROOT_KEYS, "root")
     name = root.get("suite")
     if not isinstance(name, str) or not name.strip():
         raise ConfigError("suite must be a non-empty string")
@@ -87,6 +137,7 @@ def load_suite(path: str | Path) -> EvalSuite:
     seen: set[str] = set()
     for index, item in enumerate(raw_cases):
         mapping = _require_mapping(item, f"cases[{index}]")
+        _require_known_keys(mapping, CASE_KEYS, f"cases[{index}]")
         case_id = mapping.get("id")
         if not isinstance(case_id, str) or not case_id.strip():
             raise ConfigError(f"cases[{index}].id must be a non-empty string")
@@ -95,6 +146,8 @@ def load_suite(path: str | Path) -> EvalSuite:
         seen.add(case_id)
         actual_raw = _require_mapping(mapping.get("actual"), f"cases[{index}].actual")
         expected_raw = _require_mapping(mapping.get("expected"), f"cases[{index}].expected")
+        _require_known_keys(actual_raw, ACTUAL_KEYS, f"cases[{index}].actual")
+        _require_known_keys(expected_raw, EXPECTED_KEYS, f"cases[{index}].expected")
         actual = Actual(
             success=_require_bool(actual_raw, "success", f"cases[{index}].actual"),
             latency_ms=_optional_number(actual_raw, "latency_ms", f"cases[{index}].actual"),
